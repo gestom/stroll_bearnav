@@ -1,0 +1,7 @@
+<launch>
+
+    <node name="cameleon_ros_driver" pkg="cameleon_ros_driver" type="cameleon_ros_driver" output="screen" >
+    <rosparam file="$(find cameleon_ros_driver)/etc/default.yaml" />
+    </node>
+
+</launch>
