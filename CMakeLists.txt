@@ -10,6 +10,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   nav_msgs
   geometry_msgs
+  cv_bridge
+  image_transport
 )
 
 ## System dependencies are found with CMake's conventions
@@ -132,19 +134,22 @@ add_library(cameleon_timer src/CTimer.cpp)
 
 ## Declare a C++ executable
 add_executable(cameleon_ros_driver src/cameleon_ros_driver.cpp)
+add_executable(cameleon_video src/cameleon_video.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(cameleon_ros_driver cameleon_message_client cameleon_message ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(cameleon_video ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(
-	cameleon_ros_driver
+target_link_libraries(cameleon_ros_driver
 	cameleon_message_client
 	cameleon_message
 	cameleon_timer
 	${catkin_LIBRARIES}
 	)
+
+target_link_libraries(cameleon_video ${catkin_LIBRARIES})
 
 #############
 ## Install ##
