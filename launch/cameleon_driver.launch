@@ -1,7 +1,22 @@
 <launch>
 
+<!-- Turtlesim Node-->
+  <node pkg="turtlesim" type="turtlesim_node" name="sim"/>
+   <remap from="/turtle1/cmd_vel" to="/cmd_vel"/>
+
+<!-- joy node -->
+  <node pkg="joy"
+        type="joy_node" name="turtle_joy" >
+    <param name="dev" type="string" value="/dev/input/js0" />
+    <param name="deadzone" value="0.12" />
+   <remap from="/turtle1/cmd_vel" to="/cmd_vel"/>
+  </node>
+     
+
     <node name="cameleon_ros_driver" pkg="cameleon_ros_driver" type="cameleon_ros_driver" output="screen" >
     <rosparam file="$(find cameleon_ros_driver)/etc/default.yaml" />
     </node>
+   <node pkg="learning_joy" type="learning_joy_node" name="teleop"/>
+    <remap from="/turtle1/cmd_vel" to="/cmd_vel"/>
 
 </launch>
