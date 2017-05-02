@@ -7,14 +7,17 @@
 #include <unistd.h>
 
 #include "CRobot.h"
+#include "CConsole.h"
 
-CRobot::CRobot(const char *name,float maxForward,float maxBackward,float maxTurn) 
-{
+CRobot::CRobot() {
+	//	const char * name = "/home/petr/cameleon/file";
+	const char * name = "/dev/ttyS0";
 	port = open(name, O_RDWR | O_NONBLOCK);
 	if (port == -1) {
+		error;
 		perror("Cannot open port");
 	} else
-		std::cout << "Opened port " << name << std::endl;
+		msg << "Opened port " << name << std::endl;
 
 	struct termios ctrlStruct;
 	tcgetattr(port, &ctrlStruct);
@@ -41,47 +44,69 @@ CRobot::CRobot(const char *name,float maxForward,float maxBackward,float maxTurn
 	theta = 0;
 	x = 0;
 	y = 0;
-	forwardSpeed = 0;
-	turnSpeed = 0;
-	flipSpeed = 0;
+
 }
 
 CRobot::~CRobot() {
 	close(port);
 }
 
-void CRobot::setSpeeds(float forward,float turn, float flip) 
-{
-	forwardSpeed = 1000*forward; //m/s to mm/s
-	turnSpeed = 100*turn; //rad/s to 10-2 rad/s
-	flipSpeed = 100*flip; //idem
-	//command_date = ros::Time::now();
+bool CRobot::processMessage(const CMessage & message) {
+	bool result = false;
+	switch (message.type) {
+		case MSG_STOP:
+			setSpeeds(0,0,0);
+			result = true;
+			break;
+
+		case MSG_SPEED:
+			setSpeeds(message.forward, message.turn, message.flipper);
+			result = true;
+			break;
+
+		case MSG_RESET:
+			dbg << "Reset: " <<
+				" OLO " << oldLOdom << " ORO " << oldROdom << std::endl;
+			resetOdom();
+			result = true;
+			break;
+
+		default:
+			break;
+	}
+	return result;
 }
 
-bool CRobot::exchangeInfo()
-{
+void CRobot::setSpeeds(const int forward, const int turn, const int flip) {
 	char serialFrame[32];
-	sprintf(serialFrame, "V%+05dP%+04dF%+03dOVNNNNVXXX\n",forwardSpeed,turnSpeed,bound(flipSpeed, -47, 47));
+	sprintf(serialFrame, "V%+05dP%+04dF%+03dOVNNNNVXXX\n",
+			forward,
+			turn,
+			bound(flip, -47, 47));
 	unsigned char checkSum = 0;
 
-	for (unsigned short i = 0; i < 22; i++) checkSum += serialFrame[i];
+	for (unsigned short i = 0; i < 22; i++)
+		checkSum += serialFrame[i];
 
 	sprintf(serialFrame + 22, "%03u\n", checkSum);
+	msg << serialFrame << std::endl;
 	ssize_t wn = write(port, serialFrame, 26);
 	if (wn == -1) {
+		error;
 		perror("Write failed");
-		return false;
 	}
-	return true;
-	//if (receiveInfo()) odom();
+
+	if (receiveInfo()) {
+		odom();
+	}
 }
 
 bool CRobot::odom(void) {
 	const double base = 0.45; // m
 	const int rOdom = odomRight - oldROdom;
 	const int lOdom = odomLeft  - oldLOdom;
-	//dbg << "rodom " << oldROdom << " lodom " << oldLOdom << std::endl;
-	std::cout << "rodom " << rOdom << " lodom " << lOdom << std::endl;
+	dbg << "rodom " << oldROdom << " lodom " << oldLOdom << std::endl;
+	dbg << "rodom " << rOdom << " lodom " << lOdom << std::endl;
 	const int sum = (rOdom + lOdom);
 	const int subst = (rOdom - lOdom);
 	distance = sum / 2;
@@ -92,7 +117,7 @@ bool CRobot::odom(void) {
 	} else
 		x = sum * base / 2;
 
-	std::cout << "Distance " << distance / 1000.0 << " Theta " << theta << " x " << x << " y " << y << std::endl;
+	msg << "Distance " << distance / 1000.0 << " Theta " << theta << " x " << x << " y " << y << std::endl;
 	return true;
 }
 
@@ -103,28 +128,29 @@ bool CRobot::receiveInfo(void) {
 		sscanf(buffer, "%06d%06d", &odomLeft, &odomRight);
 		sscanf(buffer + 41, "%03d%03d%03d", &batteryLevel, &pitch, &roll);
 		sscanf(buffer + 54, "%03d", &flipperPose);
-		std::cout << (buffer);
+		dbg << (buffer);
 		dataValid = true;
 	} else {
+		warn;
 		fprintf(stdout, "Suspicious CPF frame - dropping\n");
 		dataValid = false;
 	}
-	std::cout << ret << std::endl;
+	msg << ret << std::endl;
 
 	return (ret == 64);
 }
 
 bool CRobot::resetOdom(void) {
-	std::cout << "Reset odom function" << std::endl;
+	dbg << "Reset odom function" << std::endl;
 	odom();
 	oldLOdom = odomLeft;
 	oldROdom = odomRight;
-	std::cout << "rodom " << oldROdom << " lodom " << oldLOdom << std::endl;
+	dbg << "rodom " << oldROdom << " lodom " << oldLOdom << std::endl;
 	return true;
 }
 
 void CRobot::printInfo(void) const {
-	std::cout << "Print Info ";
+	dbg << "Print Info ";
 	fprintf(stdout, "LROdom % 2.3f % 2.3f Pitch %1.3f Roll %1.3f Flipper %1.3f Battery % 3d%%\n",
 			odomLeft / 1000.0,        // m
 			odomRight / 1000.0,       // m
@@ -134,17 +160,16 @@ void CRobot::printInfo(void) const {
 			batteryLevel);            // %
 }
 
-/*void CRobot::getStatus(CStatusMessage & status)
+void CRobot::getStatus(CStatusMessage & status)
 {
 	status.status = (dataValid) ? 1 : 0;
-	status.odoLeft = int(x*1000);//odomLeft;
-	status.odoRight = int(x*1000);//odomRight;
-	status.pitch = int(theta);//pitch;
+	status.odoLeft = odomLeft;
+	status.odoRight = odomRight;
+	status.pitch = pitch;
 	status.roll = roll;
 	status.flipperPos = flipperPose;
 	status.batteryLevel = batteryLevel;
-}*/
-
+}
 
 inline int CRobot::bound(int input, const int min, const int max) const {
 	input = input > min ? input : min;
