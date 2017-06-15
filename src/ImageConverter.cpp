@@ -7,16 +7,18 @@
 #include <stdio.h>
 #include <iostream>
 #include <cmath>
-#include <opencv2/core/core.hpp>
+//#include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/xfeatures2d.hpp>
+#include <opencv2/features2d.hpp>
+//#include <opencv2/calib3d/calib3d.hpp>
 using namespace cv;
+using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-FeatureDetector *detector = NULL;
-DescriptorExtractor *descriptor = NULL;
+SURF *detector = NULL;
+
 class ImageConverter
 {
   ros::NodeHandle nh_;
@@ -55,8 +57,12 @@ public:
     }
 
   // cv_ptr->image=
-  	detector = new FastFeatureDetector();
-    descriptor = new BriefDescriptorExtractor();
+//  	detector = new FastFeatureDetector();
+//Ptr<FAST> detector = FAST::create(0.1 );
+ //   FastFeatureDetector *detector = FastFeatureDetector::create( 0.1 );
+    detector = SURF::create( 0.1 );
+//    descriptor = new BriefDescriptorExtractor();
+    //detector = FastFeatureDetector::create( 0.1 );
    	vector<KeyPoint> keypoints_1, keypoints_2;
    	Mat descriptors_1, descriptors_2;
     Mat img_matches, img_t1,img_t2,img_matchestr;

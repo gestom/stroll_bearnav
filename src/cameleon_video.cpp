@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "cameleon_camera");
 	ros::NodeHandle n = ros::NodeHandle("~");
 	image_transport::ImageTransport it(n);
-	VideoCapture cap("rtsp://172.43.50.194/axis-media/media.amp?camera=1"); // open the default camera
+	VideoCapture cap("rtsp://172.43.50.194/axis-media/media.amp?camera=quad"); // open the default camera
 	if(!cap.isOpened())  // check if we succeeded
 		return -1;
 
