@@ -13,11 +13,10 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
 )
-
+find_package(OpenCV REQUIRED)
+SET(Open_CV_LIBRARIES opencv_core opencv_highgui opencv_imgproc opencv_features2d)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
-
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -120,7 +119,7 @@ catkin_package(
 include_directories(
   ${catkin_INCLUDE_DIRS}
 )
-
+include_directories(${OpenCV_INCLUDE_DIRS})
 ## Declare a C++ library
 #add_library(cameleon_driver src/CRobot.cpp)
 add_library(cameleon_message src/CMessage.cpp)
@@ -135,7 +134,8 @@ add_library(cameleon_timer src/CTimer.cpp)
 ## Declare a C++ executable
 add_executable(cameleon_ros_driver src/cameleon_ros_driver.cpp)
 add_executable(cameleon_video src/cameleon_video.cpp)
-
+add_executable(pid src/pid.cpp)
+add_executable(ImageConverter src/ImageConverter.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(cameleon_ros_driver cameleon_message_client cameleon_message ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -150,7 +150,8 @@ target_link_libraries(cameleon_ros_driver
 	)
 
 target_link_libraries(cameleon_video ${catkin_LIBRARIES})
-
+target_link_libraries(pid ${catkin_LIBRARIES})
+target_link_libraries(ImageConverter ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #############
 ## Install ##
 #############

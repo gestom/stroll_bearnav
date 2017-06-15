@@ -15,7 +15,7 @@ std::string robotIP;
 double maxForwardSpeed,maxBackwardSpeed,maxTurnSpeed;
 double forwardSpeedGain,turnSpeedGain;
 CMessage message;
-CMessageClient client;
+	CMessageClient client;
 CStatusMessage status;
 nav_msgs::Odometry odometry;
 
@@ -71,16 +71,16 @@ void readData()
 
 void commandCallback(const geometry_msgs::Twist::ConstPtr& msg)
 {
-	message.type = MSG_SPEED;
-	message.forward = (int)(msg->linear.x*1000);
-	message.turn = (int)(msg->angular.z*1000);
-	message.flipper = (int)(msg->angular.y*1000);
+message.type = MSG_SPEED;
+message.forward = (int)(msg->linear.x*1000);
+message.turn = (int)(msg->angular.z*1000);
+message.flipper = (int)(msg->angular.y*1000);
 
-	if (message.forward > +maxForwardSpeed*1000) message.forward = maxForwardSpeed*1000;
-	if (message.forward < -maxBackwardSpeed*1000) message.forward = -maxBackwardSpeed*1000;
-	if (message.turn    > +maxTurnSpeed*1000) message.turn = maxTurnSpeed*1000;
-	if (message.turn    < -maxTurnSpeed*1000) message.turn = -maxTurnSpeed*1000;
-	client.sendMessage(message);
+if (message.forward > +maxForwardSpeed*1000) message.forward = maxForwardSpeed*1000;
+if (message.forward < -maxBackwardSpeed*1000) message.forward = -maxBackwardSpeed*1000;
+if (message.turn    > +maxTurnSpeed*1000) message.turn = maxTurnSpeed*1000;
+if (message.turn    < -maxTurnSpeed*1000) message.turn = -maxTurnSpeed*1000;
+client.sendMessage(message);
 }
      
 int main(int argc, char** argv)
