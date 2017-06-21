@@ -14,7 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
 )
 find_package(OpenCV REQUIRED)
-SET(Open_CV_LIBRARIES opencv_core opencv_highgui opencv_imgproc opencv_features2d)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -151,7 +150,7 @@ target_link_libraries(cameleon_ros_driver
 
 target_link_libraries(cameleon_video ${catkin_LIBRARIES})
 target_link_libraries(pid ${catkin_LIBRARIES})
-target_link_libraries(ImageConverter ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(ImageConverter cameleon_timer ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #############
 ## Install ##
 #############
