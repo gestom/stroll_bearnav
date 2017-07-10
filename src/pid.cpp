@@ -43,8 +43,6 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg){
 	//initiate parameters
 	//Enter PID parameters and desired angle of rotation
 	if(start==true){
-		std::cout << "Enter PID parameters: ";
-		std::cin >> Kp >> Ki >> Kd;
 		std::cout << "Enter desired Angle (rad): ";
 		std::cin >> desiredAngle; 
 		desiredAngle=atan2(2*(z*w),1-2*(z*z))+desiredAngle;
@@ -80,7 +78,7 @@ int main(int argc,char** argv){
 	n.param("axis_angular", angularAxis, 0.1);
 	n.param("axis_linear", linearAxis,0);	
 	odometrySub = n.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
-	commandPub = n.advertise<geometry_msgs::Twist>("/cmd_vel",1);
+	commandPub = n.advertise<geometry_msgs::Twist>("cmd",1);
 	while(ros::ok()){
 		ros::spinOnce();
 		
