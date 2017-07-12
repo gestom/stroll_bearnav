@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include "CTimer.h"
 #include <iostream>
-#include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 #include <cmath>
 #include <opencv2/opencv.hpp>
@@ -29,38 +28,9 @@ Mat img_matches, img_t1,img_t2,img_matchestr,img_keypoints_1,img_3;
 ros::Publisher cmd_pub_;
 ros::Subscriber odometrySub;
 geometry_msgs::Twist twist;
-nav_msgs::Odometry odometry;
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
 Mat img_2;
-double pointDist;
-int totalDist;
-double startx,starty,currentx,currenty,pointx,pointy;
-int meter=-1;
-char filename[100];
-
-void odomcallback(const nav_msgs::Odometry::ConstPtr& msg){
-	if(meter==-1){
-	startx=msg->pose.pose.position.x;
-	starty=msg->pose.pose.position.y;
-	pointx=startx;
-	pointy=starty;
-	meter=0;	
-	}	
-	currentx=msg->pose.pose.position.x;
-	currenty=msg->pose.pose.position.y;
-	
-	pointDist = sqrt(pow(currentx-pointx,2)+pow(currenty-pointy,2));
-	
-	if(pointDist>1) {
-		totaldistance+=pointDistance;
-		pointx=currentx;
-		pointy=currenty;
-			
-	  }
-	 
-
-}
 
 void loadImage(string file){
 
@@ -98,29 +68,16 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	timer.start();	
 	transpose(cv_ptr->image,img_t1);
 	if(start){
-    img_2=img_t1.clone();
-	start=false;
-	detector->detectAndCompute(img_2, Mat (), keypoints_2,descriptors_2);
+    	img_2=img_t1.clone();
+		start=false;
+		detector->detectAndCompute(img_2, Mat (), keypoints_2,descriptors_2);
 	}
-	if(pointDist>1){
-	sprintf(Filename,%s_
-	} 
 
   	std::vector< DMatch > good_matches;
-//	detector->detectAndCompute(img_2, Mat (), keypoints_2,descriptors_2);
 	detector->detectAndCompute(img_t1, Mat (), keypoints_1,descriptors_1);
 	printf("Get Time %i\n",timer.getTime());	
-//	detector->detect(img_t1,keypoints_1);
-//	detector->detect(img_t2,keypoints_2);
-//	descriptor->compute(img_t1,keypoints_1,descriptors_1);
-//	descriptor->compute(img_t2,keypoints_2,descriptors_2);
-//	drawKeypoints( img_t1, keypoints_1, img_keypoints_1, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-//	transpose(img_keypoints_1,img_t1);
-//	imshow("Keypoints 1", img_t1 );
 	float differenceRot=0;
 	if (keypoints_1.size() >0 && keypoints_2.size() >0){
-		//FlannBasedMatcher matcher;
-		//    DescriptorMatcher matcher(NORM_HAMMING,true);
 		Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(NORM_HAMMING);
 		vector< vector<DMatch> > matches;
 
@@ -142,13 +99,14 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		int count=0,bestc=0;
 		Point2f current;
 		Point2f best, possible;
-	int numBins = 21;
-	int histogram[numBins];
-	int granularity = 20;
-	int differences[num];
-  	std::vector< DMatch > best_matches;
-	for (int i = 0;i<numBins;i++) histogram[i] = 0;
-		//ransac 
+		int numBins = 21;
+		int histogram[numBins];
+		int granularity = 20;
+		int differences[num];
+  		std::vector< DMatch > best_matches;
+	
+		for (int i = 0;i<numBins;i++) histogram[i] = 0;
+			//ransac 
 		for (int i=0;i<num;i++){
 
 			int idx2=good_matches[i].trainIdx;
@@ -158,23 +116,12 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 			current.x=round(matched_points1[i].x-matched_points2[i].x);	
 			current.y=round(matched_points1[i].y-matched_points2[i].y);
 			int length=sqrt(pow(matched_points2[i].x-matched_points1[i].x,2)+pow(matched_points2[i].y-matched_points1[i].y,2));
-		//	cout << "Matched_point1 " << matched_points1[i] <<  "Matched_point2 " << matched_points2[i] <<"length: " << length << endl;
-		//	cout <<"Matched points size: " << matched_points1.size() << endl;
-			/*for(int j=0;j<num-1;j++){
 
-				possible.x=round(matched_points1[j].x-matched_points2[j].x);	
-				possible.y=round(matched_points1[j].y-matched_points2[j].y);
-				//cout << "Possible" << possiblex << endl;	
-				if (current.x==	possible.x && current.y==possible.y){
-					count++;
-
-				}
-			}*/
 			int difference = current.y;
 			int index = (difference+granularity/2)/granularity + numBins/2;
 			if (current.x > 50){
 				 differences[i] = -1000000;
-			}else{
+			} else{
 				differences[i] = difference;
 				if (index <= 0) index = 0;
 				if (index >= numBins) index = numBins-1;
@@ -207,10 +154,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		}
 		cout << "Difference Rotation: "<< sum/count << endl;
 		differenceRot=sum/count;
-		// TODO najit maximum histogramu a prevezt do realnych souradnic hx,hy
-		// TODO najit vsechny body blizke (v sousednich chlivkach) hx,hy a spocitat jejich prumernou odchylku
-		// TODO dat tyto body to best matches a zobrazit jen best matches 
-		// TODO publikovat na topicu 
 
 		cout << "Counter: " << bestc << endl;
 		cout << "Vektor: " << best.x << " " << best.y << endl;
@@ -236,15 +179,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 			fs.release();
 		}
 	}
-	//  if (cv_ptr->image.rows > 60 && cv_ptr->image.cols > 60)
-     // cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255,0,0));
-	
- /*	if (meter){
-			
-			write(fs, "keypoints: ", keypoints_1);
-			write(fs, "descriptors: ", descriptors_1);
-	
-	}*/
 
 	twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
 	twist.angular.y = twist.angular.x = 0.0;
@@ -256,8 +190,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 }
 
-
-
 int main(int argc, char** argv)
 { 
   ros::init(argc, argv, "image_converter");
@@ -265,9 +197,8 @@ int main(int argc, char** argv)
   loadImage("/home/parallels/catkin_ws/src/cameleon_ros_driver/features.yaml");
   image_transport::ImageTransport it_(nh_);
   cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
-  image_sub_ = it_.subscribe( "/usb_cam/image_raw", 1,imageCallback);
+  image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
   image_pub_ = it_.advertise("/image_converter/output_video", 1);
-  odometrySub = nh_.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
   ros::spin();
   return 0;
 }
