@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <iostream>
 #include <geometry_msgs/Twist.h>
-#include <cameleon_ros_driver/FeatureArray.h>
-#include <cameleon_ros_driver/Feature.h>
+#include <stroll_bearnav/FeatureArray.h>
+#include <stroll_bearnav/Feature.h>
 #include <cmath>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
@@ -25,8 +25,8 @@ Mat img_matches, img_t1,img_t2,img_matchestr,img_keypoints_1,img_3;
 
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
-cameleon_ros_driver::FeatureArray featureArray;
-cameleon_ros_driver::Feature feature;
+stroll_bearnav::FeatureArray featureArray;
+stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "image_converter");
   ros::NodeHandle nh_;
   image_transport::ImageTransport it_(nh_);
-  feat_pub_ = nh_.advertise<cameleon_ros_driver::FeatureArray>("/features",1);
+  feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
   image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
   image_pub_ = it_.advertise("/image_converter/output_video", 1);
   ros::spin();

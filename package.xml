@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>cameleon_ros_driver</name>
+  <name>stroll_bearnav</name>
   <version>0.0.0</version>
-  <description>The cameleon_ros_driver package</description>
+  <description>Implementation of the Simple, Yet Stable Bearing Only Navigation</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->

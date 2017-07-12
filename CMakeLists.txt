@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(cameleon_ros_driver)
+project(stroll_bearnav)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -13,7 +13,6 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
   message_generation
-  
 )
 find_package(OpenCV REQUIRED)
 ## System dependencies are found with CMake's conventions
@@ -123,9 +122,9 @@ include_directories(
 include_directories(${OpenCV_INCLUDE_DIRS})
 ## Declare a C++ library
 #add_library(cameleon_driver src/CRobot.cpp)
-add_library(cameleon_message src/CMessage.cpp)
-add_library(cameleon_message_client src/CMessageClient.cpp)
-add_library(cameleon_timer src/CTimer.cpp)
+#add_library(cameleon_message src/CMessage.cpp)
+#add_library(cameleon_message_client src/CMessageClient.cpp)
+#add_library(cameleon_timer src/CTimer.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -133,35 +132,31 @@ add_library(cameleon_timer src/CTimer.cpp)
 # add_dependencies(cameleon_ros_driver ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-add_executable(cameleon_ros_driver src/cameleon_ros_driver.cpp)
-add_executable(cameleon_video src/cameleon_video.cpp)
-add_executable(pid src/pid.cpp)
-add_executable(ImageConverter src/ImageConverter.cpp)
-add_executable(joyImage src/joyImage.cpp)
-add_executable(mapper src/mapper.cpp)
-add_executable(imgFeatures src/imgFeatures.cpp)
-add_executable(distance src/distance.cpp)
+#add_executable(cameleon_ros_driver src/cameleon_ros_driver.cpp)
+#add_executable(cameleon_video src/cameleon_video.cpp)
+#add_executable(pid src/pid.cpp)
+#add_executable(ImageConverter src/ImageConverter.cpp)
+#add_executable(joyImage src/joyImage.cpp)
+add_executable(mapper_node src/mapper.cpp)
+add_executable(feature_extraction_node src/featureExtraction.cpp)
+add_executable(distance_measurement_node src/distanceMeasurement.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(cameleon_ros_driver cameleon_message_client cameleon_message ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(cameleon_video imgFeatures ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(cameleon_ros_driver cameleon_message_client cameleon_message ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(cameleon_video imgFeatures ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(feature_extraction_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(cameleon_ros_driver
-	cameleon_message_client
-	cameleon_message
-	cameleon_timer
-	${catkin_LIBRARIES}
-	)
-
-target_link_libraries(cameleon_video ${catkin_LIBRARIES})
-target_link_libraries(pid ${catkin_LIBRARIES})
-target_link_libraries(ImageConverter cameleon_timer ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(joyImage cameleon_timer ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(mapper ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(imgFeatures ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(distance ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+#target_link_libraries(cameleon_ros_driver cameleon_message_client cameleon_message cameleon_timer${catkin_LIBRARIES})
+#target_link_libraries(cameleon_video ${catkin_LIBRARIES})
+#target_link_libraries(pid ${catkin_LIBRARIES})
+#target_link_libraries(ImageConverter cameleon_timer ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+#target_link_libraries(joyImage cameleon_timer ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(mapper_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(feature_extraction_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(distance_measurement_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #############
 ## Install ##
 #############
