@@ -4,22 +4,21 @@
 #include <cmath>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Float32.h>
-#include <std_msgs/Bool.h>
 using namespace std;
 
 
 ros::Publisher dist_pub_;
-ros::Publisher meter_pub_;
+ros::Publisher distEvent_pub_;
 ros::Subscriber odometrySub;
 nav_msgs::Odometry odometry;
 std_msgs::Float32 dist_;
-std_msgs::Bool meter_;
+std_msgs::Float32 distEvent_;
 double pointDist=0;
 float totalDist=0;
 double startx,starty,currentx,currenty,pointx,pointy;
-bool start=true;
+float distanceEvent=0;
 double diffM=0;
-bool meter=false;
+bool start=true;
 
 void odomcallback(const nav_msgs::Odometry::ConstPtr& msg){
 	if(start){
@@ -37,18 +36,15 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg){
 		diffM=pointDist+diffM-1;
 		pointx=currentx;
 		pointy=currenty;
-		meter=true;
-		meter_.data=meter;
-		meter_pub_.publish(meter_);
-	}
-
-	if(meter){
+		distanceEvent=totalDist;
+		distEvent_.data=distanceEvent;
+		distEvent_pub_.publish(distEvent_);
+		
  		dist_.data=totalDist;
-	} else {
+	}  else {
 		dist_.data=totalDist+pointDist+diffM;
 	}
 	dist_pub_.publish(dist_);
-	meter=false;
 	
 }
 
@@ -60,7 +56,7 @@ int main(int argc, char** argv)
   ros::NodeHandle nh_;
   odometrySub = nh_.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
   dist_pub_=nh_.advertise<std_msgs::Float32>("/distance",1);
-  meter_pub_=nh_.advertise<std_msgs::Bool>("/event/meter",1); 
+  distEvent_pub_=nh_.advertise<std_msgs::Float32>("/event/meter",1); 
   ros::spin();
   return 0;
 }

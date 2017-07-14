@@ -8,6 +8,7 @@
 #include <iostream>
 #include <stroll_bearnav/FeatureArray.h>
 #include <stroll_bearnav/Feature.h>
+#include <std_msgs/Float32.h>
 #include <cmath>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
@@ -17,33 +18,38 @@ using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-Ptr<SURF> detector = SURF::create(100);
-vector<KeyPoint> keypoints_1; 
-Mat descriptors_1;
-Mat img_matches, img_t1,img_t2,img_matchestr,img_keypoints_1,img_3;
+vector<KeyPoint> keypoints_1,keypoints_2; 
+Mat descriptors_1,descriptors_2;
 
-image_transport::Subscriber image_sub_;
-image_transport::Publisher image_pub_;
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
-void imageCallback(const sensor_msgs::ImageConstPtr& msg)
+ros::Subscriber dist_sub_;
+Mat img,img2;
+String name="/home/parallels/catkin_ws/datasets/images_cameleon/image_features0.yaml";
+
+void loadImage(string file){
+ 	
+
+	FileStorage fs(file, FileStorage::READ);
+	if(fs.isOpened()){
+		fs["Keypoints"]>>keypoints_2;
+		fs["Descriptors"]>>descriptors_2;
+		fs["Image"]>>img2;
+
+		if(keypoints_2.size() > 0 && descriptors_2.rows > 0 && keypoints_2.size() == descriptors_2.rows && img2.rows>0){
+			keypoints_1=keypoints_2;
+			descriptors_1=descriptors_2;
+			img=img2.clone();
+			fs.release();
+		}
+	}
+}
+
+
+void distCallback(const std_msgs::Float32::ConstPtr& msg)
 {
-	
-    cv_bridge::CvImagePtr cv_ptr;
-    try
-    {
-      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
-	img_t1=cv_ptr->image;
-	detector->detectAndCompute(img_t1, Mat (), keypoints_1,descriptors_1);
-	descriptors_1.convertTo(descriptors_1,CV_32FC1);
-	featureArray.feature.clear();	
+	float distance=msg->data;
 
 	if (keypoints_1.size() > 0){
 	for(int i=0;i<keypoints_1.size();i++){
@@ -54,9 +60,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		feature.response=keypoints_1[i].response;
 		feature.octave=keypoints_1[i].octave;
 		feature.class_id=keypoints_1[i].class_id;
-		descriptors_1.row(i).copyTo(feature.descriptor);
-
-		featureArray.feature.push_back(feature);
+		feature.descriptor.push_back(descriptors_1.at<float>(i,1));
+    featureArray.feature.push_back(feature);
 	}
 	}
 	feat_pub_.publish(featureArray);
@@ -65,12 +70,11 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 int main(int argc, char** argv)
 { 
-  ros::init(argc, argv, "feature_extraction");
+  ros::init(argc, argv, "feature_load");
   ros::NodeHandle nh_;
-  image_transport::ImageTransport it_(nh_);
-  feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
-  image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
-  image_pub_ = it_.advertise("/image_converter/output_video", 1);
+  loadImage(name);
+  feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
+  dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
   ros::spin();
   return 0;
 }
