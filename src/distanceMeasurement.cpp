@@ -31,9 +31,9 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg){
 	pointDist = sqrt(pow(currentx-pointx,2)+pow(currenty-pointy,2));
    
 	
-	if(pointDist+diffM>1){
+	if(pointDist+diffM>0.1){
 		totalDist+=pointDist+diffM;
-		diffM=pointDist+diffM-1;
+		diffM=pointDist+diffM-0.1;
 		pointx=currentx;
 		pointy=currenty;
 		distanceEvent=totalDist;

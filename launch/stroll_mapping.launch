@@ -3,7 +3,7 @@
 <!-- Feature Node-->
   <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction_node"/>
 <!-- Mapper node -->
-  <node pkg="stroll_bearnav" type="mapper_node" name="mapper_node"/>
+  <node pkg="stroll_bearnav" type="mapper_node" name="mapper_node" output="screen"/>
      
 <!-- Distance Measurement Node -->
   <node pkg="stroll_bearnav" type="distance_measurement_node" name="distance_measurement_node"/>

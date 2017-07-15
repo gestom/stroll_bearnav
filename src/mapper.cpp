@@ -19,27 +19,21 @@ image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
 float distanceTotalEvent=0;
 char filename[100];
-String name="/home/parallels/catkin_ws/datasets/images_cameleon/";
+String name="/home/gestom/projects/cameleon/datasets/";
 Mat img,descriptors;
 Mat descriptor;
 vector<KeyPoint> keypoints;
 KeyPoint keypoint;
-bool start=true;
+bool save=true;
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg);
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg);
 
-void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg){
-	
+void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
+{
 	distanceTotalEvent=msg->data;
-	sprintf(filename,"%simage_features%.3f.yaml",name.c_str(),distanceTotalEvent);
-	FileStorage fs(filename,FileStorage::WRITE);
-	write(fs, "Image", img);
-	write(fs, "Keypoints", keypoints);
-	write(fs, "Descriptors",descriptors);
-	fs << "Distance" << distanceTotalEvent;
-	fs.release();
+	save = true;
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -59,37 +53,35 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 }
 
 
-void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg){
-	
+void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
+{
+	if(save){
 		keypoints.clear();
 		descriptors=Mat();
-	
-	for(int i=0; i<msg->feature.size();i++){
 
-		keypoint.pt.x=msg->feature[i].x;
-		keypoint.pt.y=msg->feature[i].y;
-		keypoint.size=msg->feature[i].size;
-		keypoint.angle=msg->feature[i].angle;
-		keypoint.response=msg->feature[i].response;
-		keypoint.octave=msg->feature[i].octave;
-		keypoint.class_id=msg->feature[i].class_id;
-       	keypoints.push_back(keypoint);
-		int size=msg->feature[i].descriptor.size();
-		Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
-		descriptors.push_back(mat);
-			
+		for(int i=0; i<msg->feature.size();i++){
 
- }		
-	if(start){
-		sprintf(filename,"%simage_features0.yaml",name.c_str());
+			keypoint.pt.x=msg->feature[i].x;
+			keypoint.pt.y=msg->feature[i].y;
+			keypoint.size=msg->feature[i].size;
+			keypoint.angle=msg->feature[i].angle;
+			keypoint.response=msg->feature[i].response;
+			keypoint.octave=msg->feature[i].octave;
+			keypoint.class_id=msg->feature[i].class_id;
+			keypoints.push_back(keypoint);
+			int size=msg->feature[i].descriptor.size();
+			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
+			descriptors.push_back(mat);
+		}
+		sprintf(filename,"%s/%.3f.yaml",name.c_str(),distanceTotalEvent);
+		ROS_INFO("Saving map to %s",filename);
 		FileStorage fs(filename,FileStorage::WRITE);
 		write(fs, "Image", img);
 		write(fs, "Keypoints", keypoints);
 		write(fs, "Descriptors",descriptors);
 		fs.release();
-		start=false;
-
-}
+		save=false;
+	}
 }
 
 
@@ -100,8 +92,8 @@ int main(int argc, char** argv)
 	image_transport::ImageTransport it_(nh_);
 	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
 	featureSub_ = nh_.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
-    distEventSub_=nh_.subscribe<std_msgs::Float32>("/event/meter",1,distanceEventCallback);
-    ros::spin();
-    return 0;
+	distEventSub_=nh_.subscribe<std_msgs::Float32>("/event/meter",1,distanceEventCallback);
+	ros::spin();
+	return 0;
 }
 

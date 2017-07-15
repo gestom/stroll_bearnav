@@ -27,27 +27,26 @@ image_transport::Publisher image_pub_;
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
+
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-	
-    cv_bridge::CvImagePtr cv_ptr;
-    try
-    {
-      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
+
+	cv_bridge::CvImagePtr cv_ptr;
+	try
+	{
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
+	}
+	catch (cv_bridge::Exception& e)
+	{
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+		return;
+	}
 	img_t1=cv_ptr->image;
 	detector->detectAndCompute(img_t1, Mat (), keypoints_1,descriptors_1);
-	descriptors_1.convertTo(descriptors_1,CV_32FC1);
 	featureArray.feature.clear();	
 
-	if (keypoints_1.size() > 0){
 	for(int i=0;i<keypoints_1.size();i++){
-	    feature.x=keypoints_1[i].pt.x;
+		feature.x=keypoints_1[i].pt.x;
 		feature.y=keypoints_1[i].pt.y;
 		feature.size=keypoints_1[i].size;
 		feature.angle=keypoints_1[i].angle;
@@ -55,9 +54,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		feature.octave=keypoints_1[i].octave;
 		feature.class_id=keypoints_1[i].class_id;
 		descriptors_1.row(i).copyTo(feature.descriptor);
-
 		featureArray.feature.push_back(feature);
-	}
 	}
 	feat_pub_.publish(featureArray);
 
