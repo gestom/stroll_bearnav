@@ -6,7 +6,6 @@
 #include <std_msgs/Float32.h>
 using namespace std;
 
-
 ros::Publisher dist_pub_;
 ros::Publisher distEvent_pub_;
 ros::Subscriber odometrySub;
@@ -19,6 +18,7 @@ double startx,starty,currentx,currenty,pointx,pointy;
 float distanceEvent=0;
 double diffM=0;
 bool start=true;
+float distanceThreshold = 0.1; 
 
 void odomcallback(const nav_msgs::Odometry::ConstPtr& msg){
 	if(start){
@@ -31,9 +31,9 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg){
 	pointDist = sqrt(pow(currentx-pointx,2)+pow(currenty-pointy,2));
    
 	
-	if(pointDist+diffM>0.1){
+	if(pointDist+diffM>distanceThreshold){
 		totalDist+=pointDist+diffM;
-		diffM=pointDist+diffM-0.1;
+		diffM=pointDist+diffM-distanceThreshold;
 		pointx=currentx;
 		pointy=currenty;
 		distanceEvent=totalDist;

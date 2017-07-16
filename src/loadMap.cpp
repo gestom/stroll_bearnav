@@ -77,8 +77,6 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 {
 	float distance=msg->data;
 	featureArray.feature.clear();
-	//ROS_INFO("%f %i",distance,numMaps);
-	//indicates the end of the path 
 	//if the next map is closer than the current one
 	if (fabs(distance-mapDistances[mapIndex]) > fabs(distance-mapDistances[mapIndex+1]))
 	{
