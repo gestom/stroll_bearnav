@@ -8,7 +8,6 @@
 #include <stroll_bearnav/distanceConfig.h>
 using namespace std;
 
-
 ros::Publisher dist_pub_;
 ros::Publisher distEvent_pub_;
 ros::Subscriber odometrySub;

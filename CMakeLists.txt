@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(stroll_bearnav)
-
+set ( CMAKE_CXX_FLAGS "-ggdb")
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -141,7 +141,7 @@ add_executable(mapper_node src/mapper.cpp)
 add_executable(feature_extraction_node src/featureExtraction.cpp)
 add_executable(distance_measurement_node src/distanceMeasurement.cpp)
 add_executable(feature_load_node src/loadMap.cpp)
-add_executable(angle_from_features_node src/angleFromFeature.cpp)
+add_executable(navigator_node src/navigator.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -152,6 +152,7 @@ add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPO
 add_dependencies(feature_load_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(angle_from_features_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(distance_measurement_node ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 #target_link_libraries(cameleon_ros_driver cameleon_message_client cameleon_message cameleon_timer${catkin_LIBRARIES})
@@ -163,7 +164,7 @@ target_link_libraries(mapper_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(feature_extraction_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(distance_measurement_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(feature_load_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(angle_from_features_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(navigator_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #############
 ## Install ##
 #############
