@@ -57,8 +57,7 @@ find_package(OpenCV REQUIRED)
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
-#   Service1.srv
-#   Service2.srv
+#   pathName.srv
 # )
 
 ## Generate actions in the 'action' folder
@@ -91,6 +90,7 @@ find_package(OpenCV REQUIRED)
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
  generate_dynamic_reconfigure_options(
   	cfg/distance.cfg
+	cfg/threshold.cfg
  )
 
 ###################################
@@ -147,11 +147,10 @@ add_executable(navigator_node src/navigator.cpp)
 ## same as for the library above
 #add_dependencies(cameleon_ros_driver cameleon_message_client cameleon_message ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #add_dependencies(cameleon_video imgFeatures ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(feature_extraction_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(feature_extraction_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(feature_load_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(angle_from_features_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(distance_measurement_node ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+add_dependencies(distance_measurement_node ${PROJECT_NAME}_gencfg  ${catkin_EXPORTED_TARGETS})
 add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against

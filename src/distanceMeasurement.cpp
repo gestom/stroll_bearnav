@@ -21,14 +21,13 @@ float distanceEvent=0;
 double diffM=0;
 bool start=true;
 stroll_bearnav::distanceConfig config;
-double distanceThreshold=config.distance_param;
-
+float distanceThreshold=1;
 
 void callback(stroll_bearnav::distanceConfig &config, uint32_t level) {
 
 	 distanceThreshold=config.distance_param;
- 	 ROS_INFO("Reconfigure Request: %f", 
-            config.distance_param);
+		
+		
 }
 
 void odomcallback(const nav_msgs::Odometry::ConstPtr& msg){
