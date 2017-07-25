@@ -12,12 +12,13 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
+#include <dynamic_reconfigure/server.h>
+#include <stroll_bearnav/thresholdConfig.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-Ptr<SURF> detector = SURF::create(100);
 vector<KeyPoint> keypoints_1; 
 Mat descriptors_1;
 Mat img_matches, img_t1,img_t2,img_matchestr,img_keypoints_1,img_3;
@@ -26,8 +27,16 @@ image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
+stroll_bearnav::thresholdConfig config;
 ros::Publisher feat_pub_;
+int surfThreshold=config.surf_threshold_param;
 
+void callback(stroll_bearnav::thresholdConfig &config, uint32_t level) {
+
+	 surfThreshold=config.surf_threshold_param;
+ 	 ROS_INFO("Reconfigure Request: %d", 
+            config.surf_threshold_param);
+}
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 
@@ -42,6 +51,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		return;
 	}
 	img_t1=cv_ptr->image;
+	
+	Ptr<SURF> detector = SURF::create(surfThreshold);
 	detector->detectAndCompute(img_t1, Mat (), keypoints_1,descriptors_1);
 	featureArray.feature.clear();	
 
@@ -65,6 +76,10 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "feature_extraction");
   ros::NodeHandle nh_;
   image_transport::ImageTransport it_(nh_);
+  dynamic_reconfigure::Server<stroll_bearnav::thresholdConfig> server;
+  dynamic_reconfigure::Server<stroll_bearnav::thresholdConfig>::CallbackType f;
+  f = boost::bind(&callback, _1, _2);
+  server.setCallback(f);
   feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
   image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
   image_pub_ = it_.advertise("/image_converter/output_video", 1);

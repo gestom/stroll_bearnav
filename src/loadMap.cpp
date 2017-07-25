@@ -27,7 +27,7 @@ stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
 ros::Subscriber dist_sub_;
 Mat img,img2;
-String folder="/home/gestom/projects/cameleon/datasets/";
+string folder;
 
 float mapDistances[1000];
 int mapIndex = 0;
@@ -103,6 +103,8 @@ int main(int argc, char** argv)
   loadMaps(folder);
   ros::init(argc, argv, "feature_load");
   ros::NodeHandle nh_;
+  ros::param::get("~folder", folder);
+
   feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
   dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
   ros::spin();

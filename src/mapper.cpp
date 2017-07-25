@@ -18,8 +18,8 @@ ros::Subscriber distEventSub_;
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
 float distanceTotalEvent=0;
-char filename[100];
-String name="/home/gestom/projects/cameleon/datasets/";
+char name[100];
+string fileName;
 Mat img,descriptors;
 Mat descriptor;
 vector<KeyPoint> keypoints;
@@ -73,9 +73,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
 			descriptors.push_back(mat);
 		}
-		sprintf(filename,"%s/%.3f.yaml",name.c_str(),distanceTotalEvent);
-		ROS_INFO("Saving map to %s",filename);
-		FileStorage fs(filename,FileStorage::WRITE);
+		sprintf(name,"%s/%.3f.yaml",fileName.c_str(),distanceTotalEvent);
+		ROS_INFO("Saving map to %s",name);
+		FileStorage fs(name,FileStorage::WRITE);
 		write(fs, "Image", img);
 		write(fs, "Keypoints", keypoints);
 		write(fs, "Descriptors",descriptors);
@@ -90,9 +90,11 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "mapper");
 	ros::NodeHandle nh_;
 	image_transport::ImageTransport it_(nh_);
+	ros::param::get("~fileName", fileName);
 	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
 	featureSub_ = nh_.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
 	distEventSub_=nh_.subscribe<std_msgs::Float32>("/event/meter",1,distanceEventCallback);
+	 ROS_INFO( "%s", fileName.c_str());
 	ros::spin();
 	return 0;
 }

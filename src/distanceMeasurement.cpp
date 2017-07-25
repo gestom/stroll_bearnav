@@ -4,6 +4,8 @@
 #include <cmath>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Float32.h>
+#include <dynamic_reconfigure/server.h>
+#include <stroll_bearnav/distanceConfig.h>
 using namespace std;
 
 ros::Publisher dist_pub_;
@@ -18,7 +20,15 @@ double startx,starty,currentx,currenty,pointx,pointy;
 float distanceEvent=0;
 double diffM=0;
 bool start=true;
-float distanceThreshold = 0.1; 
+stroll_bearnav::distanceConfig config;
+float distanceThreshold=1;
+
+void callback(stroll_bearnav::distanceConfig &config, uint32_t level) {
+
+	 distanceThreshold=config.distance_param;
+		
+		
+}
 
 void odomcallback(const nav_msgs::Odometry::ConstPtr& msg){
 	if(start){
@@ -54,6 +64,11 @@ int main(int argc, char** argv)
 { 
   ros::init(argc, argv, "distance");
   ros::NodeHandle nh_;
+  dynamic_reconfigure::Server<stroll_bearnav::distanceConfig> server;
+  dynamic_reconfigure::Server<stroll_bearnav::distanceConfig>::CallbackType f;
+  f = boost::bind(&callback, _1, _2);
+  server.setCallback(f);
+
   odometrySub = nh_.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
   dist_pub_=nh_.advertise<std_msgs::Float32>("/distance",1);
   distEvent_pub_=nh_.advertise<std_msgs::Float32>("/event/meter",1); 
