@@ -19,7 +19,7 @@ image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
 float distanceTotalEvent=0;
 char name[100];
-string filename;
+string fileName;
 Mat img,descriptors;
 Mat descriptor;
 vector<KeyPoint> keypoints;
@@ -73,7 +73,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
 			descriptors.push_back(mat);
 		}
-		sprintf(name,"%s/%.3f.yaml",filename.c_str(),distanceTotalEvent);
+		sprintf(name,"%s/%.3f.yaml",fileName.c_str(),distanceTotalEvent);
 		ROS_INFO("Saving map to %s",name);
 		FileStorage fs(name,FileStorage::WRITE);
 		write(fs, "Image", img);
@@ -90,12 +90,11 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "mapper");
 	ros::NodeHandle nh_;
 	image_transport::ImageTransport it_(nh_);
-	string filename;
-	ros::param::get("~filename", filename);
+	ros::param::get("~fileName", fileName);
 	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
 	featureSub_ = nh_.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
 	distEventSub_=nh_.subscribe<std_msgs::Float32>("/event/meter",1,distanceEventCallback);
-	 ROS_INFO( "%s", filename.c_str());
+	 ROS_INFO( "%s", fileName.c_str());
 	ros::spin();
 	return 0;
 }
