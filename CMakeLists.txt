@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   message_generation
   dynamic_reconfigure
+  actionlib_msgs
+  actionlib
 )
 find_package(OpenCV REQUIRED)
 ## System dependencies are found with CMake's conventions
@@ -52,25 +54,29 @@ find_package(OpenCV REQUIRED)
    FILES
    Feature.msg
    FeatureArray.msg	
- )
+   Speed.msg
+   SpeedArray.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
-#   FILES
-#   pathName.srv
+ #  FILES
+ #  pathName.srv
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+ add_action_files(
+   FILES
+   mapper.action
+  navigator.action
+	loadMap.action
+ )
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
    std_msgs
+   actionlib_msgs
  )
 
 ################################################
@@ -105,7 +111,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES cameleon_ros_driver
-  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime actionlib_msgs
 #  DEPENDS 
 )
 

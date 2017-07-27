@@ -15,6 +15,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
+#include <stroll_bearnav/navigatorAction.h>
+#include <actionlib/server/simple_action_server.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -26,7 +28,11 @@ int tenCounter=10;
 vector<KeyPoint> keypoints_1, keypoints_2,keypoints_3;
 Mat descriptors_1, descriptors_2,descriptors_3;
 Mat img_matches, img_t1,img_t2,img_matchestr,img_keypoints_1,img_3;
-
+typedef actionlib::SimpleActionServer<stroll_bearnav::navigatorAction> Server;
+Server *server;
+bool done=false;
+stroll_bearnav::navigatorResult result;
+stroll_bearnav::navigatorFeedback feedback;
 ros::Publisher cmd_pub_;
 ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
@@ -66,10 +72,29 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	}
 }
  
+void executeCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *serv)
+{
+  done = false;
+  
+  while(done == false){
+    usleep(200000);
+    if(server->isPreemptRequested()){
+     done = true;
+		
+     server->setPreempted(result);
+
+		while(true){
+		  twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+		  twist.angular.y = twist.angular.x = 0.0;	
+	 	  cmd_pub_.publish(twist);
+   		}
+	}
+  }
+}  
 
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
-
+	if(!done){
 	keypoints_2.clear();
 	descriptors_2=Mat();
 
@@ -91,16 +116,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	}
 
 	std::vector< DMatch > good_matches;
-	//	detector->detectAndCompute(img_2, Mat (), keypoints_2,descriptors_2);
-	//detector->detectAndCompute(img_t1, Mat (), keypoints_1,descriptors_1);
-	//printf("Get Time %i\n",timer.getTime());	
-	//	detector->detect(img_t1,keypoints_1);
-	//	detector->detect(img_t2,keypoints_2);
-	//	descriptor->compute(img_t1,keypoints_1,descriptors_1);
-	//	descriptor->compute(img_t2,keypoints_2,descriptors_2);
-	//	drawKeypoints( img_t1, keypoints_1, img_keypoints_1, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-	//	transpose(img_keypoints_1,img_t1);
-	//	imshow("Keypoints 1", img_t1 );
 	float differenceRot=0;
 	if (keypoints_1.size() >0 && keypoints_2.size() >0){
 		//FlannBasedMatcher matcher;
@@ -140,18 +155,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			current.x=round(matched_points1[i].x-matched_points2[i].x);	
 			current.y=round(matched_points1[i].y-matched_points2[i].y);
 			int length=sqrt(pow(matched_points2[i].x-matched_points1[i].x,2)+pow(matched_points2[i].y-matched_points1[i].y,2));
-			//	cout << "Matched_point1 " << matched_points1[i] <<  "Matched_point2 " << matched_points2[i] <<"length: " << length << endl;
-			//	cout <<"Matched points size: " << matched_points1.size() << endl;
-			/*for(int j=0;j<num-1;j++){
-
-			  possible.x=round(matched_points1[j].x-matched_points2[j].x);	
-			  possible.y=round(matched_points1[j].y-matched_points2[j].y);
-			//cout << "Possible" << possiblex << endl;	
-			if (current.x==	possible.x && current.y==possible.y){
-			count++;
-
-			}
-			}*/
 			int difference = current.x;
 			int index = (difference+granularity/2)/granularity + numBins/2;
 			if (fabs(current.y) > 50){
@@ -178,8 +181,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		int rotation=(position-numBins/2)*granularity;
 		printf("\n");
 		float sum=0;
-		//cout << "Rotation: "<< rotation << endl;
-		//cout << "Position: "<< position << endl;
 		for(int i=0;i<num;i++){
 			if (fabs(differences[i]-rotation) < granularity*1.5){
 				sum+=differences[i];
@@ -187,14 +188,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				best_matches.push_back(good_matches[i]);
 			}
 		}
-		//cout << "Difference Rotation: "<< sum/count << endl;
 		differenceRot=sum/count;
-		// TODO najit maximum histogramu a prevezt do realnych souradnic hx,hy
-		// TODO najit vsechny body blizke (v sousednich chlivkach) hx,hy a spocitat jejich prumernou odchylku
-		// TODO dat tyto body to best matches a zobrazit jen best matches 
-		// TODO publikovat na topicu 
 
-		//cout << "Counter: " << bestc << endl;
 		cout << "Vektor: " << best.x << " " << best.y << endl;
 
 	}
@@ -202,11 +197,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	twist.linear.x = 0.1; 
 	twist.angular.y = twist.angular.x = 0.0;
 
-	// Output modified video stream
 	twist.angular.z=differenceRot*0.0001;
 	cmd_pub_.publish(twist);
-	//image_pub_.publish(cv_ptr->toImageMsg());
-
+}
 }
 
 
