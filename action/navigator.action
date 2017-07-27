@@ -1,0 +1,9 @@
+#goal definiton
+bool success
+---
+#result definition
+bool success
+---
+#feedback
+float32 distance
+int32[] histogram

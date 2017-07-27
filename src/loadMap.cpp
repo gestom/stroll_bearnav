@@ -9,11 +9,14 @@
 #include <stroll_bearnav/FeatureArray.h>
 #include <stroll_bearnav/Feature.h>
 #include <std_msgs/Float32.h>
+#include <geometry_msgs/Twist.h>
 #include <cmath>
 #include <dirent.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
+#include <actionlib/server/simple_action_server.h>
+#include <stroll_bearnav/loadMapAction.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -21,19 +24,26 @@ static const std::string OPENCV_WINDOW = "Image window";
 
 vector<KeyPoint> keypoints_1,keypoints_2; 
 Mat descriptors_1,descriptors_2;
-
+ros::Publisher cmd_pub_;
+typedef actionlib::SimpleActionServer<stroll_bearnav::loadMapAction> Server;
+Server *server;
+geometry_msgs::Twist twist;
+stroll_bearnav::loadMapResult result;
+stroll_bearnav::loadMapFeedback feedback;
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
 ros::Subscriber dist_sub_;
 Mat img,img2;
 string folder;
-
+int numberOfUsedMaps=0;
+bool isRunning=true;
 float mapDistances[1000];
 int mapIndex = 0;
 int numMaps = 1;
 bool stop = false;
-
+int numFeatures;
+float distanceT;
 void loadMaps(string folder)
 {
 	DIR *dir;
@@ -63,50 +73,77 @@ void loadMap(int index)
 		fs["Keypoints"]>>keypoints_1;
 		fs["Descriptors"]>>descriptors_1;
 		fs["Image"]>>img;
-
-		/*:if(keypoints_2.size() > 0 && descriptors_2.rows > 0 && keypoints_2.size() == descriptors_2.rows && img2.rows>0){
-			keypoints_1=keypoints_2;
-			descriptors_1=descriptors_2;
-			img=img2.clone();
-		}*/
+		numFeatures+=keypoints_1.size();
 		fs.release();
+		feedback.fileName=fileName;
+		server->publishFeedback(feedback);
+		numberOfUsedMaps++;
 	}
 }
 
-void distCallback(const std_msgs::Float32::ConstPtr& msg)
+void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 {
-	float distance=msg->data;
-	featureArray.feature.clear();
-	//if the next map is closer than the current one
-	if (fabs(distance-mapDistances[mapIndex]) > fabs(distance-mapDistances[mapIndex+1]))
-	{
-		mapIndex++;
-		loadMap(mapIndex);
-		for(int i=0;i<keypoints_1.size();i++)
-		{
-			feature.x=keypoints_1[i].pt.x;
-			feature.y=keypoints_1[i].pt.y;
-			feature.size=keypoints_1[i].size;
-			feature.angle=keypoints_1[i].angle;
-			feature.response=keypoints_1[i].response;
-			feature.octave=keypoints_1[i].octave;
-			feature.class_id=keypoints_1[i].class_id;
-			feature.descriptor=descriptors_1.row(i);
-			featureArray.feature.push_back(feature);
+	isRunning = true;
+  
+    while(isRunning == true){
+   		usleep(200000);
+    	
+		if(server->isPreemptRequested()){
+     		isRunning = false;
+	 		result.numberOfMaps=numberOfUsedMaps;
+		 	result.distance=distanceT;
+		 	result.features=numFeatures;
+	
+	        server->setPreempted(result);
+	
+			while(true){
+			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+		 	twist.angular.y = twist.angular.x = 0.0;	
+	 	    cmd_pub_.publish(twist);
+   			}
 		}
-		feat_pub_.publish(featureArray);
+  	}
+  
+}
+
+void distCallback(const std_msgs::Float32::ConstPtr& msg)
+{	
+	if(isRunning){
+		distanceT=msg->data;
+		featureArray.feature.clear();
+	//if the next map is closer than the current one
+		if (fabs(distanceT-mapDistances[mapIndex]) > fabs(distanceT-mapDistances[mapIndex+1]))
+		{
+			mapIndex++;
+			loadMap(mapIndex);
+			for(int i=0;i<keypoints_1.size();i++)
+			{
+				feature.x=keypoints_1[i].pt.x;
+				feature.y=keypoints_1[i].pt.y;
+				feature.size=keypoints_1[i].size;
+				feature.angle=keypoints_1[i].angle;
+				feature.response=keypoints_1[i].response;
+				feature.octave=keypoints_1[i].octave;
+				feature.class_id=keypoints_1[i].class_id;
+				feature.descriptor=descriptors_1.row(i);
+				featureArray.feature.push_back(feature);
+			}
+			feat_pub_.publish(featureArray);
+		}
 	}
 }
 
 int main(int argc, char** argv)
 { 
-  loadMaps(folder);
   ros::init(argc, argv, "feature_load");
   ros::NodeHandle nh_;
   ros::param::get("~folder", folder);
-
+  loadMaps(folder);
+  cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
   feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
   dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
+  server = new Server (nh_, "mapping", boost::bind(&executeCB, _1, server), false);
+  server->start();
   ros::spin();
   return 0;
 }
