@@ -227,6 +227,7 @@ int main(int argc, char** argv)
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	ROS_INFO( "%s", fileName.c_str());
+
 	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
 	server->start();
 

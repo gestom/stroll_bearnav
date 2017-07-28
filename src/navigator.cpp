@@ -64,6 +64,15 @@ typedef struct
 	float flipper;
 }SPathElement;
 
+typedef enum
+{
+	IDLE,
+	NAVIGATING,
+	PREEMPTED,
+	COMPLETED
+}ENavigationState;
+
+ENavigationState state = IDLE;
 vector<SPathElement> path;
 
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
@@ -89,12 +98,15 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
  
 void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *serv)
 {
-	done = false;
-
-	while(done == false){
+	state = NAVIGATING;
+	currentPathElement = 0;
+	while(state != IDLE){
 		if(server->isPreemptRequested()){
-			done = true;
+			state = PREEMPTED;
 			server->setPreempted(result);
+		}
+		if (/*server->succeeded()*/ true && state == COMPLETED){
+			server->setSucceeded(result);
 		}
 		usleep(200000);
 	}
@@ -104,7 +116,7 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
-	if(!done){
+	if(state == NAVIGATING){
 		keypoints_2.clear();
 		descriptors_2=Mat();
 
@@ -213,19 +225,17 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		twist.angular.z=path[currentPathElement].angular+differenceRot*0.0001;
 		cmd_pub_.publish(twist);
 	}
+	if (state == COMPLETED || state == PREEMPTED) state = IDLE;
 }
 
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 {
-	ROS_INFO("%i %f %f %f %i",currentPathElement,path[currentPathElement].distance,msg->data,path[currentPathElement].forward,(int)path.size()); 
-	if (path[currentPathElement+1].distance < msg->data)
+	//ROS_INFO("%i %f %f %f %i",currentPathElement,path[currentPathElement].distance,msg->data,path[currentPathElement].forward,(int)path.size()); 
+	if (currentPathElement+2 <= path.size())
 	{
-		if (currentPathElement+2 > path.size())
-		{
-			ROS_INFO("TERMINATE");
-		}else{
-			currentPathElement++;
-		}
+		if (path[currentPathElement+1].distance < msg->data) currentPathElement++;
+	}else{
+		state = COMPLETED;
 	}
 }
 
@@ -238,20 +248,24 @@ int main(int argc, char** argv)
 	a.flipper = 0.0;
 	path.push_back(a); 
 	a.distance = 0.5;
-	a.forward = 0.2;
-	a.angular = 0.05;
+	a.forward = 0.4;
+	a.angular = 0.0;
 	path.push_back(a); 
 	a.distance = 1.0;
 	a.forward = 0.0;
 	a.angular = 0.0;
 	path.push_back(a); 
 	ros::init(argc, argv, "angle_from_features");
-	ros::NodeHandle nh_;
-	image_transport::ImageTransport it_(nh_);
-	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
-	featureSub_ = nh_.subscribe( "/features", 1,featureCallback);
-	loadFeatureSub_ = nh_.subscribe("/load/features", 1,loadFeatureCallback);
-	distSub_=nh_.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
+	ros::NodeHandle nh;
+	image_transport::ImageTransport it_(nh);
+	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
+	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
+	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
+	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
+
+	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
+	server->start();
+
 	ros::spin();
 	return 0;
 }
