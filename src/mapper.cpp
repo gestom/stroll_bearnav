@@ -11,8 +11,8 @@
 #include <std_msgs/Float32.h>
 #include <actionlib/server/simple_action_server.h>
 #include <stroll_bearnav/mapperAction.h>
-#include <stroll_bearnav/Speed.h>
-#include <stroll_bearnav/SpeedArray.h>
+//#include <stroll_bearnav/Speed.h>
+//#include <stroll_bearnav/SpeedArray.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Joy.h>
 
@@ -43,8 +43,8 @@ typedef actionlib::SimpleActionServer<stroll_bearnav::mapperAction> Server;
 Server *server;
 stroll_bearnav::mapperResult result;
 stroll_bearnav::mapperFeedback feedback;
-stroll_bearnav::Speed speed;
-stroll_bearnav::SpeedArray	speedArray;
+//stroll_bearnav::Speed speed;
+//stroll_bearnav::SpeedArray	speedArray;
 char name[100];
 string fileName;
 Mat img,descriptors;
@@ -97,7 +97,7 @@ void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
 
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 {   
-	if(state != IDLE) distanceTravelled=msg->data;
+	distanceTravelled=msg->data;
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -119,12 +119,12 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 {
-	state = MAPPING;
 	fileName=goal->fileName;
+	state = SAVING;
 	while(state == MAPPING || state == SAVING){
-		usleep(200000);
 		if(server->isPreemptRequested())
 		{
+			ROS_INFO("Map complete, flushing maps.");
 			while(state == SAVING) usleep(200000);
 			sprintf(name,"%s_%.3f.yaml",fileName.c_str(),distanceTotalEvent);
 			ROS_INFO("Saving map to %s",name);
@@ -142,6 +142,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 			server->setPreempted(result);
 			state = TERMINATING;
 		}
+		usleep(200000);
 	}
 	while(state == TERMINATING){
 		ROS_INFO("Mapping complete, stopping robot.");
@@ -153,7 +154,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 /*receiving joystick data*/
 void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {     
-	angularSpeed = forwardSpeed*maxAngularSpeed*joy->axes[angularAxis];
+	angularSpeed = maxAngularSpeed*forwardSpeed*0.5*joy->axes[angularAxis];
 	forwardAcceleration = maxForwardAcceleration*joy->axes[linearAxis];;
 	flipperSpeed = maxFlipperSpeed*joy->axes[flipperAxis];
 	if  (joy->buttons[stopButton]) angularSpeed = forwardSpeed = flipperSpeed = 0;
@@ -185,7 +186,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
 			descriptors.push_back(mat);
 		}
-		sprintf(name,"%s/%.3f.yaml",fileName.c_str(),distanceTotalEvent);
+		sprintf(name,"%s_%.3f.yaml",fileName.c_str(),distanceTotalEvent);
 		ROS_INFO("Saving map to %s",name);
 		FileStorage fs(name,FileStorage::WRITE);
 		write(fs, "Image", img);
@@ -226,6 +227,7 @@ int main(int argc, char** argv)
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	ROS_INFO( "%s", fileName.c_str());
+
 	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
 	server->start();
 
@@ -239,9 +241,9 @@ int main(int argc, char** argv)
 			forwardSpeed = fmin(fmax(forwardSpeed,-maxForwardSpeed),maxForwardSpeed);
 			twist.linear.x =  forwardSpeed;
 			angularSpeed = fmin(fmax(angularSpeed,-maxAngularSpeed),maxAngularSpeed);
-			twist.linear.z =  angularSpeed;;
+			twist.angular.z =  angularSpeed;;
 			flipperSpeed = fmin(fmax(flipperSpeed,-maxFlipperSpeed),maxFlipperSpeed);
-			twist.linear.y =  flipperSpeed;
+			twist.angular.y =  flipperSpeed;
 			vel_pub_.publish(twist);
 			if (lastForwardSpeed != forwardSpeed || lastAngularSpeed != angularSpeed || lastFlipperSpeed != flipperSpeed)
 			{

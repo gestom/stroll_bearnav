@@ -13,6 +13,7 @@
 #include <stroll_bearnav/Feature.h>
 #include <stroll_bearnav/Speed.h>
 #include <cmath>
+#include <std_msgs/Float32.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
@@ -34,11 +35,13 @@ Server *server;
 bool done=false;
 stroll_bearnav::navigatorResult result;
 stroll_bearnav::navigatorFeedback feedback;
+
 stroll_bearnav::Speed speed;
 ros::Publisher cmd_pub_;
 ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
 ros::Subscriber speed_sub_;
+
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
 image_transport::Subscriber image_sub_;
@@ -53,7 +56,26 @@ char filename[100];
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature; 
 float ratioMatchConstant = 0.7;
-vector<float> path;
+int currentPathElement = 0;
+
+typedef struct
+{
+	float distance;
+	float forward;
+	float angular;
+	float flipper;
+}SPathElement;
+
+typedef enum
+{
+	IDLE,
+	NAVIGATING,
+	PREEMPTED,
+	COMPLETED
+}ENavigationState;
+
+ENavigationState state = IDLE;
+vector<SPathElement> path;
 
 void speedCallback(const stroll_bearnav::Speed::ConstPtr& msg)
 {
@@ -85,12 +107,15 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
  
 void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *serv)
 {
-	done = false;
-
-	while(done == false){
+	state = NAVIGATING;
+	currentPathElement = 0;
+	while(state != IDLE){
 		if(server->isPreemptRequested()){
-			done = true;
+			state = PREEMPTED;
 			server->setPreempted(result);
+		}
+		if (/*server->succeeded()*/ true && state == COMPLETED){
+			server->setSucceeded(result);
 		}
 		usleep(200000);
 	}
@@ -100,7 +125,7 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
-	if(!done){
+	if(state == NAVIGATING){
 		keypoints_2.clear();
 		descriptors_2=Mat();
 
@@ -203,23 +228,55 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 
 		twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-		twist.linear.x = 0.5; 
+		twist.linear.x = path[currentPathElement].forward; 
 		twist.angular.y = twist.angular.x = 0.0;
 
-		twist.angular.z=differenceRot*0.0001;
+		twist.angular.z=path[currentPathElement].angular+differenceRot*0.0001;
 		cmd_pub_.publish(twist);
+	}
+	if (state == COMPLETED || state == PREEMPTED) state = IDLE;
+}
+
+void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
+{
+	//ROS_INFO("%i %f %f %f %i",currentPathElement,path[currentPathElement].distance,msg->data,path[currentPathElement].forward,(int)path.size()); 
+	if (currentPathElement+2 <= path.size())
+	{
+		if (path[currentPathElement+1].distance < msg->data) currentPathElement++;
+	}else{
+		state = COMPLETED;
 	}
 }
 
 int main(int argc, char** argv)
-{ 
+{
+	SPathElement a;
+	a.distance = 0;
+	a.forward = 0.1;
+	a.angular = 0.0;
+	a.flipper = 0.0;
+	path.push_back(a); 
+	a.distance = 0.5;
+	a.forward = 0.4;
+	a.angular = 0.0;
+	path.push_back(a); 
+	a.distance = 1.0;
+	a.forward = 0.0;
+	a.angular = 0.0;
+	path.push_back(a); 
 	ros::init(argc, argv, "angle_from_features");
-	ros::NodeHandle nh_;
-	image_transport::ImageTransport it_(nh_);
-	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
-	featureSub_ = nh_.subscribe( "/features", 1,featureCallback);
-	loadFeatureSub_ = nh_.subscribe("/load/features", 1,loadFeatureCallback);
+
+	ros::NodeHandle nh;
+	image_transport::ImageTransport it_(nh);
+	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
+	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
+	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
+	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	speed_sub_=nh_.subscribe<stroll_bearnav::Speed>("/speed/data",1,speedCallback);
+  
+	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
+	server->start();
+
 	ros::spin();
 	return 0;
 }

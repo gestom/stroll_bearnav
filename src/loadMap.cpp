@@ -47,6 +47,7 @@ int numMaps = 1;
 bool stop = false;
 int numFeatures;
 float distanceT;
+
 vector<float> path;
 void loadMaps(string folder)
 {
@@ -57,12 +58,15 @@ void loadMaps(string folder)
 		/* print all the files and directories within directory */
 		while ((ent = readdir (dir)) != NULL) 
 		{
-			if (strstr(ent->d_name,"yaml") != NULL) mapDistances[numMaps++] = atof(ent->d_name);
+			if (strstr(ent->d_name,"yaml") != NULL){
+				 /*if (strcmp(ent->d_name,);
+				 mapDistances[numMaps++] = atof(ent->d_name);*/
+			}
 		}
 		closedir (dir);
 	} else {
 		/* could not open directory */
-		perror ("");
+		ROS_ERROR("Could not open folder with maps.");
 	}
 	std::sort(mapDistances, mapDistances + numMaps, std::less<float>());
 	mapDistances[0] = mapDistances[numMaps] = mapDistances[numMaps-1];
@@ -105,26 +109,29 @@ void loadPath(string folder)
 void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 {
 	isRunning = true;
-  
-    while(isRunning == true){
-   		usleep(200000);
-    	
+
+	loadMaps(folder,goal->prefix);
+	stroll_bearnav::loadMapFeedback feedback;
+
+	while(isRunning == true){
+		usleep(200000);
+
 		if(server->isPreemptRequested()){
-     		isRunning = false;
-	 		result.numberOfMaps=numberOfUsedMaps;
-		 	result.distance=distanceT;
-		 	result.features=numFeatures;
-	
-	        server->setPreempted(result);
-	
-			while(true){
-			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-		 	twist.angular.y = twist.angular.x = 0.0;	
-	 	    cmd_pub_.publish(twist);
-   			}
+			isRunning = false;
+			result.numberOfMaps = numberOfUsedMaps;
+			result.distance=distanceT;
+			result.features=numFeatures;
+			
+			server->setPreempted(result);
+
+			/*while(true){
+				twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+				twist.angular.y = twist.angular.x = 0.0;	
+				cmd_pub_.publish(twist);
+			}*/
 		}
-  	}
-  
+	}
+
 }
 
 void distCallback(const std_msgs::Float32::ConstPtr& msg)
