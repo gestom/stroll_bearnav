@@ -71,7 +71,7 @@ int main( int argc, char** argv )
     //std::cout << "image width " << img_1.size().width << " " << '\n';
     int int_start = 5;
     int int_end = 20;
-    if( argc == 6 ){
+    if( argc >= 6 ){
         int_start = atoi(argv[4]);
         int_end = atoi(argv[5]);
     }
@@ -92,9 +92,16 @@ int main( int argc, char** argv )
         dev+= pow(distances_x[k],2);
         mean += distances_x[k];
         int dist = (int) round(distances_x[k]) + shift;
-        for (int i = dist-int_start; i < dist+int_end; ++i) {
+        int increment = 1;
+        for (int i = dist-int_start; i < dist; ++i) {
             if( (i < 0) || (i>length) ) continue;
-            histogram_x[i]++;
+            histogram_x[i] += increment;
+            increment++;
+        }
+        for (int i = dist; i <= dist+int_end; ++i) {
+            if( (i < 0) || (i>length) ) continue;
+            histogram_x[i] += increment;
+            if(increment > 1 ) increment--;
         }
     }
     std::cout << '\n';
@@ -122,7 +129,7 @@ int main( int argc, char** argv )
     std::vector< DMatch > correct_matches;
     std::vector< DMatch > outliers_matches;
     int outlier = dev;
-    if( argc == 7 ){
+    if( argc >= 7 ){
         outlier = atoi(argv[6]);
     }
     for (int n = 0; n < distances_length; n++) {
@@ -184,12 +191,12 @@ int main( int argc, char** argv )
                  outliers_matches, img_matches_bad,  Scalar(255,0,0), Scalar::all(-1),
                  vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 
-
-    //-- Show detected matches
-    imshow( "Good Matches", img_matches );
-    imshow( "Correct Matches", img_matches_good );
-    imshow( "Outliers Matches", img_matches_bad );
-
+    if(atoi(argv[7])) {
+        //-- Show detected matches
+        imshow("Good Matches", img_matches);
+        imshow("Correct Matches", img_matches_good);
+        imshow("Outliers Matches", img_matches_bad);
+    }
    /* for( int i = 0; i < (int)good_matches.size(); i++ )
     { printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
    */
