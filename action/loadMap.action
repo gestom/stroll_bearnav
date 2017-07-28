@@ -2,9 +2,12 @@
 string prefix 
 ---
 #result definition
-int32 numberOfMaps
 float32 distance
-int32 features
+int32 numFeatures
+int32 numMaps
 ---
 #feedback
 string fileName
+int32 numFeatures
+int32 numberOfMaps
+int32 mapIndex

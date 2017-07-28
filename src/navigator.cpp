@@ -11,6 +11,7 @@
 #include <geometry_msgs/Twist.h>
 #include <stroll_bearnav/FeatureArray.h>
 #include <stroll_bearnav/Feature.h>
+#include <stroll_bearnav/Speed.h>
 #include <cmath>
 #include <std_msgs/Float32.h>
 #include <opencv2/opencv.hpp>
@@ -35,9 +36,11 @@ bool done=false;
 stroll_bearnav::navigatorResult result;
 stroll_bearnav::navigatorFeedback feedback;
 
+stroll_bearnav::Speed speed;
 ros::Publisher cmd_pub_;
 ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
+ros::Subscriber speedSub_;
 ros::Subscriber distSub_;
 
 geometry_msgs::Twist twist;
@@ -75,6 +78,13 @@ typedef enum
 ENavigationState state = IDLE;
 vector<SPathElement> path;
 
+void speedCallback(const stroll_bearnav::Speed::ConstPtr& msg)
+{
+	//TODOfor(int i=0;i<msg->velocity.size();i++){
+	//	path.push_back(msg->velocity[i]);
+	//}
+
+}
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
 	ROS_INFO("Received a new map reference map");
@@ -256,13 +266,15 @@ int main(int argc, char** argv)
 	a.angular = 0.0;
 	path.push_back(a); 
 	ros::init(argc, argv, "angle_from_features");
+
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-
+	speedSub_=nh.subscribe<stroll_bearnav::Speed>("/speed/data",1,speedCallback);
+  
 	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
 	server->start();
 
