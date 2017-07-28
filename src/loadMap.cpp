@@ -38,6 +38,7 @@ void loadMaps(string folder)
 {
 	DIR *dir;
 	struct dirent *ent;
+	cout << folder << endl;
 	if ((dir = opendir (folder.c_str())) != NULL) {
 		/* print all the files and directories within directory */
 		while ((ent = readdir (dir)) != NULL) 
@@ -100,13 +101,12 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 
 int main(int argc, char** argv)
 { 
-  loadMaps(folder);
-  ros::init(argc, argv, "feature_load");
-  ros::NodeHandle nh_;
-  ros::param::get("~folder", folder);
-
-  feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
-  dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
-  ros::spin();
-  return 0;
+	ros::init(argc, argv, "feature_load");
+	ros::NodeHandle nh_;
+	ros::param::get("~folder", folder);
+	loadMaps(folder);
+	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
+	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
+	ros::spin();
+	return 0;
 }

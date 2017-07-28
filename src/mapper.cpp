@@ -38,7 +38,6 @@ void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-
 	cv_bridge::CvImagePtr cv_ptr;
 	try
 	{
@@ -58,7 +57,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	if(save){
 		keypoints.clear();
 		descriptors=Mat();
-
 		for(int i=0; i<msg->feature.size();i++){
 
 			keypoint.pt.x=msg->feature[i].x;
@@ -94,8 +92,7 @@ int main(int argc, char** argv)
 	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
 	featureSub_ = nh_.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
 	distEventSub_=nh_.subscribe<std_msgs::Float32>("/event/meter",1,distanceEventCallback);
-	 ROS_INFO( "%s", fileName.c_str());
+	ROS_INFO( "%s", fileName.c_str());
 	ros::spin();
 	return 0;
 }
-

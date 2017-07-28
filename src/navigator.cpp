@@ -46,12 +46,11 @@ stroll_bearnav::Feature feature;
 
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
-	ROS_INFO("Received new map");
+	ROS_INFO("Received a new map");
 	keypoints_1.clear();
 	descriptors_1=Mat();
 
 	for(int i=0; i<msg->feature.size();i++){
-
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
 		keypoint.size=msg->feature[i].size;
@@ -73,8 +72,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	keypoints_2.clear();
 	descriptors_2=Mat();
 
-	for(int i=0; i<msg->feature.size();i++){
-
+	/*reconstitute features from the incoming message*/
+	for(int i=0; i<msg->feature.size();i++)
+	{
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
 		keypoint.size=msg->feature[i].size;
@@ -83,42 +83,32 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypoint.octave=msg->feature[i].octave;
 		keypoint.class_id=msg->feature[i].class_id;
 		keypoints_2.push_back(keypoint);
+
 		int size=msg->feature[i].descriptor.size();
 		Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
 		descriptors_2.push_back(mat);
-
-
 	}
 
 	std::vector< DMatch > good_matches;
-	//	detector->detectAndCompute(img_2, Mat (), keypoints_2,descriptors_2);
-	//detector->detectAndCompute(img_t1, Mat (), keypoints_1,descriptors_1);
-	//printf("Get Time %i\n",timer.getTime());	
-	//	detector->detect(img_t1,keypoints_1);
-	//	detector->detect(img_t2,keypoints_2);
-	//	descriptor->compute(img_t1,keypoints_1,descriptors_1);
-	//	descriptor->compute(img_t2,keypoints_2,descriptors_2);
-	//	drawKeypoints( img_t1, keypoints_1, img_keypoints_1, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-	//	transpose(img_keypoints_1,img_t1);
-	//	imshow("Keypoints 1", img_t1 );
 	float differenceRot=0;
+
+	/*establish correspondences, build the histogram and determine robot heading*/
 	if (keypoints_1.size() >0 && keypoints_2.size() >0){
-		//FlannBasedMatcher matcher;
-		//    DescriptorMatcher matcher(NORM_HAMMING,true);
+
+		/*feature matching*/
 		Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_L2);
 		vector< vector<DMatch> > matches;
-
 		matcher->knnMatch( descriptors_1, descriptors_2, matches, 2);
-		double max_dist = 0; double min_dist = 100;
-		//-- Quick calculation of max and min distances between keypoints
+
+		/*perform ratio matching*/ 
 		good_matches.reserve(matches.size());  
-		for (size_t i = 0; i < matches.size(); ++i)
+		for (size_t i = 0; i < matches.size(); i++)
 		{ 
-			if (matches[i][0].distance < 0.7*matches[i][1].distance) good_matches.push_back(matches[i][0]);
+			if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance) good_matches.push_back(matches[i][0]);
 		}
 
-
-		int num= good_matches.size();
+		/*building histogram*/	
+		int num=good_matches.size();
 		vector<Point2f> matched_points1;
 		vector<Point2f> matched_points2;
 		int count=0,bestc=0;
@@ -130,28 +120,16 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		int differences[num];
 		std::vector< DMatch > best_matches;
 		for (int i = 0;i<numBins;i++) histogram[i] = 0;
-		//ransac 
+	
 		for (int i=0;i<num;i++){
-
+	
 			int idx2=good_matches[i].trainIdx;
 			int idx1=good_matches[i].queryIdx;
 			matched_points1.push_back(keypoints_1[idx1].pt);
 			matched_points2.push_back(keypoints_2[idx2].pt);
+			/*difference in x and y positions*/
 			current.x=round(matched_points1[i].x-matched_points2[i].x);	
 			current.y=round(matched_points1[i].y-matched_points2[i].y);
-			int length=sqrt(pow(matched_points2[i].x-matched_points1[i].x,2)+pow(matched_points2[i].y-matched_points1[i].y,2));
-			//	cout << "Matched_point1 " << matched_points1[i] <<  "Matched_point2 " << matched_points2[i] <<"length: " << length << endl;
-			//	cout <<"Matched points size: " << matched_points1.size() << endl;
-			/*for(int j=0;j<num-1;j++){
-
-			  possible.x=round(matched_points1[j].x-matched_points2[j].x);	
-			  possible.y=round(matched_points1[j].y-matched_points2[j].y);
-			//cout << "Possible" << possiblex << endl;	
-			if (current.x==	possible.x && current.y==possible.y){
-			count++;
-
-			}
-			}*/
 			int difference = current.x;
 			int index = (difference+granularity/2)/granularity + numBins/2;
 			if (fabs(current.y) > 50){
@@ -164,6 +142,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			}
 			count=0; 
 		}
+
+		/*histogram printing*/
 		int max=0;
 		int position=0;
 		printf("Bin: ");
@@ -196,29 +176,25 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 		//cout << "Counter: " << bestc << endl;
 		cout << "Vektor: " << best.x << " " << best.y << endl;
-
 	}
+
 	twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-	twist.linear.x = 0.1; 
+	twist.linear.x = 0.5; 
 	twist.angular.y = twist.angular.x = 0.0;
 
-	// Output modified video stream
 	twist.angular.z=differenceRot*0.0001;
 	cmd_pub_.publish(twist);
 	//image_pub_.publish(cv_ptr->toImageMsg());
-
 }
-
-
 
 int main(int argc, char** argv)
 { 
-  ros::init(argc, argv, "angle_from_features");
-  ros::NodeHandle nh_;
-  image_transport::ImageTransport it_(nh_);
-  cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
-  featureSub_ = nh_.subscribe( "/features", 1,featureCallback);
-  loadFeatureSub_ = nh_.subscribe("/load/features", 1,loadFeatureCallback);
-  ros::spin();
-  return 0;
+	ros::init(argc, argv, "angle_from_features");
+	ros::NodeHandle nh_;
+	image_transport::ImageTransport it_(nh_);
+	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
+	featureSub_ = nh_.subscribe( "/features", 1,featureCallback);
+	loadFeatureSub_ = nh_.subscribe("/load/features", 1,loadFeatureCallback);
+	ros::spin();
+	return 0;
 }
