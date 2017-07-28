@@ -40,7 +40,8 @@ stroll_bearnav::Speed speed;
 ros::Publisher cmd_pub_;
 ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
-ros::Subscriber speed_sub_;
+ros::Subscriber speedSub_;
+ros::Subscriber distSub_;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
@@ -79,9 +80,9 @@ vector<SPathElement> path;
 
 void speedCallback(const stroll_bearnav::Speed::ConstPtr& msg)
 {
-	for(int i=0;i<msg->velocity.size();i++){
-		path.push_back(msg->velocity[i]);
-	}
+	//TODOfor(int i=0;i<msg->velocity.size();i++){
+	//	path.push_back(msg->velocity[i]);
+	//}
 
 }
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
@@ -272,7 +273,7 @@ int main(int argc, char** argv)
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-	speed_sub_=nh_.subscribe<stroll_bearnav::Speed>("/speed/data",1,speedCallback);
+	speedSub_=nh.subscribe<stroll_bearnav::Speed>("/speed/data",1,speedCallback);
   
 	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
 	server->start();

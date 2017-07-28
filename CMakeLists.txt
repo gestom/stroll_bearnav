@@ -54,8 +54,7 @@ find_package(OpenCV REQUIRED)
    FILES
    Feature.msg
    FeatureArray.msg	
-   Speed.msg
-   SpeedArray.msg
+   PathProfile.msg
 )
 
 ## Generate services in the 'srv' folder
