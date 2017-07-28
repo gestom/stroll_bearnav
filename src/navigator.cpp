@@ -12,6 +12,7 @@
 #include <stroll_bearnav/FeatureArray.h>
 #include <stroll_bearnav/Feature.h>
 #include <cmath>
+#include <std_msgs/Float32.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
@@ -33,9 +34,12 @@ Server *server;
 bool done=false;
 stroll_bearnav::navigatorResult result;
 stroll_bearnav::navigatorFeedback feedback;
+
 ros::Publisher cmd_pub_;
 ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
+ros::Subscriber distSub_;
+
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
 image_transport::Subscriber image_sub_;
@@ -50,6 +54,17 @@ char filename[100];
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature; 
 float ratioMatchConstant = 0.7;
+int currentPathElement = 0;
+
+typedef struct
+{
+	float distance;
+	float forward;
+	float angular;
+	float flipper;
+}SPathElement;
+
+vector<SPathElement> path;
 
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
@@ -192,22 +207,51 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 
 		twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-		twist.linear.x = 0.5; 
+		twist.linear.x = path[currentPathElement].forward; 
 		twist.angular.y = twist.angular.x = 0.0;
 
-		twist.angular.z=differenceRot*0.0001;
+		twist.angular.z=path[currentPathElement].angular+differenceRot*0.0001;
 		cmd_pub_.publish(twist);
 	}
 }
 
+void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
+{
+	ROS_INFO("%i %f %f %f %i",currentPathElement,path[currentPathElement].distance,msg->data,path[currentPathElement].forward,(int)path.size()); 
+	if (path[currentPathElement+1].distance < msg->data)
+	{
+		if (currentPathElement+2 > path.size())
+		{
+			ROS_INFO("TERMINATE");
+		}else{
+			currentPathElement++;
+		}
+	}
+}
+
 int main(int argc, char** argv)
-{ 
+{
+	SPathElement a;
+	a.distance = 0;
+	a.forward = 0.1;
+	a.angular = 0.0;
+	a.flipper = 0.0;
+	path.push_back(a); 
+	a.distance = 0.5;
+	a.forward = 0.2;
+	a.angular = 0.05;
+	path.push_back(a); 
+	a.distance = 1.0;
+	a.forward = 0.0;
+	a.angular = 0.0;
+	path.push_back(a); 
 	ros::init(argc, argv, "angle_from_features");
 	ros::NodeHandle nh_;
 	image_transport::ImageTransport it_(nh_);
 	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
 	featureSub_ = nh_.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh_.subscribe("/load/features", 1,loadFeatureCallback);
+	distSub_=nh_.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	ros::spin();
 	return 0;
 }
