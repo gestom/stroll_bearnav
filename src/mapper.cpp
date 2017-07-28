@@ -97,7 +97,7 @@ void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
 
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 {   
-	if(state != IDLE) distanceTravelled=msg->data;
+	distanceTravelled=msg->data;
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)

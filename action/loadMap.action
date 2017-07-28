@@ -1,5 +1,5 @@
 #goal definiton
-int32 numberOfMaps
+string prefix 
 ---
 #result definition
 int32 numberOfMaps

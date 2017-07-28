@@ -26,7 +26,7 @@ double diffM=0;
 bool start=true;
 stroll_bearnav::distanceConfig config;
 stroll_bearnav::Speed speed;
-float distanceThreshold=1;
+float distanceThreshold=0.2;
 
 
 void callback(stroll_bearnav::distanceConfig &config, uint32_t level)

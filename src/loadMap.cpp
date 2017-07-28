@@ -44,7 +44,8 @@ int numMaps = 1;
 bool stop = false;
 int numFeatures;
 float distanceT;
-void loadMaps(string folder)
+
+void loadMaps(string folder,string )
 {
 	DIR *dir;
 	struct dirent *ent;
@@ -53,12 +54,15 @@ void loadMaps(string folder)
 		/* print all the files and directories within directory */
 		while ((ent = readdir (dir)) != NULL) 
 		{
-			if (strstr(ent->d_name,"yaml") != NULL) mapDistances[numMaps++] = atof(ent->d_name);
+			if (strstr(ent->d_name,"yaml") != NULL){
+				 /*if (strcmp(ent->d_name,);
+				 mapDistances[numMaps++] = atof(ent->d_name);*/
+			}
 		}
 		closedir (dir);
 	} else {
 		/* could not open directory */
-		perror ("");
+		ROS_ERROR("Could not open folder with maps.");
 	}
 	std::sort(mapDistances, mapDistances + numMaps, std::less<float>());
 	mapDistances[0] = mapDistances[numMaps] = mapDistances[numMaps-1];
@@ -85,26 +89,29 @@ void loadMap(int index)
 void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 {
 	isRunning = true;
-  
-    while(isRunning == true){
-   		usleep(200000);
-    	
+
+	loadMaps(folder,goal->prefix);
+	stroll_bearnav::loadMapFeedback feedback;
+
+	while(isRunning == true){
+		usleep(200000);
+
 		if(server->isPreemptRequested()){
-     		isRunning = false;
-	 		result.numberOfMaps=numberOfUsedMaps;
-		 	result.distance=distanceT;
-		 	result.features=numFeatures;
-	
-	        server->setPreempted(result);
-	
-			while(true){
-			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-		 	twist.angular.y = twist.angular.x = 0.0;	
-	 	    cmd_pub_.publish(twist);
-   			}
+			isRunning = false;
+			result.numberOfMaps = numberOfUsedMaps;
+			result.distance=distanceT;
+			result.features=numFeatures;
+			
+			server->setPreempted(result);
+
+			/*while(true){
+				twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+				twist.angular.y = twist.angular.x = 0.0;	
+				cmd_pub_.publish(twist);
+			}*/
 		}
-  	}
-  
+	}
+
 }
 
 void distCallback(const std_msgs::Float32::ConstPtr& msg)
@@ -139,7 +146,7 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "feature_load");
 	ros::NodeHandle nh_;
 	ros::param::get("~folder", folder);
-	loadMaps(folder);
+	//loadMaps(folder);
 	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
