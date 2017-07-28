@@ -14,7 +14,6 @@ using namespace std;
 ros::Publisher dist_pub_;
 ros::Publisher distEvent_pub_;
 ros::Subscriber odometrySub;
-ros::Publisher speed_pub_;
 nav_msgs::Odometry odometry;
 std_msgs::Float32 dist_;
 std_msgs::Float32 distEvent_;
@@ -25,7 +24,6 @@ float distanceEvent=0;
 double diffM=0;
 bool start=true;
 stroll_bearnav::distanceConfig config;
-stroll_bearnav::Speed speed;
 float distanceThreshold=1;
 
 
@@ -61,12 +59,6 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
 		dist_.data=totalDist+pointDist+diffM;
 	}
 	dist_pub_.publish(dist_);
-
-	speed.distance=totalDist;
-	speed.forwardSpeed=msg->twist.twist.linear.x;
-	speed.angularSpeed=msg->twist.twist.linear.y;
-	speed.flipper=msg->twist.twist.angular.y;
-	speed_pub_.publish(speed);
 }
 
 
@@ -82,7 +74,6 @@ int main(int argc, char** argv)
 	odometrySub = nh_.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
 	dist_pub_=nh_.advertise<std_msgs::Float32>("/distance",1);
 	distEvent_pub_=nh_.advertise<std_msgs::Float32>("/distance/events",1);
-	speed_pub_=nh_.advertise<stroll_bearnav::Speed>("/distance/data",1);
 	ros::spin();
 	return 0;
 }

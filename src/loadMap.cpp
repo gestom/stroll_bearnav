@@ -8,6 +8,7 @@
 #include <iostream>
 #include <stroll_bearnav/FeatureArray.h>
 #include <stroll_bearnav/Feature.h>
+#include <stroll_bearnav/Speed.h>
 #include <std_msgs/Float32.h>
 #include <geometry_msgs/Twist.h>
 #include <cmath>
@@ -32,8 +33,10 @@ stroll_bearnav::loadMapResult result;
 stroll_bearnav::loadMapFeedback feedback;
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
+stroll_bearnav::Speed speed;
 ros::Publisher feat_pub_;
 ros::Subscriber dist_sub_;
+ros::Publisher speed_pub_;
 Mat img,img2;
 string folder;
 int numberOfUsedMaps=0;
@@ -44,6 +47,7 @@ int numMaps = 1;
 bool stop = false;
 int numFeatures;
 float distanceT;
+vector<float> path;
 void loadMaps(string folder)
 {
 	DIR *dir;
@@ -81,7 +85,23 @@ void loadMap(int index)
 		numberOfUsedMaps++;
 	}
 }
+void loadPath(string folder)
+{	
+	char fileName[1000];
+	sprintf(fileName,"%s.yaml",folder.c_str()); 
+	printf("Loading %s.yaml\n",folder.c_str()); 
+	FileStorage fsp(fileName, FileStorage::READ);
+	path.clear();
+	if(fsp.isOpened()){
+		fsp["Path"]>>path;
+		fsp.release();
+	}
+	for(int i=0;i<path.size();i++){
+	speed.velocity.push_back(path[i]);
+	}
+	speed_pub_.publish(speed);
 
+}
 void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 {
 	isRunning = true;
@@ -140,7 +160,9 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh_;
 	ros::param::get("~folder", folder);
 	loadMaps(folder);
+	loadPath(folder);
 	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
+	speed_pub_ = nh_.advertise<stroll_bearnav::Speed>("speed/data",1);
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
 	server = new Server (nh_, "mapping", boost::bind(&executeCB, _1, server), false);

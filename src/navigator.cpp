@@ -11,6 +11,7 @@
 #include <geometry_msgs/Twist.h>
 #include <stroll_bearnav/FeatureArray.h>
 #include <stroll_bearnav/Feature.h>
+#include <stroll_bearnav/Speed.h>
 #include <cmath>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
@@ -33,9 +34,11 @@ Server *server;
 bool done=false;
 stroll_bearnav::navigatorResult result;
 stroll_bearnav::navigatorFeedback feedback;
+stroll_bearnav::Speed speed;
 ros::Publisher cmd_pub_;
 ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
+ros::Subscriber speed_sub_;
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
 image_transport::Subscriber image_sub_;
@@ -50,7 +53,15 @@ char filename[100];
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature; 
 float ratioMatchConstant = 0.7;
+vector<float> path;
 
+void speedCallback(const stroll_bearnav::Speed::ConstPtr& msg)
+{
+	for(int i=0;i<msg->velocity.size();i++){
+		path.push_back(msg->velocity[i]);
+	}
+
+}
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
 	ROS_INFO("Received a new map reference map");
@@ -208,6 +219,7 @@ int main(int argc, char** argv)
 	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
 	featureSub_ = nh_.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh_.subscribe("/load/features", 1,loadFeatureCallback);
+	speed_sub_=nh_.subscribe<stroll_bearnav::Speed>("/speed/data",1,speedCallback);
 	ros::spin();
 	return 0;
 }
