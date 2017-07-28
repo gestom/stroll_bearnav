@@ -56,7 +56,7 @@ stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 
 /*joystick input parameters - axes that correspond to forward, turning and flipper speeds*/ 
-int terminateButton = 1;
+int stopButton = 1;
 int linearAxis = 1;
 int angularAxis = 0;
 int flipperAxis = 4;
@@ -123,7 +123,8 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	fileName=goal->fileName;
 	while(state == MAPPING || state == SAVING){
 		usleep(200000);
-		if(server->isPreemptRequested()){
+		if(server->isPreemptRequested())
+		{
 			while(state == SAVING) usleep(200000);
 			sprintf(name,"%s_%.3f.yaml",fileName.c_str(),distanceTotalEvent);
 			ROS_INFO("Saving map to %s",name);
@@ -149,18 +150,13 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	forwardSpeed = angularSpeed = flipperSpeed = 0.0;
 }
 
-void speedCallback(const stroll_bearnav::Speed::ConstPtr& msg)
-{
-
-
-}
- 
 /*receiving joystick data*/
 void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {     
 	angularSpeed = forwardSpeed*maxAngularSpeed*joy->axes[angularAxis];
 	forwardAcceleration = maxForwardAcceleration*joy->axes[linearAxis];;
 	flipperSpeed = maxFlipperSpeed*joy->axes[flipperAxis];
+	if  (joy->buttons[stopButton]) angularSpeed = forwardSpeed = flipperSpeed = 0;
 } 
 
 /*flipper position -- for stair traverse*/
@@ -196,7 +192,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		write(fs, "Keypoints", keypoints);
 		write(fs, "Descriptors",descriptors);
 		fs.release();
-		state=MAPPING;
+		state = MAPPING;
 		feedback.fileName=name;
 		server->publishFeedback(feedback);
 	}
@@ -213,7 +209,7 @@ int main(int argc, char** argv)
 	nh.param("axis_linear", linearAxis, 1);
 	nh.param("axis_angular", angularAxis, 0);
 	nh.param("axis_flipper", flipperAxis, 4);
-	nh.param("terminateButton", terminateButton, 1);
+	nh.param("stopButton", stopButton, 1);
 
 	nh.param("angularSpeed", maxAngularSpeed, 0.2);
 	nh.param("forwardSpeed", maxForwardSpeed, 0.2);
