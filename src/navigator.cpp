@@ -11,7 +11,7 @@
 #include <geometry_msgs/Twist.h>
 #include <stroll_bearnav/FeatureArray.h>
 #include <stroll_bearnav/Feature.h>
-#include <stroll_bearnav/Speed.h>
+#include <stroll_bearnav/PathProfile.h>
 #include <cmath>
 #include <std_msgs/Float32.h>
 #include <opencv2/opencv.hpp>
@@ -36,7 +36,6 @@ bool done=false;
 stroll_bearnav::navigatorResult result;
 stroll_bearnav::navigatorFeedback feedback;
 
-stroll_bearnav::Speed speed;
 ros::Publisher cmd_pub_;
 ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
@@ -78,13 +77,21 @@ typedef enum
 ENavigationState state = IDLE;
 vector<SPathElement> path;
 
-void speedCallback(const stroll_bearnav::Speed::ConstPtr& msg)
+void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 {
-	//TODOfor(int i=0;i<msg->velocity.size();i++){
-	//	path.push_back(msg->velocity[i]);
-	//}
-
+	SPathElement a;
+	path.clear();
+	for (int i = 0;i<msg->distance.size();i++)
+	{
+		a.distance = msg->distance[i];
+		a.forward = msg->forwardSpeed[i];
+		a.angular = msg->angularSpeed[i];
+		a.flipper = msg->flipper[i];
+		path.push_back(a);
+	}
+	for (int i = 0;i<path.size();i++) printf("%.3f %.3f %.3f %.3f\n",path[i].distance,path[i].forward,path[i].angular,path[i].flipper);
 }
+
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
 	ROS_INFO("Received a new map reference map");
@@ -151,6 +158,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		float differenceRot=0;
 
 		/*establish correspondences, build the histogram and determine robot heading*/
+		int count=0,bestc=0;
 		if (keypoints_1.size() >0 && keypoints_2.size() >0){
 
 			/*feature matching*/
@@ -169,10 +177,11 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int num=good_matches.size();
 			vector<Point2f> matched_points1;
 			vector<Point2f> matched_points2;
-			int count=0,bestc=0;
 			Point2f current;
 			Point2f best, possible;
 			int numBins = 21;
+			count=0;
+			bestc=0;
 			int histogram[numBins];
 			int granularity = 20;
 			int differences[num];
@@ -225,22 +234,26 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			}
 			differenceRot=sum/count;
 
-			cout << "Vektor: " << best.x << " " << best.y << endl;
+			cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
+		if (path.size()>currentPathElement)
+		{
+			//ROS_INFO("MOVE %f",path[currentPathElement].forward);
+			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+			twist.linear.x = path[currentPathElement].forward; 
+			twist.angular.y = twist.angular.x = 0.0;
 
-		twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-		twist.linear.x = path[currentPathElement].forward; 
-		twist.angular.y = twist.angular.x = 0.0;
-
-		twist.angular.z=path[currentPathElement].angular+differenceRot*0.0001;
-		cmd_pub_.publish(twist);
+			twist.angular.z=path[currentPathElement].angular;
+			if (count>3) twist.angular.z+=differenceRot*0.0001*0;
+			cmd_pub_.publish(twist);
+		}
 	}
 	if (state == COMPLETED || state == PREEMPTED) state = IDLE;
 }
 
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 {
-	//ROS_INFO("%i %f %f %f %i",currentPathElement,path[currentPathElement].distance,msg->data,path[currentPathElement].forward,(int)path.size()); 
+	//if (path.size() >0) ROS_INFO("%i %f %f %f %i",currentPathElement,path[currentPathElement].distance,msg->data,path[currentPathElement].forward,(int)path.size()); 
 	if (currentPathElement+2 <= path.size())
 	{
 		if (path[currentPathElement+1].distance < msg->data) currentPathElement++;
@@ -251,20 +264,6 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 
 int main(int argc, char** argv)
 {
-	SPathElement a;
-	a.distance = 0;
-	a.forward = 0.1;
-	a.angular = 0.0;
-	a.flipper = 0.0;
-	path.push_back(a); 
-	a.distance = 0.5;
-	a.forward = 0.4;
-	a.angular = 0.0;
-	path.push_back(a); 
-	a.distance = 1.0;
-	a.forward = 0.0;
-	a.angular = 0.0;
-	path.push_back(a); 
 	ros::init(argc, argv, "angle_from_features");
 
 	ros::NodeHandle nh;
@@ -273,7 +272,7 @@ int main(int argc, char** argv)
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-	speedSub_=nh.subscribe<stroll_bearnav::Speed>("/speed/data",1,speedCallback);
+	speedSub_=nh.subscribe<stroll_bearnav::PathProfile>("/load/path",1,pathCallback);
   
 	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
 	server->start();

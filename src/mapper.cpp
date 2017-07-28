@@ -153,7 +153,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 
 /*receiving joystick data*/
 void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
-{     
+{    
 	angularSpeed = maxAngularSpeed*forwardSpeed*0.5*joy->axes[angularAxis];
 	forwardAcceleration = maxForwardAcceleration*joy->axes[linearAxis];;
 	flipperSpeed = maxFlipperSpeed*joy->axes[flipperAxis];
@@ -230,13 +230,10 @@ int main(int argc, char** argv)
 
 	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
 	server->start();
-
+	path.clear();
 	while (ros::ok()){
 		if (state == MAPPING)
 		{
-			lastForwardSpeed = forwardSpeed;
-			lastAngularSpeed = angularSpeed;
-			lastFlipperSpeed = flipperSpeed;
 			forwardSpeed += forwardAcceleration;
 			forwardSpeed = fmin(fmax(forwardSpeed,-maxForwardSpeed),maxForwardSpeed);
 			twist.linear.x =  forwardSpeed;
@@ -251,7 +248,11 @@ int main(int argc, char** argv)
 				path.push_back(forwardSpeed);
 				path.push_back(angularSpeed);
 				path.push_back(flipperSpeed);
+				printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
 			}
+			lastForwardSpeed = forwardSpeed;
+			lastAngularSpeed = angularSpeed;
+			lastFlipperSpeed = flipperSpeed;
 		}
 		if (state == TERMINATING){
 			twist.linear.x = twist.angular.z = twist.angular.y = 0;
