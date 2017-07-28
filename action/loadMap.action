@@ -1,0 +1,10 @@
+#goal definiton
+string prefix 
+---
+#result definition
+int32 numberOfMaps
+float32 distance
+int32 features
+---
+#feedback
+string fileName

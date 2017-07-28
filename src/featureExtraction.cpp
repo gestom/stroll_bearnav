@@ -12,12 +12,13 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
+#include <dynamic_reconfigure/server.h>
+#include <stroll_bearnav/featureExtractionConfig.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-Ptr<SURF> detector = SURF::create(100);
 vector<KeyPoint> keypoints_1; 
 Mat descriptors_1;
 Mat img_matches, img_t1,img_t2,img_matchestr,img_keypoints_1,img_3;
@@ -27,6 +28,16 @@ image_transport::Publisher image_pub_;
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
+int surfThreshold = 1000;
+Ptr<SURF> detector = SURF::create(surfThreshold);
+
+void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
+{
+	surfThreshold=config.thresholdParam;
+	//ratioMatchConstant=config.ratioMatchConstant;
+	//TODOdetector->changeHessianBla(surfThreshold);
+	ROS_DEBUG("Changing feature featureExtraction to %d", surfThreshold);
+}
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -42,9 +53,9 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		return;
 	}
 	img_t1=cv_ptr->image;
+
 	detector->detectAndCompute(img_t1, Mat (), keypoints_1,descriptors_1);
 	featureArray.feature.clear();	
-
 	for(int i=0;i<keypoints_1.size();i++){
 		feature.x=keypoints_1[i].pt.x;
 		feature.y=keypoints_1[i].pt.y;
@@ -62,14 +73,17 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 int maina(int argc, char** argv)
 { 
-  ros::init(argc, argv, "feature_extraction");
-  ros::NodeHandle nh_;
-  image_transport::ImageTransport it_(nh_);
-  feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
-  image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
-  image_pub_ = it_.advertise("/image_converter/output_video", 1);
-  ros::spin();
-  return 0;
+	ros::init(argc, argv, "feature_extraction");
+	ros::NodeHandle nh_;
+	image_transport::ImageTransport it_(nh_);
+	dynamic_reconfigure::Server<stroll_bearnav::featureExtractionConfig> server;
+	dynamic_reconfigure::Server<stroll_bearnav::featureExtractionConfig>::CallbackType f = boost::bind(&callback, _1, _2);
+	server.setCallback(f);
+	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
+	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
+	image_pub_ = it_.advertise("/image_converter/output_video", 1);
+	ros::spin();
+	return 0;
 }
 /*
  * @file SURF_FlannMatcher
