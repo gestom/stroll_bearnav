@@ -57,6 +57,7 @@ stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature; 
 float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
+int minGoodFeatures = 3;
 
 typedef struct
 {
@@ -244,7 +245,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			twist.angular.y = twist.angular.x = 0.0;
 
 			twist.angular.z=path[currentPathElement].angular;
-			if (count>3) twist.angular.z+=differenceRot*0.0001*0;
+			if (count>minGoodFeatures) twist.angular.z+=differenceRot*0.0001;
 			cmd_pub_.publish(twist);
 		}
 	}
