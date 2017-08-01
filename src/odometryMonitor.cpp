@@ -17,47 +17,48 @@ ros::Subscriber odometrySub;
 nav_msgs::Odometry odometry;
 std_msgs::Float32 dist_;
 std_msgs::Float32 distEvent_;
-double pointDist=0;
-float totalDist=0;
-double startx,starty,currentx,currenty,pointx,pointy;
-float distanceEvent=0;
-double diffM=0;
-bool start=true;
 stroll_bearnav::distanceConfig config;
 stroll_bearnav::Speed speed;
+
+int eventCounter=0;
+float totalDist=0;
+double currentX,currentY;
+double lastX=FLT_MAX;
+double lastY=FLT_MAX;
+float distanceEvent=0;
 float distanceThreshold=0.2;
 
+/*allow the distanceThreshold to be changed online*/
 void callback(stroll_bearnav::distanceConfig &config, uint32_t level)
-{
+{	
+	 eventCounter = eventCounter*distanceThreshold/config.distance_param;
 	 distanceThreshold=config.distance_param;
  	 ROS_INFO("Changing distance threshold: %f", config.distance_param);
 }
 
 void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
-	if(start){
-		pointx=msg->pose.pose.position.x;
-		pointy=msg->pose.pose.position.y;
-		start=false;	
+	/*if lastX and lastY are not initialized*/
+	if (lastX == FLT_MAX && lastY == FLT_MAX){
+		lastX=msg->pose.pose.position.x;
+		lastY=msg->pose.pose.position.y;
 	}	
-	currentx=msg->pose.pose.position.x;
-	currenty=msg->pose.pose.position.y;
-	pointDist = sqrt(pow(currentx-pointx,2)+pow(currenty-pointy,2));
 
+	/*calculate eucledian distance from the last odometric position*/
+	currentX=msg->pose.pose.position.x;
+	currentY=msg->pose.pose.position.y;
+	totalDist += sqrt(pow(currentX-lastX,2)+pow(currentY-lastY,2));
+	lastX=currentX;
+	lastY=currentY;
 
-	if(pointDist+diffM>distanceThreshold){
-		totalDist+=pointDist+diffM;
-		diffM=pointDist+diffM-distanceThreshold;
-		pointx=currentx;
-		pointy=currenty;
-		distanceEvent=totalDist;
-		distEvent_.data=distanceEvent;
+	/*if it exceeds distanceThreshold from the last send position, then send an event*/
+	if (totalDist-eventCounter*distanceThreshold > distanceThreshold)
+	{
+		eventCounter++;
+		distEvent_.data=totalDist;
 		distEvent_pub_.publish(distEvent_);
-
-		dist_.data=totalDist;
-	}  else {
-		dist_.data=totalDist+pointDist+diffM;
-	}
+	} 
+	dist_.data=totalDist;
 	dist_pub_.publish(dist_);
 }
 
