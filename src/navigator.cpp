@@ -24,15 +24,9 @@ using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-Ptr<SURF> detector = SURF::create(100);
-bool start=true;
-int tenCounter=10;
-vector<KeyPoint> keypoints_1, keypoints_2,keypoints_3;
-Mat descriptors_1, descriptors_2,descriptors_3;
-Mat img_matches, img_t1,img_t2,img_matchestr,img_keypoints_1,img_3;
+/* Action server */
 typedef actionlib::SimpleActionServer<stroll_bearnav::navigatorAction> Server;
 Server *server;
-bool done=false;
 stroll_bearnav::navigatorResult result;
 stroll_bearnav::navigatorFeedback feedback;
 
@@ -41,23 +35,26 @@ ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
 ros::Subscriber speedSub_;
 ros::Subscriber distSub_;
+image_transport::Subscriber image_sub_;
+image_transport::Publisher image_pub_;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
-image_transport::Subscriber image_sub_;
-image_transport::Publisher image_pub_;
+
+/* Image features parameters */
+Ptr<SURF> detector = SURF::create(100);
+vector<KeyPoint> keypoints_1, keypoints_2;
+Mat descriptors_1, descriptors_2;
 Mat img_2;
 KeyPoint keypoint,keypoint2;
-double pointDist;
-int totalDist;
-double startx,starty,currentx,currenty,pointx,pointy;
-int meter=-1;
-char filename[100];
-stroll_bearnav::FeatureArray featureArray;
-stroll_bearnav::Feature feature; 
 float ratioMatchConstant = 0.7;
-int currentPathElement = 0;
 int minGoodFeatures = 0;
+
+/* Feature message */
+stroll_bearnav::FeatureArray featureArray;
+stroll_bearnav::Feature feature;
+ 
+int currentPathElement = 0;
 
 typedef struct
 {
@@ -101,7 +98,7 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	ROS_INFO("Received a new map reference map");
 	keypoints_1.clear();
 	descriptors_1=Mat();
-	
+
 	for(int i=0; i<msg->feature.size();i++){
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
@@ -226,7 +223,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					position=i;
 				}
 			}
-	
+
 			/* rotation between features based on histogram voting */
 			int rotation=(position-numBins/2)*granularity;
 			printf("\n");
@@ -245,7 +242,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 			cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
-		
+
 		if (path.size()>currentPathElement)
 		{
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
