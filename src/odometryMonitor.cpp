@@ -6,7 +6,6 @@
 #include <std_msgs/Float32.h>
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/distanceConfig.h>
-#include <stroll_bearnav/Speed.h>
 
 
 using namespace std;
@@ -18,8 +17,8 @@ nav_msgs::Odometry odometry;
 std_msgs::Float32 dist_;
 std_msgs::Float32 distEvent_;
 stroll_bearnav::distanceConfig config;
-stroll_bearnav::Speed speed;
 
+/* distance parameters */
 int eventCounter=0;
 float totalDist=0;
 double currentX,currentY;
@@ -67,6 +66,8 @@ int main(int argc, char** argv)
 { 
 	ros::init(argc, argv, "distance");
 	ros::NodeHandle nh_;
+
+	//initiate action server
 	dynamic_reconfigure::Server<stroll_bearnav::distanceConfig> server;
 	dynamic_reconfigure::Server<stroll_bearnav::distanceConfig>::CallbackType f;
 	f = boost::bind(&callback, _1, _2);
