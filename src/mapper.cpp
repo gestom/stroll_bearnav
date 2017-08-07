@@ -213,8 +213,8 @@ int main(int argc, char** argv)
 	nh.param("stopButton", stopButton, 1);
 
 	nh.param("angularSpeed", maxAngularSpeed, 0.2);
-	nh.param("forwardSpeed", maxForwardSpeed, 0.2);
-	nh.param("flipperSpeed", maxFlipperSpeed, 0.2);
+	nh.param("forwardSpeed", maxForwardSpeed, 0.8);
+	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
 	vel_pub_ = nh.advertise<geometry_msgs::Twist>("cmd", 1);
@@ -248,7 +248,7 @@ int main(int argc, char** argv)
 				path.push_back(forwardSpeed);
 				path.push_back(angularSpeed);
 				path.push_back(flipperSpeed);
-				//printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
+				printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
 			}
 			lastForwardSpeed = forwardSpeed;
 			lastAngularSpeed = angularSpeed;

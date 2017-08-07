@@ -57,7 +57,7 @@ stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature; 
 float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
-int minGoodFeatures = 3;
+int minGoodFeatures = 0;
 
 typedef struct
 {
