@@ -34,17 +34,15 @@ ros::Subscriber distEventSub_;
 ros::Subscriber distSub_;
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
-float distanceTotalEvent=0;
-float distanceTravelled=0;
-float flipperPosition=0;
 EMappingState state = IDLE;
 
+/* Action server parameters */
 typedef actionlib::SimpleActionServer<stroll_bearnav::mapperAction> Server;
 Server *server;
 stroll_bearnav::mapperResult result;
 stroll_bearnav::mapperFeedback feedback;
-//stroll_bearnav::Speed speed;
-//stroll_bearnav::SpeedArray	speedArray;
+
+/* Image feature variables */
 char name[100];
 string fileName;
 Mat img,descriptors;
@@ -52,6 +50,8 @@ Mat descriptor;
 vector<KeyPoint> keypoints;
 vector<float> path;
 KeyPoint keypoint;
+
+/* Feature messages */
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 
@@ -82,11 +82,15 @@ double angularSpeed = 0;
 double lastForwardSpeed = 0;
 double lastFlipperSpeed = 0;
 double lastAngularSpeed = 0;
+float distanceTotalEvent=0;
+float distanceTravelled=0;
+float flipperPosition=0;
 
 
 void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg);
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg);
 
+/* Total distance travelled recieved from the event */ 
 void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
 {   
 	if(state == MAPPING){
@@ -94,12 +98,13 @@ void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
 		state = SAVING;
 	}
 }
-
+/*distance currently travelled */
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 {   
 	distanceTravelled=msg->data;
 }
 
+/*Assign current image to variable */
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 	if(state != IDLE){
@@ -116,12 +121,14 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		img=cv_ptr->image;
 	}	
 }
-
+/*Action server */
 void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 {
 	fileName=goal->fileName;
 	state = SAVING;
 	while(state == MAPPING || state == SAVING){
+
+		/*on preempt request end mapping and save current map */
 		if(server->isPreemptRequested())
 		{
 			ROS_INFO("Map complete, flushing maps.");
@@ -144,6 +151,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 		}
 		usleep(200000);
 	}
+	/* stop robot at the end of mapping*/
 	while(state == TERMINATING){
 		ROS_INFO("Mapping complete, stopping robot.");
 		usleep(200000);
@@ -166,6 +174,7 @@ void flipperCallback(const std_msgs::Float32::ConstPtr& msg)
 	flipperPosition = msg->data;   
 }
 
+/* save features and image recieved from camera as a local map*/
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == SAVING){
@@ -206,12 +215,13 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
 	ros::param::get("~fileName", fileName);
-
+	/* joystick params */
 	nh.param("axis_linear", linearAxis, 1);
 	nh.param("axis_angular", angularAxis, 0);
 	nh.param("axis_flipper", flipperAxis, 4);
 	nh.param("stopButton", stopButton, 1);
 
+	/* robot speed limits */
 	nh.param("angularSpeed", maxAngularSpeed, 0.2);
 	nh.param("forwardSpeed", maxForwardSpeed, 0.8);
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
@@ -227,13 +237,15 @@ int main(int argc, char** argv)
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	ROS_INFO( "%s", fileName.c_str());
-
+	
+	/* Initiate action server */
 	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
 	server->start();
+
 	path.clear();
 	while (ros::ok()){
 		if (state == MAPPING)
-		{
+		{   /* speed limits */
 			forwardSpeed += forwardAcceleration;
 			forwardSpeed = fmin(fmax(forwardSpeed,-maxForwardSpeed),maxForwardSpeed);
 			twist.linear.x =  forwardSpeed;
@@ -242,6 +254,8 @@ int main(int argc, char** argv)
 			flipperSpeed = fmin(fmax(flipperSpeed,-maxFlipperSpeed),maxFlipperSpeed);
 			twist.angular.y =  flipperSpeed;
 			vel_pub_.publish(twist);
+
+			/* saving path profile */
 			if (lastForwardSpeed != forwardSpeed || lastAngularSpeed != angularSpeed || lastFlipperSpeed != flipperSpeed)
 			{
 				path.push_back(distanceTravelled);
