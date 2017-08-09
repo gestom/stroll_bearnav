@@ -23,29 +23,34 @@ using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-vector<KeyPoint> keypoints_1,keypoints_2; 
-Mat descriptors_1,descriptors_2;
 ros::Publisher cmd_pub_;
-typedef actionlib::SimpleActionServer<stroll_bearnav::loadMapAction> Server;
-Server *server;
-geometry_msgs::Twist twist;
-stroll_bearnav::loadMapResult result;
-stroll_bearnav::loadMapFeedback feedback;
-stroll_bearnav::FeatureArray featureArray;
-stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
 ros::Subscriber dist_sub_;
 ros::Publisher pathPub;
+
+/* Action server */
+typedef actionlib::SimpleActionServer<stroll_bearnav::loadMapAction> Server;
+Server *server;
+stroll_bearnav::loadMapResult result;
+stroll_bearnav::loadMapFeedback feedback;
+
+/* Feature messages */
+stroll_bearnav::FeatureArray featureArray;
+stroll_bearnav::Feature feature;
+
+/* map variables */
 Mat img,img2;
+vector<KeyPoint> keypoints_1,keypoints_2; 
+Mat descriptors_1,descriptors_2;
 string folder;
 int numberOfUsedMaps=0;
 float mapDistances[1000];
 int mapIndex = 0;
 int numMaps = 1;
-bool stop = false;
 int numFeatures;
 float distanceT;
 string prefix;
+bool stop = false;
 
 typedef enum
 {
@@ -55,6 +60,8 @@ typedef enum
 }EMapLoaderState;
 EMapLoaderState state = IDLE;
 
+/* Loads all maps from a folder 
+   returns number of loaded maps  */
 int loadMaps()
 {
 	numMaps = 0;
@@ -76,15 +83,17 @@ int loadMaps()
 		/* could not open directory */
 		ROS_ERROR("Could not open folder %s with maps.",folder.c_str());
 	}
+
+	/* send feedback to action server */
 	feedback.fileName =  "";
 	feedback.numberOfMaps = numMaps;
 	server->publishFeedback(feedback);
-//	ROS_INFO("There are %i maps present.",numMaps);
+
 	std::sort(mapDistances, mapDistances + numMaps, std::less<float>());
 	mapDistances[0] = mapDistances[numMaps] = mapDistances[numMaps-1];
 	return numMaps;
 }
-
+/* load map based on distance travelled  */
 void loadMap(int index)
 {
 	char fileName[1000];
@@ -101,10 +110,12 @@ void loadMap(int index)
 		feedback.fileName=fileName;
 		feedback.numFeatures=keypoints_1.size();
 		feedback.mapIndex=index+1;
+		/* feedback returns name of loaded map, number of features in it and index */
 		server->publishFeedback(feedback);
 	}
 }
-
+/* load path profile 
+   returns size of path profile */
 int loadPath()
 {	
 	char fileName[1000];
@@ -127,12 +138,14 @@ int loadPath()
 	pathPub.publish(pathProfile);
 	return path.size();
 }
-
+/* Action server */
 void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 {
 
 	stroll_bearnav::loadMapFeedback feedback;
+	
 	prefix = goal->prefix;
+	
 	if (loadMaps() > 0 && loadPath() > 0){
 			 state = ACTIVE;
 	}else{
@@ -141,9 +154,11 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 		result.numMaps=0;
 		server->setAborted(result);
 	}
+	/* server returns distance travelled, total number of features
+	   and number of loaded map on preempt request or at the end of path */
 	while(state != IDLE){
 		usleep(200000);
-
+		
 		if(server->isPreemptRequested()){
 			result.distance=distanceT;
 			result.numFeatures=numFeatures;
@@ -183,7 +198,10 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 				feature.descriptor=descriptors_1.row(i);
 				featureArray.feature.push_back(feature);
 			}
+			/* publish loaded map */
 			feat_pub_.publish(featureArray);
+
+			/* reached end */
 			if (mapIndex+1 >= numMaps) state = COMPLETE; 
 		}
 	}
@@ -198,6 +216,7 @@ int main(int argc, char** argv)
 	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/load/path",1);
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
+	/* Initiate action server */
 	server = new Server (nh_, "loader", boost::bind(&executeCB, _1, server), false);
 	server->start();
 	ros::spin();
