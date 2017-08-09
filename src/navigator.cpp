@@ -57,7 +57,8 @@ stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature; 
 float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
-int minGoodFeatures = 0;
+int minGoodFeatures = 2;
+float differenceRot=0;
 
 typedef struct
 {
@@ -156,7 +157,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 
 		std::vector< DMatch > good_matches;
-		float differenceRot=0;
 
 		/*establish correspondences, build the histogram and determine robot heading*/
 		int count=0,bestc=0;
@@ -235,9 +235,10 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			}
 			differenceRot=sum/count;
 
-			cout << "Vektor: " << count << " " << differenceRot << endl;
+			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
-		if (path.size()>currentPathElement)
+		if (count<=minGoodFeatures) differenceRot = 0;
+/*		if (path.size()>currentPathElement)
 		{
 			//ROS_INFO("MOVE %f",path[currentPathElement].forward);
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
@@ -247,7 +248,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			twist.angular.z=path[currentPathElement].angular;
 			if (count>minGoodFeatures) twist.angular.z+=differenceRot*0.0001;
 			cmd_pub_.publish(twist);
-		}
+		}*/
 	}
 	if (state == COMPLETED || state == PREEMPTED) state = IDLE;
 }
@@ -260,6 +261,19 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		if (path[currentPathElement+1].distance < msg->data) currentPathElement++;
 	}else{
 		state = COMPLETED;
+	}
+	if (state == NAVIGATING){
+		if (path.size()>currentPathElement)
+		{
+			//ROS_INFO("MOVE %f",path[currentPathElement].forward);
+			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+			twist.linear.x = path[currentPathElement].forward; 
+			twist.angular.y = twist.angular.x = 0.0;
+
+			twist.angular.z=path[currentPathElement].angular;
+			twist.angular.z+=differenceRot*0.0001;
+			cmd_pub_.publish(twist);
+		}
 	}
 }
 

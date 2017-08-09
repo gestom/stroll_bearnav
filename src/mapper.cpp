@@ -103,6 +103,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 	if(state != IDLE){
+		ROS_INFO("Catching image");
 		cv_bridge::CvImagePtr cv_ptr;
 		try
 		{
@@ -114,6 +115,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 			return;
 		}
 		img=cv_ptr->image;
+		ROS_INFO("Image caought");
 	}	
 }
 
@@ -158,6 +160,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	forwardAcceleration = maxForwardAcceleration*joy->axes[linearAxis];;
 	flipperSpeed = maxFlipperSpeed*joy->axes[flipperAxis];
 	if  (joy->buttons[stopButton]) angularSpeed = forwardSpeed = flipperSpeed = 0;
+	ROS_INFO("Joystick pressed");
 } 
 
 /*flipper position -- for stair traverse*/
@@ -189,7 +192,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		sprintf(name,"%s_%.3f.yaml",fileName.c_str(),distanceTotalEvent);
 		ROS_INFO("Saving map to %s",name);
 		FileStorage fs(name,FileStorage::WRITE);
-		write(fs, "Image", img);
+		//write(fs, "Image", img);
 		write(fs, "Keypoints", keypoints);
 		write(fs, "Descriptors",descriptors);
 		fs.release();
@@ -213,7 +216,7 @@ int main(int argc, char** argv)
 	nh.param("stopButton", stopButton, 1);
 
 	nh.param("angularSpeed", maxAngularSpeed, 0.2);
-	nh.param("forwardSpeed", maxForwardSpeed, 0.8);
+	nh.param("forwardSpeed", maxForwardSpeed, 0.3);
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
@@ -242,6 +245,7 @@ int main(int argc, char** argv)
 			flipperSpeed = fmin(fmax(flipperSpeed,-maxFlipperSpeed),maxFlipperSpeed);
 			twist.angular.y =  flipperSpeed;
 			vel_pub_.publish(twist);
+			ROS_INFO("Velocity published");
 			if (lastForwardSpeed != forwardSpeed || lastAngularSpeed != angularSpeed || lastFlipperSpeed != flipperSpeed)
 			{
 				path.push_back(distanceTravelled);
