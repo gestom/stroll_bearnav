@@ -32,11 +32,21 @@ Mat descriptors_1;
 Mat img_1;
 Ptr<SURF> detector = SURF::create(surfThreshold);
 
+/* adaptive threshold parameters */
+bool adaptThreshold;
+int targetKeypoints;
+int gain;
+
 /* dynamic reconfigure of surf threshold */
 void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 {
-	surfThreshold=config.thresholdParam;
-	ROS_DEBUG("Changing feature featureExtraction to %d", surfThreshold);
+    adaptThreshold = config.adaptThreshold;
+    if (!adaptThreshold) surfThreshold=config.thresholdParam;
+    targetKeypoints = config.targetKeypoints;
+    gain = config.gain;
+
+    detector->setHessianThreshold(surfThreshold);
+    ROS_DEBUG("Changing feature featureExtraction to %d, keypoints %i", surfThreshold, targetKeypoints);
 }
 
 /* Extract features from image recieved from camera */
@@ -88,6 +98,13 @@ int main(int argc, char** argv)
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
 	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
 	image_pub_ = it_.advertise("/image_converter/output_video", 1);
+
+    //adaptive surf threshold - trying to target a given number of keypoints
+    if (adaptThreshold){
+            surfThreshold += gain*(targetKeypoints - keypoints_1.size()); // p regulator
+            detector->setHessianThreshold(surfThreshold);
+    }
+
 	ros::spin();
 	return 0;
 }
