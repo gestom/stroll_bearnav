@@ -58,10 +58,10 @@ find_package(OpenCV REQUIRED)
 )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
- #  FILES
- #  pathName.srv
-# )
+add_service_files(
+  FILES
+  SetDistance.srv
+)
 
 ## Generate actions in the 'action' folder
  add_action_files(
@@ -156,8 +156,8 @@ add_executable(navigator_node src/navigator.cpp)
 add_dependencies(feature_extraction_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(feature_testing_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(map_preprocessor_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(odometry_monitor_node ${PROJECT_NAME}_gencfg  ${catkin_EXPORTED_TARGETS})
+add_dependencies(map_preprocessor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+add_dependencies(odometry_monitor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg  ${catkin_EXPORTED_TARGETS})
 add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
