@@ -25,11 +25,6 @@ using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-/* Action server */
-typedef actionlib::SimpleActionServer<stroll_bearnav::navigatorAction> Server;
-Server *server;
-stroll_bearnav::navigatorResult result;
-stroll_bearnav::navigatorFeedback feedback;
 
 ros::Publisher cmd_pub_;
 ros::Subscriber featureSub_;
@@ -38,6 +33,16 @@ ros::Subscriber speedSub_;
 ros::Subscriber distSub_;
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
+
+/* Service for set/reset distance */
+stroll_bearnav::SetDistance srv;
+ros::ServiceClient client;
+
+/* Action server */
+typedef actionlib::SimpleActionServer<stroll_bearnav::navigatorAction> Server;
+Server *server;
+stroll_bearnav::navigatorResult result;
+stroll_bearnav::navigatorFeedback feedback;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
@@ -119,6 +124,19 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 {
 	state = NAVIGATING;
 	currentPathElement = 0;
+
+	/* reset distance using service*/
+	srv.request.distance=0;
+
+	if (client.call(srv))
+	{   
+		ROS_INFO("Distance set to: %f", (float)srv.response.distance);
+	}
+	else
+	{
+		ROS_ERROR("Failed to call service SetDistance");
+	}
+
 	while(state != IDLE){
 		if(server->isPreemptRequested()){
 			state = PREEMPTED;
@@ -287,20 +305,8 @@ int main(int argc, char** argv)
 	server->start();
 
 	/* Initiate service */
-	ros::ServiceClient client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
-	stroll_bearnav::SetDistance srv;
-	/* reset distance */
-	srv.request.distance=0;
+	client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
 
-	if (client.call(srv))
-	{   
-		ROS_INFO("Distance set to: %f", (float)srv.response.distance);
-	}
-	else
-	{
-		ROS_ERROR("Failed to call service SetDistance");
-		return 1;
-	}
 	ros::spin();
 	return 0;
 }
