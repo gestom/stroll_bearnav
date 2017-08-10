@@ -11,10 +11,9 @@
 #include <std_msgs/Float32.h>
 #include <actionlib/server/simple_action_server.h>
 #include <stroll_bearnav/mapperAction.h>
-//#include <stroll_bearnav/Speed.h>
-//#include <stroll_bearnav/SpeedArray.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Joy.h>
+#include <stroll_bearnav/SetDistance.h>
 
 using namespace std;
 using namespace cv;
@@ -240,10 +239,25 @@ int main(int argc, char** argv)
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	ROS_INFO( "%s", fileName.c_str());
-	
+
 	/* Initiate action server */
 	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
 	server->start();
+	/* Initiate service */
+	ros::ServiceClient client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
+	stroll_bearnav::SetDistance srv;
+	/* reset distance */
+	srv.request.distance=0;
+
+	if (client.call(srv))
+	{   
+		ROS_INFO("Distance set to: %f", (float)srv.response.distance);
+	}
+	else
+	{
+		ROS_ERROR("Failed to call service SetDistance");
+		return 1;
+	}
 
 	path.clear();
 	while (ros::ok()){

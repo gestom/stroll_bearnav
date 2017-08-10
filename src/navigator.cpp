@@ -18,6 +18,7 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
 #include <stroll_bearnav/navigatorAction.h>
+#include <stroll_bearnav/SetDistance.h>
 #include <actionlib/server/simple_action_server.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -285,6 +286,21 @@ int main(int argc, char** argv)
 	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
 	server->start();
 
+	/* Initiate service */
+	ros::ServiceClient client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
+	stroll_bearnav::SetDistance srv;
+	/* reset distance */
+	srv.request.distance=0;
+
+	if (client.call(srv))
+	{   
+		ROS_INFO("Distance set to: %f", (float)srv.response.distance);
+	}
+	else
+	{
+		ROS_ERROR("Failed to call service SetDistance");
+		return 1;
+	}
 	ros::spin();
 	return 0;
 }
