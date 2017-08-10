@@ -19,26 +19,27 @@ using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-vector<KeyPoint> keypoints_1; 
-Mat descriptors_1;
-Mat img_matches, img_t1,img_t2,img_matchestr,img_keypoints_1,img_3;
-
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
+
+/* image feature parameters */
 int surfThreshold = 1000;
+vector<KeyPoint> keypoints_1; 
+Mat descriptors_1;
+Mat img_1;
 Ptr<SURF> detector = SURF::create(surfThreshold);
 
+/* dynamic reconfigure of surf threshold */
 void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 {
 	surfThreshold=config.thresholdParam;
-	//ratioMatchConstant=config.ratioMatchConstant;
-	//TODOdetector->changeHessianBla(surfThreshold);
 	ROS_DEBUG("Changing feature featureExtraction to %d", surfThreshold);
 }
 
+/* Extract features from image recieved from camera */
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 
@@ -52,10 +53,11 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 		return;
 	}
-	img_t1=cv_ptr->image;
-
-	detector->detectAndCompute(img_t1, Mat (), keypoints_1,descriptors_1);
-	featureArray.feature.clear();	
+	img_1=cv_ptr->image;
+	/* Detect image features */
+	detector->detectAndCompute(img_1, Mat (), keypoints_1,descriptors_1);
+	featureArray.feature.clear();
+	/* Save image features to variables */	
 	for(int i=0;i<keypoints_1.size();i++){
 		feature.x=keypoints_1[i].pt.x;
 		feature.y=keypoints_1[i].pt.y;
@@ -67,6 +69,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		descriptors_1.row(i).copyTo(feature.descriptor);
 		featureArray.feature.push_back(feature);
 	}
+	/* publish image features */
 	feat_pub_.publish(featureArray);
 
 }
@@ -76,9 +79,12 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "feature_extraction");
 	ros::NodeHandle nh_;
 	image_transport::ImageTransport it_(nh_);
+
+	/* Initiate dynamic reconfiguration */
 	dynamic_reconfigure::Server<stroll_bearnav::featureExtractionConfig> server;
 	dynamic_reconfigure::Server<stroll_bearnav::featureExtractionConfig>::CallbackType f = boost::bind(&callback, _1, _2);
 	server.setCallback(f);
+
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
 	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
 	image_pub_ = it_.advertise("/image_converter/output_video", 1);

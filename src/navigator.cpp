@@ -11,54 +11,57 @@
 #include <geometry_msgs/Twist.h>
 #include <stroll_bearnav/FeatureArray.h>
 #include <stroll_bearnav/Feature.h>
-#include <stroll_bearnav/Speed.h>
+#include <stroll_bearnav/PathProfile.h>
 #include <cmath>
 #include <std_msgs/Float32.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
 #include <stroll_bearnav/navigatorAction.h>
+#include <stroll_bearnav/SetDistance.h>
 #include <actionlib/server/simple_action_server.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-Ptr<SURF> detector = SURF::create(100);
-bool start=true;
-int tenCounter=10;
-vector<KeyPoint> keypoints_1, keypoints_2,keypoints_3;
-Mat descriptors_1, descriptors_2,descriptors_3;
-Mat img_matches, img_t1,img_t2,img_matchestr,img_keypoints_1,img_3;
-typedef actionlib::SimpleActionServer<stroll_bearnav::navigatorAction> Server;
-Server *server;
-bool done=false;
-stroll_bearnav::navigatorResult result;
-stroll_bearnav::navigatorFeedback feedback;
 
-stroll_bearnav::Speed speed;
 ros::Publisher cmd_pub_;
 ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
 ros::Subscriber speedSub_;
 ros::Subscriber distSub_;
+image_transport::Subscriber image_sub_;
+image_transport::Publisher image_pub_;
+
+/* Service for set/reset distance */
+stroll_bearnav::SetDistance srv;
+ros::ServiceClient client;
+
+/* Action server */
+typedef actionlib::SimpleActionServer<stroll_bearnav::navigatorAction> Server;
+Server *server;
+stroll_bearnav::navigatorResult result;
+stroll_bearnav::navigatorFeedback feedback;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
-image_transport::Subscriber image_sub_;
-image_transport::Publisher image_pub_;
+
+/* Image features parameters */
+Ptr<SURF> detector = SURF::create(100);
+vector<KeyPoint> keypoints_1, keypoints_2;
+Mat descriptors_1, descriptors_2;
 Mat img_2;
 KeyPoint keypoint,keypoint2;
-double pointDist;
-int totalDist;
-double startx,starty,currentx,currenty,pointx,pointy;
-int meter=-1;
-char filename[100];
-stroll_bearnav::FeatureArray featureArray;
-stroll_bearnav::Feature feature; 
 float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
+int minGoodFeatures = 2;
+float differenceRot=0;
 
+/* Feature message */
+stroll_bearnav::FeatureArray featureArray;
+stroll_bearnav::Feature feature;
+ 
 typedef struct
 {
 	float distance;
@@ -78,13 +81,24 @@ typedef enum
 ENavigationState state = IDLE;
 vector<SPathElement> path;
 
-void speedCallback(const stroll_bearnav::Speed::ConstPtr& msg)
-{
-	//TODOfor(int i=0;i<msg->velocity.size();i++){
-	//	path.push_back(msg->velocity[i]);
-	//}
 
+void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
+{
+	SPathElement a;
+	path.clear();
+	/* save path profile to variable */
+	for (int i = 0;i<msg->distance.size();i++)
+	{
+		a.distance = msg->distance[i];
+		a.forward = msg->forwardSpeed[i];
+		a.angular = msg->angularSpeed[i];
+		a.flipper = msg->flipper[i];
+		path.push_back(a);
+	}
+	for (int i = 0;i<path.size();i++) printf("%.3f %.3f %.3f %.3f\n",path[i].distance,path[i].forward,path[i].angular,path[i].flipper);
 }
+
+/* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
 	ROS_INFO("Received a new map reference map");
@@ -105,11 +119,24 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		descriptors_1.push_back(mat);
 	}
 }
- 
+
 void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *serv)
 {
 	state = NAVIGATING;
 	currentPathElement = 0;
+
+	/* reset distance using service*/
+	srv.request.distance=0;
+
+	if (client.call(srv))
+	{   
+		ROS_INFO("Distance set to: %f", (float)srv.response.distance);
+	}
+	else
+	{
+		ROS_ERROR("Failed to call service SetDistance");
+	}
+
 	while(state != IDLE){
 		if(server->isPreemptRequested()){
 			state = PREEMPTED;
@@ -148,9 +175,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 
 		std::vector< DMatch > good_matches;
-		float differenceRot=0;
 
 		/*establish correspondences, build the histogram and determine robot heading*/
+		int count=0,bestc=0;
 		if (keypoints_1.size() >0 && keypoints_2.size() >0){
 
 			/*feature matching*/
@@ -169,10 +196,11 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int num=good_matches.size();
 			vector<Point2f> matched_points1;
 			vector<Point2f> matched_points2;
-			int count=0,bestc=0;
 			Point2f current;
 			Point2f best, possible;
 			int numBins = 21;
+			count=0;
+			bestc=0;
 			int histogram[numBins];
 			int granularity = 20;
 			int differences[num];
@@ -213,9 +241,13 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					position=i;
 				}
 			}
+
+			/* rotation between features based on histogram voting */
 			int rotation=(position-numBins/2)*granularity;
 			printf("\n");
 			float sum=0;
+
+			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
 					sum+=differences[i];
@@ -223,48 +255,42 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					best_matches.push_back(good_matches[i]);
 				}
 			}
-			differenceRot=sum/count;
+			/*difference between features */
+			differenceRot=sum/count; 
 
-			cout << "Vektor: " << best.x << " " << best.y << endl;
+			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
-
-		twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-		twist.linear.x = path[currentPathElement].forward; 
-		twist.angular.y = twist.angular.x = 0.0;
-
-		twist.angular.z=path[currentPathElement].angular+differenceRot*0.0001;
-		cmd_pub_.publish(twist);
+		if (count<=minGoodFeatures) differenceRot = 0;
 	}
 	if (state == COMPLETED || state == PREEMPTED) state = IDLE;
 }
 
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
-{
-	//ROS_INFO("%i %f %f %f %i",currentPathElement,path[currentPathElement].distance,msg->data,path[currentPathElement].forward,(int)path.size()); 
+{	
+	/* check for end of path profile */
 	if (currentPathElement+2 <= path.size())
 	{
 		if (path[currentPathElement+1].distance < msg->data) currentPathElement++;
 	}else{
 		state = COMPLETED;
 	}
+	if (state == NAVIGATING){
+		if (path.size()>currentPathElement)
+		{
+			//ROS_INFO("MOVE %f",path[currentPathElement].forward);
+			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+			twist.linear.x = path[currentPathElement].forward; 
+			twist.angular.y = twist.angular.x = 0.0;
+
+			twist.angular.z=path[currentPathElement].angular;
+			twist.angular.z+=differenceRot*0.0001;
+			cmd_pub_.publish(twist);
+		}
+	}
 }
 
 int main(int argc, char** argv)
 {
-	SPathElement a;
-	a.distance = 0;
-	a.forward = 0.1;
-	a.angular = 0.0;
-	a.flipper = 0.0;
-	path.push_back(a); 
-	a.distance = 0.5;
-	a.forward = 0.4;
-	a.angular = 0.0;
-	path.push_back(a); 
-	a.distance = 1.0;
-	a.forward = 0.0;
-	a.angular = 0.0;
-	path.push_back(a); 
 	ros::init(argc, argv, "angle_from_features");
 
 	ros::NodeHandle nh;
@@ -273,10 +299,13 @@ int main(int argc, char** argv)
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-	speedSub_=nh.subscribe<stroll_bearnav::Speed>("/speed/data",1,speedCallback);
-  
+	speedSub_=nh.subscribe<stroll_bearnav::PathProfile>("/load/path",1,pathCallback);
+  	/* Initiate action server */
 	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
 	server->start();
+
+	/* Initiate service */
+	client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
 
 	ros::spin();
 	return 0;

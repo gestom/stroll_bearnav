@@ -145,8 +145,8 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 add_executable(mapper_node src/mapper.cpp)
 add_executable(feature_extraction_node src/featureExtraction.cpp)
 add_executable(feature_testing_node src/featureTesting.cpp)
-add_executable(distance_measurement_node src/distanceMeasurement.cpp)
-add_executable(feature_load_node src/loadMap.cpp)
+add_executable(odometry_monitor_node src/odometryMonitor.cpp)
+add_executable(map_preprocessor_node src/mapPreprocessor.cpp)
 add_executable(navigator_node src/navigator.cpp)
 
 ## Add cmake target dependencies of the executable
@@ -156,8 +156,8 @@ add_executable(navigator_node src/navigator.cpp)
 add_dependencies(feature_extraction_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(feature_testing_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(feature_load_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(distance_measurement_node ${PROJECT_NAME}_gencfg  ${catkin_EXPORTED_TARGETS})
+add_dependencies(map_preprocessor_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(odometry_monitor_node ${PROJECT_NAME}_gencfg  ${catkin_EXPORTED_TARGETS})
 add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
@@ -169,8 +169,8 @@ add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_E
 target_link_libraries(mapper_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(feature_extraction_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(feature_testing_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(distance_measurement_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(feature_load_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(odometry_monitor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(map_preprocessor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(navigator_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #############
 ## Install ##

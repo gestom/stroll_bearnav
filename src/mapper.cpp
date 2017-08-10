@@ -11,10 +11,9 @@
 #include <std_msgs/Float32.h>
 #include <actionlib/server/simple_action_server.h>
 #include <stroll_bearnav/mapperAction.h>
-//#include <stroll_bearnav/Speed.h>
-//#include <stroll_bearnav/SpeedArray.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Joy.h>
+#include <stroll_bearnav/SetDistance.h>
 
 using namespace std;
 using namespace cv;
@@ -34,17 +33,18 @@ ros::Subscriber distEventSub_;
 ros::Subscriber distSub_;
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
-float distanceTotalEvent=0;
-float distanceTravelled=0;
-float flipperPosition=0;
 EMappingState state = IDLE;
+/* Service for set/reset distance */
+ros::ServiceClient client;
+stroll_bearnav::SetDistance srv;
 
+/* Action server parameters */
 typedef actionlib::SimpleActionServer<stroll_bearnav::mapperAction> Server;
 Server *server;
 stroll_bearnav::mapperResult result;
 stroll_bearnav::mapperFeedback feedback;
-//stroll_bearnav::Speed speed;
-//stroll_bearnav::SpeedArray	speedArray;
+
+/* Image feature variables */
 char name[100];
 string fileName;
 Mat img,descriptors;
@@ -52,6 +52,8 @@ Mat descriptor;
 vector<KeyPoint> keypoints;
 vector<float> path;
 KeyPoint keypoint;
+
+/* Feature messages */
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 
@@ -82,11 +84,15 @@ double angularSpeed = 0;
 double lastForwardSpeed = 0;
 double lastFlipperSpeed = 0;
 double lastAngularSpeed = 0;
+float distanceTotalEvent=0;
+float distanceTravelled=0;
+float flipperPosition=0;
 
 
 void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg);
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg);
 
+/* Total distance travelled recieved from the event */ 
 void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
 {   
 	if(state == MAPPING){
@@ -94,15 +100,17 @@ void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
 		state = SAVING;
 	}
 }
-
+/*distance currently travelled */
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 {   
 	distanceTravelled=msg->data;
 }
 
+/*Assign current image to variable */
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 	if(state != IDLE){
+		ROS_INFO("Catching image");
 		cv_bridge::CvImagePtr cv_ptr;
 		try
 		{
@@ -114,14 +122,28 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 			return;
 		}
 		img=cv_ptr->image;
+		ROS_INFO("Image caought");
 	}	
 }
-
+/*Action server */
 void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 {
 	fileName=goal->fileName;
 	state = SAVING;
+	/* reset distance using service*/
+	srv.request.distance=0;
+
+	if (client.call(srv))
+	{   
+		ROS_INFO("Distance set to: %f", (float)srv.response.distance);
+	}
+	else
+	{
+		ROS_ERROR("Failed to call service SetDistance");
+	}
 	while(state == MAPPING || state == SAVING){
+
+		/*on preempt request end mapping and save current map */
 		if(server->isPreemptRequested())
 		{
 			ROS_INFO("Map complete, flushing maps.");
@@ -144,6 +166,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 		}
 		usleep(200000);
 	}
+	/* stop robot at the end of mapping*/
 	while(state == TERMINATING){
 		ROS_INFO("Mapping complete, stopping robot.");
 		usleep(200000);
@@ -153,11 +176,12 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 
 /*receiving joystick data*/
 void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
-{     
+{    
 	angularSpeed = maxAngularSpeed*forwardSpeed*0.5*joy->axes[angularAxis];
 	forwardAcceleration = maxForwardAcceleration*joy->axes[linearAxis];;
 	flipperSpeed = maxFlipperSpeed*joy->axes[flipperAxis];
 	if  (joy->buttons[stopButton]) angularSpeed = forwardSpeed = flipperSpeed = 0;
+	ROS_INFO("Joystick pressed");
 } 
 
 /*flipper position -- for stair traverse*/
@@ -166,6 +190,7 @@ void flipperCallback(const std_msgs::Float32::ConstPtr& msg)
 	flipperPosition = msg->data;   
 }
 
+/* save features and image recieved from camera as a local map*/
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == SAVING){
@@ -189,7 +214,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		sprintf(name,"%s_%.3f.yaml",fileName.c_str(),distanceTotalEvent);
 		ROS_INFO("Saving map to %s",name);
 		FileStorage fs(name,FileStorage::WRITE);
-		write(fs, "Image", img);
+		//write(fs, "Image", img);
 		write(fs, "Keypoints", keypoints);
 		write(fs, "Descriptors",descriptors);
 		fs.release();
@@ -206,15 +231,16 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
 	ros::param::get("~fileName", fileName);
-
+	/* joystick params */
 	nh.param("axis_linear", linearAxis, 1);
 	nh.param("axis_angular", angularAxis, 0);
 	nh.param("axis_flipper", flipperAxis, 4);
 	nh.param("stopButton", stopButton, 1);
 
+	/* robot speed limits */
 	nh.param("angularSpeed", maxAngularSpeed, 0.2);
-	nh.param("forwardSpeed", maxForwardSpeed, 0.2);
-	nh.param("flipperSpeed", maxFlipperSpeed, 0.2);
+	nh.param("forwardSpeed", maxForwardSpeed, 0.3);
+	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
 	vel_pub_ = nh.advertise<geometry_msgs::Twist>("cmd", 1);
@@ -228,15 +254,17 @@ int main(int argc, char** argv)
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	ROS_INFO( "%s", fileName.c_str());
 
+	/* Initiate action server */
 	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
 	server->start();
 
+	/* Initiate service */
+	client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
+
+	path.clear();
 	while (ros::ok()){
 		if (state == MAPPING)
-		{
-			lastForwardSpeed = forwardSpeed;
-			lastAngularSpeed = angularSpeed;
-			lastFlipperSpeed = flipperSpeed;
+		{   /* speed limits */
 			forwardSpeed += forwardAcceleration;
 			forwardSpeed = fmin(fmax(forwardSpeed,-maxForwardSpeed),maxForwardSpeed);
 			twist.linear.x =  forwardSpeed;
@@ -245,13 +273,19 @@ int main(int argc, char** argv)
 			flipperSpeed = fmin(fmax(flipperSpeed,-maxFlipperSpeed),maxFlipperSpeed);
 			twist.angular.y =  flipperSpeed;
 			vel_pub_.publish(twist);
+
+			/* saving path profile */
 			if (lastForwardSpeed != forwardSpeed || lastAngularSpeed != angularSpeed || lastFlipperSpeed != flipperSpeed)
 			{
 				path.push_back(distanceTravelled);
 				path.push_back(forwardSpeed);
 				path.push_back(angularSpeed);
 				path.push_back(flipperSpeed);
+				printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
 			}
+			lastForwardSpeed = forwardSpeed;
+			lastAngularSpeed = angularSpeed;
+			lastFlipperSpeed = flipperSpeed;
 		}
 		if (state == TERMINATING){
 			twist.linear.x = twist.angular.z = twist.angular.y = 0;
