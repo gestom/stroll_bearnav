@@ -21,11 +21,9 @@ if [ $# -eq 0 ]
     echo "use -h for help"
 fi
 
-#~/.ros/strechy/1
-for i in $(ls "$1"/*_l.png| grep "_1_" | sed s/...png$//);do echo $i; ./../../../devel/lib/stroll_bearnav/feature_testing_node $i\_l.png $i\_r.png "$2" "$3" "$4" "$5" "$6" $(echo $i|cut -f 4 -d _) >> all2.txt;done
+for i in {0..15000..25};do echo $i;./../../../devel/lib/stroll_bearnav/feature_testing_node ~/.ros/strechy/1/strechy_1_0000053_061_0031_0015_l.png ~/.ros/strechy/1/strechy_1_0000053_061_0031_0015_r.png "$i" "$3" "$4" "$5" "$6" "$i">>hesian_61.txt;done
+
+grep stats -A 1 hesian_61.txt |grep -v stat|grep -v '--' >stat_61.txt
 
 exit 0
-
-# poprve vysledky v all2 - hesian 100
-# podruhe v all3 - hesian 15000
 

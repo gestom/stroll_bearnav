@@ -85,6 +85,7 @@ int main( int argc, char** argv )
     float mean = 0;
     int distances_length = good_matches.size();
     float distances_x[distances_length];
+    std::cout << "distances" <<'\n';
     for (int k = 0; k < good_matches.size(); ++k) {
         distances_x[k] = keypoints_1[good_matches[k].queryIdx].pt.x - keypoints_2[good_matches[k].trainIdx].pt.x;
         //std::cout << "distance[" << k << "] = " << distances_x[k] << " " << '\n';
@@ -110,6 +111,7 @@ int main( int argc, char** argv )
     //std::cout << "dev = " << dev << '\n';
     //std::cout << "mean = " << mean << '\n';
     // print histogram
+    std::cout << "histogram" <<'\n';
     for (int j = 0; j < length; ++j) {
         /*if(histogram_x[j] != 0) {
             std::cout << "histogram[" << j << "] = " << histogram_x[j] << '\n';
@@ -139,8 +141,8 @@ int main( int argc, char** argv )
             correct_matches.push_back(good_matches[n]);
         }
     }
-
-    std::cout << max << " " << mean << " " << dev << " " << correct_matches.size() << " " << outliers_matches.size() << '\n';
+    std::cout << "stats" <<'\n';
+    std::cout << keypoints_1.size() << " " << keypoints_2.size() << " " << max << " " << mean << " " << dev << " " << correct_matches.size() << " " << outliers_matches.size() << " " << atoi(argv[8]) << '\n';
 
 
     /*int outliers = 3;
