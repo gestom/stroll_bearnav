@@ -11,10 +11,9 @@
 #include <std_msgs/Float32.h>
 #include <actionlib/server/simple_action_server.h>
 #include <stroll_bearnav/mapperAction.h>
-//#include <stroll_bearnav/Speed.h>
-//#include <stroll_bearnav/SpeedArray.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Joy.h>
+#include <stroll_bearnav/SetDistance.h>
 
 using namespace std;
 using namespace cv;
@@ -35,6 +34,9 @@ ros::Subscriber distSub_;
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
 EMappingState state = IDLE;
+/* Service for set/reset distance */
+ros::ServiceClient client;
+stroll_bearnav::SetDistance srv;
 
 /* Action server parameters */
 typedef actionlib::SimpleActionServer<stroll_bearnav::mapperAction> Server;
@@ -128,6 +130,17 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 {
 	fileName=goal->fileName;
 	state = SAVING;
+	/* reset distance using service*/
+	srv.request.distance=0;
+
+	if (client.call(srv))
+	{   
+		ROS_INFO("Distance set to: %f", (float)srv.response.distance);
+	}
+	else
+	{
+		ROS_ERROR("Failed to call service SetDistance");
+	}
 	while(state == MAPPING || state == SAVING){
 
 		/*on preempt request end mapping and save current map */
@@ -240,10 +253,13 @@ int main(int argc, char** argv)
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	ROS_INFO( "%s", fileName.c_str());
-	
+
 	/* Initiate action server */
 	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
 	server->start();
+
+	/* Initiate service */
+	client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
 
 	path.clear();
 	while (ros::ok()){

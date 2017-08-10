@@ -6,6 +6,7 @@
 #include <std_msgs/Float32.h>
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/distanceConfig.h>
+#include <stroll_bearnav/SetDistance.h>
 
 
 using namespace std;
@@ -26,6 +27,15 @@ double lastX=FLT_MAX;
 double lastY=FLT_MAX;
 float distanceEvent=0;
 float distanceThreshold=0.2;
+
+/* service for set/reset the distance */
+bool setDistance(stroll_bearnav::SetDistance::Request &req, stroll_bearnav::SetDistance::Response &res)
+{   
+	res.distance=req.distance;
+	totalDist=req.distance;
+	ROS_INFO("Request Distance: %f",(float)req.distance);
+	return true;
+}
 
 /*allow the distanceThreshold to be changed online*/
 void callback(stroll_bearnav::distanceConfig &config, uint32_t level)
@@ -65,7 +75,7 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
 int main(int argc, char** argv)
 { 
 	ros::init(argc, argv, "distance");
-	ros::NodeHandle nh_;
+	ros::NodeHandle nh;
 
 	//initiate action server
 	dynamic_reconfigure::Server<stroll_bearnav::distanceConfig> server;
@@ -73,9 +83,12 @@ int main(int argc, char** argv)
 	f = boost::bind(&callback, _1, _2);
 	server.setCallback(f);
 
-	odometrySub = nh_.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
-	dist_pub_=nh_.advertise<std_msgs::Float32>("/distance",1);
-	distEvent_pub_=nh_.advertise<std_msgs::Float32>("/distance/events",1);
+	/* initiate service */
+    ros::ServiceServer service = nh.advertiseService("setDistance", setDistance);
+
+	odometrySub = nh.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
+	dist_pub_=nh.advertise<std_msgs::Float32>("/distance",1);
+	distEvent_pub_=nh.advertise<std_msgs::Float32>("/distance/events",1);
 	ros::spin();
 	return 0;
 }
