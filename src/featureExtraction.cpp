@@ -81,7 +81,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	}
 	/* publish image features */
 	feat_pub_.publish(featureArray);
-
+	ROS_INFO("Features extracted %ld",featureArray.feature.size());	
 }
 
 int main(int argc, char** argv)
@@ -99,11 +99,11 @@ int main(int argc, char** argv)
 	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
 	image_pub_ = it_.advertise("/image_converter/output_video", 1);
 
-    //adaptive surf threshold - trying to target a given number of keypoints
-    if (adaptThreshold){
-            surfThreshold += gain*(targetKeypoints - keypoints_1.size()); // p regulator
-            detector->setHessianThreshold(surfThreshold);
-    }
+	//adaptive surf threshold - trying to target a given number of keypoints
+	if (adaptThreshold){
+		surfThreshold += gain*(targetKeypoints - keypoints_1.size()); // p regulator
+		detector->setHessianThreshold(surfThreshold);
+	}
 
 	ros::spin();
 	return 0;

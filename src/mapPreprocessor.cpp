@@ -53,6 +53,13 @@ float distanceT;
 string prefix;
 bool stop = false;
 
+/*map to be preloaded*/
+vector<vector<KeyPoint> > keypointsMap;
+vector<Mat> descriptorMap;
+vector<float> distanceMap;
+vector<Mat> imagesMap;
+
+
 typedef enum
 {
 	IDLE,
@@ -92,29 +99,53 @@ int loadMaps()
 
 	std::sort(mapDistances, mapDistances + numMaps, std::less<float>());
 	mapDistances[numMaps] = mapDistances[numMaps-1];
+
+	/*preload all maps*/
+	imagesMap.clear();
+	keypointsMap.clear();
+	descriptorMap.clear();
+	distanceMap.clear();
+	char fileName[1000];
+	
+	for (int i = 0;i<numMaps;i++){
+		sprintf(fileName,"%s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]); 
+		ROS_INFO("Preloading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]); 
+		FileStorage fs(fileName, FileStorage::READ);
+		if(fs.isOpened()){
+			fs["Keypoints"]>>keypoints_1;
+			fs["Descriptors"]>>descriptors_1;
+			fs["Image"]>>img;
+			fs.release();
+			keypointsMap.push_back(keypoints_1);
+			descriptorMap.push_back(descriptors_1);
+			distanceMap.push_back(mapDistances[i]);
+			//imageMap.push_back(img);
+			numFeatures+=keypoints_1.size();
+		}
+	}
+
+	/* feedback returns name of loaded map, number of features in it and index */
+	sprintf(fileName,"%i features loaded from %i maps",numFeatures,numMaps);
+	feedback.fileName = fileName;
+	feedback.numFeatures=numFeatures;
+	feedback.mapIndex=numMaps;
+	server->publishFeedback(feedback);
 	return numMaps;
 }
 /* load map based on distance travelled  */
 void loadMap(int index)
 {
+	lastLoadedMap = index;
+	keypoints_1 = keypointsMap[index];
+	descriptors_1 = descriptorMap[index];
+	numFeatures=keypoints_1.size();
 	char fileName[1000];
-	sprintf(fileName,"%s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[index]); 
-	ROS_DEBUG("Loading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[index]); 
-	FileStorage fs(fileName, FileStorage::READ);
-	if(fs.isOpened()){
-		lastLoadedMap = index;
-		fs["Keypoints"]>>keypoints_1;
-		fs["Descriptors"]>>descriptors_1;
-		fs["Image"]>>img;
-		fs.release();
-		numFeatures+=keypoints_1.size();
-		numberOfUsedMaps++;
-		feedback.fileName=fileName;
-		feedback.numFeatures=keypoints_1.size();
-		feedback.mapIndex=index+1;
-		/* feedback returns name of loaded map, number of features in it and index */
-		server->publishFeedback(feedback);
-	}
+	sprintf(fileName,"%i features loaded from %ith map at %.3f",numFeatures,index,distanceMap[index]);
+	feedback.fileName=fileName;
+	feedback.numFeatures=keypoints_1.size();
+	feedback.mapIndex=index;
+	/* feedback returns name of loaded map, number of features in it and index */
+	server->publishFeedback(feedback);
 }
 /* load path profile 
    returns size of path profile */
@@ -199,6 +230,7 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 		if (mindex > -1 && mindex != lastLoadedMap){
 			ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 			loadMap(mindex);
+//			ROS_INFO("Sending a map %i features with %i descriptors",(int)keypoints_1.size(),descriptors_1.rows);
 			for(int i=0;i<keypoints_1.size();i++)
 			{
 				feature.x=keypoints_1[i].pt.x;
@@ -214,7 +246,6 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 			numberOfUsedMaps++;
 			/* publish loaded map */
 			feat_pub_.publish(featureArray);
-
 		}
 	}
 }

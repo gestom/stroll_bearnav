@@ -53,6 +53,11 @@ vector<KeyPoint> keypoints;
 vector<float> path;
 KeyPoint keypoint;
 
+vector<vector<KeyPoint> > keypointsMap;
+vector<Mat> descriptorMap;
+vector<float> distanceMap;
+vector<Mat> imagesMap;
+
 /* Feature messages */
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
@@ -112,11 +117,10 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 	if(state != IDLE){
-		ROS_INFO("Catching image");
 		cv_bridge::CvImagePtr cv_ptr;
 		try
 		{
-			cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+			cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
 		}
 		catch (cv_bridge::Exception& e)
 		{
@@ -124,12 +128,16 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 			return;
 		}
 		img=cv_ptr->image;
-		ROS_INFO("Image caought");
 	}	
 }
 /*Action server */
 void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 {
+	imagesMap.clear();
+	keypointsMap.clear();
+	descriptorMap.clear();
+	distanceMap.clear();
+
 	/* reset distance using service*/
 	srv.request.distance = distanceTravelled = distanceTotalEvent = 0;
 	userStop = false;
@@ -142,16 +150,26 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 		if(server->isPreemptRequested() || userStop)
 		{
 			ROS_INFO("Map complete, flushing maps.");
-			while(state == SAVING) usleep(200000);
-			sprintf(name,"%s/%s_%.3f.yaml",folder.c_str(),baseName.c_str(),distanceTravelled);
-			ROS_INFO("Saving map to %s",name);
-			FileStorage fs(name,FileStorage::WRITE);
-			write(fs, "Image", img);
-			write(fs, "Keypoints", keypoints);
-			write(fs, "Descriptors",descriptors);
-			fs.release();
+			while(state == SAVING) usleep(20000);
+			/*add last data to the map*/
+			imagesMap.push_back(img);
+			keypointsMap.push_back(keypoints);
+			descriptorMap.push_back(descriptors);
+			distanceMap.push_back(distanceTravelled);
+
+			/*and flush it to the disk*/
+			for (int i = 0;i<distanceMap.size();i++){
+				sprintf(name,"%s/%s_%.3f.yaml",folder.c_str(),baseName.c_str(),distanceMap[i]);
+				ROS_INFO("Saving map to %s",name);
+				FileStorage fs(name,FileStorage::WRITE);
+				write(fs, "Image", imagesMap[i]);
+				write(fs, "Keypoints", keypointsMap[i]);
+				write(fs, "Descriptors",descriptorMap[i]);
+				fs.release();
+			}
 			result.fileName=name;
 		
+			/*save the path profile as well*/
 			sprintf(name,"%s/%s.yaml",folder.c_str(),baseName.c_str());
 			ROS_INFO("Saving path profile to %s",name);
 			FileStorage pfs(name,FileStorage::WRITE);
@@ -209,13 +227,16 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
 			descriptors.push_back(mat);
 		}
-		sprintf(name,"%s/%s_%.3f.yaml",folder.c_str(),baseName.c_str(),distanceTotalEvent);
-		ROS_INFO("Saving map to %s",name);
-		FileStorage fs(name,FileStorage::WRITE);
-		//write(fs, "Image", img);
-		write(fs, "Keypoints", keypoints);
-		write(fs, "Descriptors",descriptors);
-		fs.release();
+
+		/*store in memory rather than on disk*/
+		imagesMap.push_back(img);
+		keypointsMap.push_back(keypoints);
+		descriptorMap.push_back(descriptors);
+		distanceMap.push_back(distanceTotalEvent);
+
+		/* publish feedback */
+		sprintf(name,"%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
+		ROS_INFO("%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
 		state = MAPPING;
 		feedback.fileName=name;
 		server->publishFeedback(feedback);
@@ -246,7 +267,7 @@ int main(int argc, char** argv)
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("joy", 10, joyCallback);
 
-//	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
+	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
 	featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
 	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance/events",1,distanceEventCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
