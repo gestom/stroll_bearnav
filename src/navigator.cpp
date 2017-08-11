@@ -80,7 +80,7 @@ typedef enum
 
 ENavigationState state = IDLE;
 vector<SPathElement> path;
-
+float overshoot = 0;
 
 void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 {
@@ -101,7 +101,7 @@ void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
-	ROS_INFO("Received a new map reference map");
+	ROS_INFO("Received a new reference map");
 	keypoints_1.clear();
 	descriptors_1=Mat();
 
@@ -123,31 +123,38 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *serv)
 {
 	state = NAVIGATING;
+	int traversals = goal->traversals;
 	currentPathElement = 0;
 
 	/* reset distance using service*/
-	srv.request.distance=0;
-
-	if (client.call(srv))
-	{   
-		ROS_INFO("Distance set to: %f", (float)srv.response.distance);
-	}
-	else
-	{
-		ROS_ERROR("Failed to call service SetDistance");
-	}
-
+	srv.request.distance=overshoot=0;
+	if (!client.call(srv)) ROS_ERROR("Failed to call service SetDistance provided by odometry_monitor node!");
+	result.success = false;
 	while(state != IDLE){
 		if(server->isPreemptRequested()){
 			state = PREEMPTED;
 			server->setPreempted(result);
+			state = IDLE;
 		}
-		if (/*server->succeeded()*/ true && state == COMPLETED){
-			server->setSucceeded(result);
+		if (result.success == false && state == COMPLETED)
+		{
+			if (traversals<=1){
+				result.success = true;
+				state = IDLE;
+				server->setSucceeded(result);
+			}else{
+				sleep(2);
+				srv.request.distance=overshoot;
+				if (!client.call(srv)) ROS_ERROR("Failed to call service SetDistance provided by odometry_monitor node!");
+				sleep(2);
+				currentPathElement = 0;
+				state = NAVIGATING;
+				traversals--;
+			}
 		}
 		usleep(200000);
 	}
-	twist.linear.x = twist.linear.y = twist.linear.z = twist.angular.y = twist.angular.x = 0.0;	
+	twist.linear.x = twist.linear.y = twist.linear.z = twist.angular.z = twist.angular.y = twist.angular.x = 0.0;	
 	cmd_pub_.publish(twist);
 }
 
@@ -262,22 +269,25 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 		if (count<=minGoodFeatures) differenceRot = 0;
 	}
-	if (state == COMPLETED || state == PREEMPTED) state = IDLE;
 }
 
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 {	
-	/* check for end of path profile */
-	if (currentPathElement+2 <= path.size())
-	{
-		if (path[currentPathElement+1].distance < msg->data) currentPathElement++;
-	}else{
-		state = COMPLETED;
-	}
+
 	if (state == NAVIGATING){
+		/* check for end of path profile */
+		if (currentPathElement+2 <= path.size())
+		{
+			if (path[currentPathElement+1].distance < msg->data){
+				//ROS_INFO("Next %i %f",currentPathElement,path[currentPathElement].forward);
+				 currentPathElement++;
+			}
+		}else{
+			state = COMPLETED;
+		}
 		if (path.size()>currentPathElement)
 		{
-			//ROS_INFO("MOVE %f",path[currentPathElement].forward);
+			//ROS_INFO("MOVE %i %f",currentPathElement,path[currentPathElement].forward);
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
 			twist.linear.x = path[currentPathElement].forward; 
 			twist.angular.y = twist.angular.x = 0.0;
@@ -286,6 +296,12 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			twist.angular.z+=differenceRot*0.0001;
 			cmd_pub_.publish(twist);
 		}
+	}
+	if (state == COMPLETED){
+		if (path.size() > 0) overshoot = msg->data-path[path.size()-1].distance;
+		twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+		twist.angular.z = twist.angular.y = twist.angular.x = 0.0;
+		cmd_pub_.publish(twist);
 	}
 }
 

@@ -1,5 +1,5 @@
 #goal definiton
-bool success
+int32 traversals
 ---
 #result definition
 bool success

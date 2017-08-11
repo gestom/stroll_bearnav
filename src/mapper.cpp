@@ -280,7 +280,7 @@ int main(int argc, char** argv)
 				path.push_back(forwardSpeed);
 				path.push_back(angularSpeed);
 				path.push_back(flipperSpeed);
-				printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
+				//printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
 			}
 			lastForwardSpeed = forwardSpeed;
 			lastAngularSpeed = angularSpeed;
