@@ -71,7 +71,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	detector->detectAndCompute(img_1, Mat (), keypoints_1,descriptors_1);
 	featureArray.feature.clear();
 
-	/* Show all detected features in image */
+	/* Show all detected features in image (Red)*/
 	if(imgShow)
 	{
 		drawKeypoints( img_1, keypoints_1, cv_ptr->image, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );

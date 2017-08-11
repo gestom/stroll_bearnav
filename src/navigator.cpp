@@ -20,6 +20,8 @@
 #include <stroll_bearnav/navigatorAction.h>
 #include <stroll_bearnav/SetDistance.h>
 #include <actionlib/server/simple_action_server.h>
+#include <dynamic_reconfigure/server.h>
+#include <stroll_bearnav/navigatorConfig.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -49,14 +51,15 @@ nav_msgs::Odometry odometry;
 
 /* Image features parameters */
 Ptr<SURF> detector = SURF::create(100);
-vector<KeyPoint> keypoints_1, keypoints_2;
+vector<KeyPoint> keypoints_1, keypoints_2,keypointsGood,keypointsBest;
 Mat descriptors_1, descriptors_2;
-Mat img_2;
+Mat img_goodKeypoints_1,img_keypoints_1;
 KeyPoint keypoint,keypoint2;
 float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
 int minGoodFeatures = 2;
 float differenceRot=0;
+bool imgShow;
 
 /* Feature message */
 stroll_bearnav::FeatureArray featureArray;
@@ -98,6 +101,11 @@ void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 	for (int i = 0;i<path.size();i++) printf("%.3f %.3f %.3f %.3f\n",path[i].distance,path[i].forward,path[i].angular,path[i].flipper);
 }
 
+/* dynamic reconfigure of showing images */
+void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
+{
+	imgShow=config.showImageMatches;
+}
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
@@ -158,6 +166,22 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 	cmd_pub_.publish(twist);
 }
 
+/* Extract features from image recieved from camera */
+void imageCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+
+	cv_bridge::CvImagePtr cv_ptr;
+	try
+	{
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
+	}
+	catch (cv_bridge::Exception& e)
+	{
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+		return;
+	}
+	img_keypoints_1=cv_ptr->image;
+}
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == NAVIGATING){
@@ -221,6 +245,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				int idx1=good_matches[i].queryIdx;
 				matched_points1.push_back(keypoints_1[idx1].pt);
 				matched_points2.push_back(keypoints_2[idx2].pt);
+				keypointsGood.push_back(keypoints_2[idx2]);
 				/*difference in x and y positions*/
 				current.x=round(matched_points1[i].x-matched_points2[i].x);	
 				current.y=round(matched_points1[i].y-matched_points2[i].y);
@@ -261,6 +286,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					sum+=differences[i];
 					count++;
 					best_matches.push_back(good_matches[i]);
+					keypointsBest.push_back(keypointsGood[i]);
 				}
 			}
 			/*difference between features */
@@ -271,6 +297,12 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		if (count<=minGoodFeatures) differenceRot = 0;
 		feedback.histogram.clear();
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
+		/*Show good image features (Green) */ 
+		if(imgShow)
+		{
+			drawKeypoints(img_keypoints_1,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
+			imshow("Good Keypoints",img_goodKeypoints_1);
+		}
 		server->publishFeedback(feedback);
 	}
 }
@@ -316,6 +348,7 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
+	image_sub_ = it_.subscribe( "/image_converter/output_video", 1,imageCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
@@ -327,6 +360,10 @@ int main(int argc, char** argv)
 
 	/* Initiate service */
 	client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
+	/* Initiate dynamic reconfiguration */
+	dynamic_reconfigure::Server<stroll_bearnav::navigatorConfig> server;
+	dynamic_reconfigure::Server<stroll_bearnav::navigatorConfig>::CallbackType f = boost::bind(&callback, _1, _2);
+	server.setCallback(f);
 
 	ros::spin();
 	return 0;
