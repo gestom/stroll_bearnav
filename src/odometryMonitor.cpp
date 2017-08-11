@@ -33,7 +33,10 @@ bool setDistance(stroll_bearnav::SetDistance::Request &req, stroll_bearnav::SetD
 {   
 	res.distance=req.distance;
 	totalDist=req.distance;
-	ROS_INFO("Request Distance: %f",(float)req.distance);
+	lastX = currentX;
+	lastY = currentY;
+	eventCounter = totalDist/distanceThreshold-1;
+	ROS_INFO("Setting current travelled distance to %.3f, event counter to %i",(float)req.distance,eventCounter);
 	return true;
 }
 
@@ -42,7 +45,7 @@ void callback(stroll_bearnav::distanceConfig &config, uint32_t level)
 {	
 	 eventCounter = eventCounter*distanceThreshold/config.distance_param;
 	 distanceThreshold=config.distance_param;
- 	 ROS_INFO("Changing distance threshold: %f", config.distance_param);
+ 	 ROS_INFO("Changing distance event threshold: %f", config.distance_param);
 }
 
 void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
@@ -61,7 +64,7 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
 	lastY=currentY;
 
 	/*if it exceeds distanceThreshold from the last send position, then send an event*/
-	if (totalDist-eventCounter*distanceThreshold > distanceThreshold)
+	if (totalDist-eventCounter*distanceThreshold >= distanceThreshold)
 	{
 		eventCounter++;
 		distEvent_.data=totalDist;
