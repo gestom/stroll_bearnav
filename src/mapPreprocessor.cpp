@@ -44,8 +44,9 @@ vector<KeyPoint> keypoints_1,keypoints_2;
 Mat descriptors_1,descriptors_2;
 string folder;
 int numberOfUsedMaps=0;
+int lastLoadedMap=0;
 float mapDistances[1000];
-int mapIndex = 0;
+int numProcessedMaps = 0;
 int numMaps = 1;
 int numFeatures;
 float distanceT;
@@ -90,7 +91,7 @@ int loadMaps()
 	server->publishFeedback(feedback);
 
 	std::sort(mapDistances, mapDistances + numMaps, std::less<float>());
-	mapDistances[0] = mapDistances[numMaps] = mapDistances[numMaps-1];
+	mapDistances[numMaps] = mapDistances[numMaps-1];
 	return numMaps;
 }
 /* load map based on distance travelled  */
@@ -98,9 +99,10 @@ void loadMap(int index)
 {
 	char fileName[1000];
 	sprintf(fileName,"%s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[index]); 
-	printf("Loading %s/%s_%.3f.yaml\n",folder.c_str(),prefix.c_str(),mapDistances[index]); 
+	ROS_DEBUG("Loading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[index]); 
 	FileStorage fs(fileName, FileStorage::READ);
 	if(fs.isOpened()){
+		lastLoadedMap = index;
 		fs["Keypoints"]>>keypoints_1;
 		fs["Descriptors"]>>descriptors_1;
 		fs["Image"]>>img;
@@ -120,7 +122,7 @@ int loadPath()
 {	
 	char fileName[1000];
 	sprintf(fileName,"%s/%s.yaml",folder.c_str(),prefix.c_str()); 
-	printf("Loading %s/%s.yaml\n",folder.c_str(),prefix.c_str()); 
+	ROS_DEBUG("Loading %s/%s.yaml",folder.c_str(),prefix.c_str()); 
 	FileStorage fsp(fileName, FileStorage::READ);
 	vector<float> path;
 	path.clear();
@@ -138,10 +140,12 @@ int loadPath()
 	pathPub.publish(pathProfile);
 	return path.size();
 }
+
 /* Action server */
 void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 {
-
+	lastLoadedMap = -1;
+	numProcessedMaps = 0;
 	stroll_bearnav::loadMapFeedback feedback;
 	
 	prefix = goal->prefix;
@@ -155,21 +159,21 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 		server->setAborted(result);
 	}
 	/* server returns distance travelled, total number of features
-	   and number of loaded map on preempt request or at the end of path */
+	   and number of loaded map on preempt request*/
 	while(state != IDLE){
 		usleep(200000);
 		
 		if(server->isPreemptRequested()){
 			result.distance=distanceT;
 			result.numFeatures=numFeatures;
-			result.numMaps=mapIndex;
+			result.numMaps=numProcessedMaps;
 			server->setPreempted(result);
 			state = IDLE;
 		}
 		if(state == COMPLETE){
 			result.distance=distanceT;
 			result.numFeatures=numFeatures;
-			result.numMaps=mapIndex;
+			result.numMaps=numProcessedMaps;
 			server->setSucceeded(result);
 			state = IDLE;
 		}
@@ -181,11 +185,20 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 	if(state == ACTIVE){
 		distanceT=msg->data;
 		featureArray.feature.clear();
-		//if the next map is closer than the current one
-		if (fabs(distanceT-mapDistances[mapIndex]) > fabs(distanceT-mapDistances[mapIndex+1]))
-		{
-			mapIndex++;
-			loadMap(mapIndex);
+
+		//find the closest map
+		int mindex = -1;
+		float minDistance = FLT_MAX;
+		for (int i = 0;i<numMaps;i++){
+			if (fabs(distanceT-mapDistances[i]) < minDistance){
+				minDistance = fabs(distanceT-mapDistances[i]);
+				mindex = i;
+			}
+		}
+		//publish it
+		if (mindex > -1 && mindex != lastLoadedMap){
+			ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
+			loadMap(mindex);
 			for(int i=0;i<keypoints_1.size();i++)
 			{
 				feature.x=keypoints_1[i].pt.x;
@@ -198,11 +211,10 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 				feature.descriptor=descriptors_1.row(i);
 				featureArray.feature.push_back(feature);
 			}
+			numberOfUsedMaps++;
 			/* publish loaded map */
 			feat_pub_.publish(featureArray);
 
-			/* reached end */
-			if (mapIndex+1 >= numMaps) state = COMPLETE; 
 		}
 	}
 }
