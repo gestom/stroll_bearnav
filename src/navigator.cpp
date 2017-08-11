@@ -183,6 +183,10 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 		std::vector< DMatch > good_matches;
 
+		int numBins = 21;
+		int histogram[numBins];
+		for (int i = 0;i<numBins;i++) histogram[i] = 0;
+
 		/*establish correspondences, build the histogram and determine robot heading*/
 		int count=0,bestc=0;
 		if (keypoints_1.size() >0 && keypoints_2.size() >0){
@@ -205,14 +209,11 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			vector<Point2f> matched_points2;
 			Point2f current;
 			Point2f best, possible;
-			int numBins = 21;
 			count=0;
 			bestc=0;
-			int histogram[numBins];
 			int granularity = 20;
 			int differences[num];
 			std::vector< DMatch > best_matches;
-			for (int i = 0;i<numBins;i++) histogram[i] = 0;
 
 			for (int i=0;i<num;i++){
 
@@ -241,6 +242,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int position=0;
 			printf("Bin: ");
 			for (int i = 0;i<numBins;i++) {
+				
 				printf("%i ",histogram[i]);
 				if (histogram[i]>max)
 				{
@@ -253,7 +255,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int rotation=(position-numBins/2)*granularity;
 			printf("\n");
 			float sum=0;
-
 			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
@@ -268,6 +269,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
 		if (count<=minGoodFeatures) differenceRot = 0;
+		feedback.histogram.clear();
+		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
+		server->publishFeedback(feedback);
 	}
 }
 
@@ -276,6 +280,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 
 	if (state == NAVIGATING){
 		/* check for end of path profile */
+		feedback.distance = msg->data;
 		if (currentPathElement+2 <= path.size())
 		{
 			if (path[currentPathElement+1].distance < msg->data){
