@@ -1,0 +1,37 @@
+<launch>
+
+<!-- Distance Measurement Node -->
+  <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor_node"/>
+
+<!-- feature extraction -->
+  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction_node"/>
+
+<!-- mapping node -->
+<node pkg="stroll_bearnav" type="mapper_node" name="mapper_node">
+  <param name="folder" value="/home/gestom/stroll" />
+</node>
+
+<!-- mapping node -->
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_node">
+ <param name="folder" value="/home/gestom/stroll" />
+</node>
+
+<!-- navigator node -->
+<node pkg="stroll_bearnav" type="navigator_node" name="navigator_node">
+  <param name="folder" value="/home/gestom/stroll" />
+</node>
+
+<!-- action clients -->
+<node pkg="actionlib" type="axclient.py" args="/mapping" name="Action_client_mapper"/>
+<node pkg="actionlib" type="axclient.py" args="/navigator" name="Action_client_navigator"/>
+<node pkg="actionlib" type="axclient.py" args="/loader" name="Action_client_loader"/>
+<node pkg="rqt_reconfigure" type="rqt_reconfigure" name="Reconfigurator"/>
+
+<!-- image view -->
+<node pkg="image_view" type="image_view" name="Image_viewer">
+  <param name="image" value="/stereo/left/image_raw" />
+</node>
+
+<node pkg="stroll_bearnav" type="gui_setup.sh" name="Configure_gui"/>
+
+</launch>

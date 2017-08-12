@@ -107,6 +107,7 @@ int loadMaps()
 	distanceMap.clear();
 	char fileName[1000];
 	
+	numFeatures=0;
 	for (int i = 0;i<numMaps;i++){
 		sprintf(fileName,"%s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]); 
 		ROS_INFO("Preloading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]); 
@@ -121,6 +122,11 @@ int loadMaps()
 			distanceMap.push_back(mapDistances[i]);
 			//imageMap.push_back(img);
 			numFeatures+=keypoints_1.size();
+			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
+			feedback.fileName = fileName;
+			feedback.numFeatures=numFeatures;
+			feedback.mapIndex=numMaps;
+			server->publishFeedback(feedback);
 		}
 	}
 

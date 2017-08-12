@@ -76,6 +76,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	{
 		drawKeypoints( img_1, keypoints_1, cv_ptr->image, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );
 		imshow("Keypoints",cv_ptr->image);
+		waitKey(1);
 		image_pub_.publish(cv_ptr->toImageMsg());
 	}
 	/* Save image features to variables */	
