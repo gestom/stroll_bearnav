@@ -1,7 +1,8 @@
 <launch>
 
 <!-- tara camera driver -->
-<node name="tara_camera" pkg="tara_camera_driver" type="tara_camera_node" output="screen">
+  <group ns="stereo">
+<node name="tara_camera" pkg="tara_camera_driver" type="tara_camera_node" >
  <param name="device_id" type="int" value="1" />
  <param name="width" type="int" value="752" />
  <param name="height" type="int" value="480" />
@@ -10,6 +11,10 @@
  <param name="exposure" type="int" value="1000" />
  <param name="brightness" type="int" value="1" />
 </node>
+  </group>
+
+<!-- Default folder with maps-->
+<arg name="folder" default="/home/gestom/stroll"/>
 
 <!-- Distance Measurement Node -->
   <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor_node"/>
@@ -19,17 +24,17 @@
 
 <!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper_node">
-  <param name="folder" value="/home/gestom/stroll" />
+  <param name="folder" value="$(arg folder)" />
 </node>
 
 <!-- map loader node -->
 <node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_node">
- <param name="folder" value="/home/gestom/stroll" />
+ <param name="folder" value="$(arg folder)" />
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="navigator_node" name="navigator_node">
-  <param name="folder" value="/home/gestom/stroll" output="screen"/>
+<node pkg="stroll_bearnav" type="navigator_node" name="navigator_node" output="screen">
+  <param name="folder" value="$(arg folder)" />
 </node>
 
 <!-- action and reconfigure clients to control the system -->
