@@ -96,6 +96,7 @@ add_service_files(
  generate_dynamic_reconfigure_options(
   	cfg/distance.cfg
 	cfg/featureExtraction.cfg
+	cfg/navigator.cfg
  )
 
 ###################################
@@ -155,10 +156,10 @@ add_executable(navigator_node src/navigator.cpp)
 #add_dependencies(cameleon_video imgFeatures ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(feature_extraction_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(feature_testing_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(map_preprocessor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(odometry_monitor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg  ${catkin_EXPORTED_TARGETS})
-add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 #target_link_libraries(cameleon_ros_driver cameleon_message_client cameleon_message cameleon_timer${catkin_LIBRARIES})
