@@ -8,3 +8,4 @@ while [ $(wmctrl -l |grep $i -c) == 0 ];
 done
 wmctrl -a $i -b add,above
 done
+mplayer $(rospack find stroll_bearnav)/data/nominal.wav
