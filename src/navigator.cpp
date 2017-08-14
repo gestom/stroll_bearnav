@@ -173,7 +173,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	cv_bridge::CvImagePtr cv_ptr;
 	try
 	{
-		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 	}
 	catch (cv_bridge::Exception& e)
 	{
@@ -302,6 +302,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		{
 			drawKeypoints(img_keypoints_1,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
 			imshow("Good Keypoints",img_goodKeypoints_1);
+			waitKey(1);
 		}
 		server->publishFeedback(feedback);
 	}
@@ -348,7 +349,7 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
-	image_sub_ = it_.subscribe( "/image_converter/output_video", 1,imageCallback);
+	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);

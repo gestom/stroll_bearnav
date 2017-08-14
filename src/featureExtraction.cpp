@@ -32,6 +32,7 @@ Mat descriptors_1;
 Mat img_1;
 Ptr<SURF> detector = SURF::create(surfThreshold);
 bool imgShow;
+bool publishImg;
 
 /* adaptive threshold parameters */
 bool adaptThreshold;
@@ -50,6 +51,7 @@ void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
     ROS_DEBUG("Changing feature featureExtraction to %d, keypoints %i", surfThreshold, targetKeypoints);
 	/* show image with features */
 	imgShow=config.showImage;
+	publishImg=config.publishImgMsg;
 }
 
 /* Extract features from image recieved from camera */
@@ -59,7 +61,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	cv_bridge::CvImagePtr cv_ptr;
 	try
 	{
-		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 	}
 	catch (cv_bridge::Exception& e)
 	{
@@ -77,7 +79,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		drawKeypoints( img_1, keypoints_1, cv_ptr->image, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );
 		imshow("Keypoints",cv_ptr->image);
 		waitKey(1);
-		image_pub_.publish(cv_ptr->toImageMsg());
 	}
 	/* Save image features to variables */	
 	for(int i=0;i<keypoints_1.size();i++){
@@ -93,6 +94,11 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	}
 	/* publish image features */
 	feat_pub_.publish(featureArray);
+	/* publish image with features */
+	if(publishImg)
+	{
+		image_pub_.publish(cv_ptr->toImageMsg());
+	}
 	ROS_INFO("Features extracted %ld",featureArray.feature.size());	
 }
 
@@ -109,7 +115,7 @@ int main(int argc, char** argv)
 
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
 	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
-	image_pub_ = it_.advertise("/image_converter/output_video", 1);
+	image_pub_ = it_.advertise("/image_with_features", 1);
 
 	//adaptive surf threshold - trying to target a given number of keypoints
 	if (adaptThreshold){
