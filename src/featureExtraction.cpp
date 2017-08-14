@@ -31,6 +31,7 @@ vector<KeyPoint> keypoints_1;
 Mat descriptors_1;
 Mat img_1;
 Ptr<SURF> detector = SURF::create(surfThreshold);
+bool imgShow;
 
 /* adaptive threshold parameters */
 bool adaptThreshold;
@@ -44,7 +45,7 @@ struct desc_resp
 int target_over;
 int n_last;
 
-/* dynamic reconfigure of surf threshold */
+/* dynamic reconfigure of surf threshold and showing images */
 void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 {
     adaptThreshold = config.adaptThreshold;
@@ -52,9 +53,12 @@ void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
     targetKeypoints = config.targetKeypoints;
 	target_over = targetKeypoints + 0.3 * targetKeypoints;
     gain = config.gain;
-
+	
     detector->setHessianThreshold(surfThreshold);
+
     ROS_DEBUG("Changing feature featureExtraction to %.3f, keypoints %i", surfThreshold, targetKeypoints);
+	/* show image with features */
+	imgShow=config.showImage;
 }
 
 /* Extract features from image recieved from camera */
@@ -103,6 +107,15 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	/* Detect image features */
 	detector->detectAndCompute(img_1, Mat (), keypoints_1,descriptors_1);
 	featureArray.feature.clear();
+
+	/* Show all detected features in image (Red)*/
+	if(imgShow)
+	{
+		drawKeypoints( img_1, keypoints_1, cv_ptr->image, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );
+		imshow("Keypoints",cv_ptr->image);
+		waitKey(1);
+		image_pub_.publish(cv_ptr->toImageMsg());
+	}
 	/* Save image features to variables */	
 	for(int i=0;i<keypoints_1.size();i++){
 		feature.x=keypoints_1[i].pt.x;
@@ -119,7 +132,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	}
 	/* publish image features */
 	feat_pub_.publish(featureArray);
-
+	ROS_INFO("Features extracted %ld",featureArray.feature.size());	
 }
 
 int main(int argc, char** argv)

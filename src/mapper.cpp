@@ -33,7 +33,7 @@ ros::Subscriber distEventSub_;
 ros::Subscriber distSub_;
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
-EMappingState state = IDLE;
+
 /* Service for set/reset distance */
 ros::ServiceClient client;
 stroll_bearnav::SetDistance srv;
@@ -46,19 +46,25 @@ stroll_bearnav::mapperFeedback feedback;
 
 /* Image feature variables */
 char name[100];
-string fileName;
+string folder,baseName;
 Mat img,descriptors;
 Mat descriptor;
 vector<KeyPoint> keypoints;
 vector<float> path;
 KeyPoint keypoint;
 
+vector<vector<KeyPoint> > keypointsMap;
+vector<Mat> descriptorMap;
+vector<float> distanceMap;
+vector<Mat> imagesMap;
+
 /* Feature messages */
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 
 /*joystick input parameters - axes that correspond to forward, turning and flipper speeds*/ 
-int stopButton = 1;
+int stopButton = 2;
+int pauseButton = 0;
 int linearAxis = 1;
 int angularAxis = 0;
 int flipperAxis = 4;
@@ -76,7 +82,6 @@ ros::Publisher vel_pub_;
 
 /*state variables - twist is the message that eventually gets to the ROS driver of the robot, other are obvious*/
 geometry_msgs::Twist twist,lastTwist;
-bool teleoperated = false;
 double forwardAcceleration= 0;
 double forwardSpeed = 0;
 double flipperSpeed = 0;
@@ -87,6 +92,8 @@ double lastAngularSpeed = 0;
 float distanceTotalEvent=0;
 float distanceTravelled=0;
 float flipperPosition=0;
+bool userStop = false;
+EMappingState state = IDLE;
 
 
 void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg);
@@ -110,11 +117,10 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 	if(state != IDLE){
-		ROS_INFO("Catching image");
 		cv_bridge::CvImagePtr cv_ptr;
 		try
 		{
-			cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+			cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
 		}
 		catch (cv_bridge::Exception& e)
 		{
@@ -122,46 +128,55 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 			return;
 		}
 		img=cv_ptr->image;
-		ROS_INFO("Image caought");
 	}	
 }
 /*Action server */
 void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 {
-	fileName=goal->fileName;
-	state = SAVING;
-	/* reset distance using service*/
-	srv.request.distance=0;
+	imagesMap.clear();
+	keypointsMap.clear();
+	descriptorMap.clear();
+	distanceMap.clear();
 
-	if (client.call(srv))
-	{   
-		ROS_INFO("Distance set to: %f", (float)srv.response.distance);
-	}
-	else
-	{
-		ROS_ERROR("Failed to call service SetDistance");
-	}
+	/* reset distance using service*/
+	srv.request.distance = distanceTravelled = distanceTotalEvent = 0;
+	userStop = false;
+	baseName = goal->fileName;
+	state = SAVING;
+	if (!client.call(srv)) ROS_ERROR("Failed to call service SetDistance provided by odometry_monitor node!");
 	while(state == MAPPING || state == SAVING){
 
 		/*on preempt request end mapping and save current map */
-		if(server->isPreemptRequested())
+		if(server->isPreemptRequested() || userStop)
 		{
 			ROS_INFO("Map complete, flushing maps.");
-			while(state == SAVING) usleep(200000);
-			sprintf(name,"%s_%.3f.yaml",fileName.c_str(),distanceTotalEvent);
-			ROS_INFO("Saving map to %s",name);
-			FileStorage fs(name,FileStorage::WRITE);
-			write(fs, "Image", img);
-			write(fs, "Keypoints", keypoints);
-			write(fs, "Descriptors",descriptors);
-			fs.release();
+			while(state == SAVING) usleep(20000);
+			/*add last data to the map*/
+			imagesMap.push_back(img);
+			keypointsMap.push_back(keypoints);
+			descriptorMap.push_back(descriptors);
+			distanceMap.push_back(distanceTravelled);
+
+			/*and flush it to the disk*/
+			for (int i = 0;i<distanceMap.size();i++){
+				sprintf(name,"%s/%s_%.3f.yaml",folder.c_str(),baseName.c_str(),distanceMap[i]);
+				ROS_INFO("Saving map to %s",name);
+				FileStorage fs(name,FileStorage::WRITE);
+				write(fs, "Image", imagesMap[i]);
+				write(fs, "Keypoints", keypointsMap[i]);
+				write(fs, "Descriptors",descriptorMap[i]);
+				fs.release();
+			}
+			result.fileName=name;
 		
-			sprintf(name,"%s.yaml",fileName.c_str());
+			/*save the path profile as well*/
+			sprintf(name,"%s/%s.yaml",folder.c_str(),baseName.c_str());
 			ROS_INFO("Saving path profile to %s",name);
 			FileStorage pfs(name,FileStorage::WRITE);
 			write(pfs, "Path", path);
 			pfs.release();
-			server->setPreempted(result);
+			if (server->isPreemptRequested()) server->setPreempted(result); else  server->setSucceeded(result);
+			userStop = false;
 			state = TERMINATING;
 		}
 		usleep(200000);
@@ -180,8 +195,9 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	angularSpeed = maxAngularSpeed*forwardSpeed*0.5*joy->axes[angularAxis];
 	forwardAcceleration = maxForwardAcceleration*joy->axes[linearAxis];;
 	flipperSpeed = maxFlipperSpeed*joy->axes[flipperAxis];
-	if  (joy->buttons[stopButton]) angularSpeed = forwardSpeed = flipperSpeed = 0;
-	ROS_INFO("Joystick pressed");
+	if  (joy->buttons[stopButton] || joy->buttons[pauseButton]) angularSpeed = forwardSpeed = flipperSpeed = 0;
+	if  (joy->buttons[stopButton]) userStop = true;
+	ROS_DEBUG("Joystick pressed");
 } 
 
 /*flipper position -- for stair traverse*/
@@ -211,13 +227,16 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
 			descriptors.push_back(mat);
 		}
-		sprintf(name,"%s_%.3f.yaml",fileName.c_str(),distanceTotalEvent);
-		ROS_INFO("Saving map to %s",name);
-		FileStorage fs(name,FileStorage::WRITE);
-		//write(fs, "Image", img);
-		write(fs, "Keypoints", keypoints);
-		write(fs, "Descriptors",descriptors);
-		fs.release();
+
+		/*store in memory rather than on disk*/
+		imagesMap.push_back(img);
+		keypointsMap.push_back(keypoints);
+		descriptorMap.push_back(descriptors);
+		distanceMap.push_back(distanceTotalEvent);
+
+		/* publish feedback */
+		sprintf(name,"%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
+		ROS_INFO("%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
 		state = MAPPING;
 		feedback.fileName=name;
 		server->publishFeedback(feedback);
@@ -230,12 +249,13 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "mapper");
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
-	ros::param::get("~fileName", fileName);
+	ros::param::get("~folder", folder);
 	/* joystick params */
 	nh.param("axis_linear", linearAxis, 1);
 	nh.param("axis_angular", angularAxis, 0);
 	nh.param("axis_flipper", flipperAxis, 4);
-	nh.param("stopButton", stopButton, 1);
+	nh.param("stopButton", stopButton, 2);
+	nh.param("pauseButton", pauseButton, 0);
 
 	/* robot speed limits */
 	nh.param("angularSpeed", maxAngularSpeed, 0.2);
@@ -252,7 +272,7 @@ int main(int argc, char** argv)
 	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance/events",1,distanceEventCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
-	ROS_INFO( "%s", fileName.c_str());
+	ROS_INFO( "Map folder is: %s", folder.c_str());
 
 	/* Initiate action server */
 	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
@@ -281,7 +301,7 @@ int main(int argc, char** argv)
 				path.push_back(forwardSpeed);
 				path.push_back(angularSpeed);
 				path.push_back(flipperSpeed);
-				printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
+				//printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
 			}
 			lastForwardSpeed = forwardSpeed;
 			lastAngularSpeed = angularSpeed;
