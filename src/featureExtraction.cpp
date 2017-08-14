@@ -36,7 +36,7 @@ bool imgShow;
 /* adaptive threshold parameters */
 bool adaptThreshold;
 int targetKeypoints;
-int gain;
+float gain;
 struct desc_resp
 {
 	template<class T>
@@ -51,8 +51,8 @@ void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
     adaptThreshold = config.adaptThreshold;
     if (!adaptThreshold) surfThreshold=config.thresholdParam;
     targetKeypoints = config.targetKeypoints;
-	target_over = targetKeypoints + 0.3 * targetKeypoints;
     gain = config.gain;
+	target_over = targetKeypoints + gain * targetKeypoints;
 	
     detector->setHessianThreshold(surfThreshold);
 
@@ -76,14 +76,16 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		return;
 	}
 	img_1=cv_ptr->image;
-	//adaptive surf threshold - trying to target a given number of keypoints
+
+	/* adaptive surf threshold - trying to target a given number of keypoints */
 	if (adaptThreshold){
 		std::sort(keypoints_1.begin(), keypoints_1.end(), desc_resp());
 		if(keypoints_1.size() > target_over) {
 			surfThreshold =  ((keypoints_1[target_over].response + keypoints_1[target_over + 1].response) / 2);
 			ROS_INFO("Keypoints %ld over %i , set threshold %.3f between responses %.3f %.3f, missing %ld",keypoints_1.size(),target_over,surfThreshold,keypoints_1[target_over].response,keypoints_1[target_over + 1].response, target_over - keypoints_1.size());
 		} else {
-			n_last = std::min((int) keypoints_1.size(),(int) (keypoints_1.size()/5));
+            /* compute average difference between responses of n last keypoints */
+			n_last = keypoints_1.size()/5;
 			float avg_dif = 0;
 			if( keypoints_1.size() > 1) {
 				for (int j = (keypoints_1.size() - n_last); j < keypoints_1.size() - 1; ++j) {
@@ -91,19 +93,17 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 				}
 			} else {
 				avg_dif = 1000;
+                n_last = 2;
 			}
-			surfThreshold -= avg_dif/(n_last-1)*std::min((int) (target_over - keypoints_1.size()),70000);//4;//*(target_over - keypoints_1.size());
+			surfThreshold -= avg_dif/(n_last-1)*(target_over - keypoints_1.size());
 			ROS_INFO("Keypoints %ld under %i , set threshold %.3f, n_last %i, avg_dif %.3f, missing %ld ",keypoints_1.size(),target_over,surfThreshold,n_last,avg_dif,target_over - keypoints_1.size());
 
 		}
-		//int last_dif = (int) (keypoints_1[keypoints_1.size()-2].response - keypoints_1[keypoints_1.size()-1].response);
-		//int last_threshold = surfThreshold;
 		surfThreshold = fmax(surfThreshold,0);
 		if(keypoints_1.size() == 0) surfThreshold = 0;
-		//if(surfThreshold == 0) surfThreshold = std::max(surfThreshold-last_dif,0);
 		detector->setHessianThreshold(surfThreshold);
-		//ROS_INFO("Adaptive Hessian threshold set to %i, number of features: %ld, missing %ld",surfThreshold, keypoints_1.size(), target_over - keypoints_1.size());
 	}
+
 	/* Detect image features */
 	detector->detectAndCompute(img_1, Mat (), keypoints_1,descriptors_1);
 	featureArray.feature.clear();
@@ -126,7 +126,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		feature.octave=keypoints_1[i].octave;
 		feature.class_id=keypoints_1[i].class_id;
 		descriptors_1.row(i).copyTo(feature.descriptor);
-		if(i <= targetKeypoints) {
+		if(i < targetKeypoints) {
 			featureArray.feature.push_back(feature);
 		}
 	}
