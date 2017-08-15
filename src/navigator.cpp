@@ -112,9 +112,7 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	ROS_INFO("Received a new reference map");
 	keypoints_1.clear();
 	descriptors_1=Mat();
-	keypointsBest.clear();
-	keypointsGood.clear();
-	for(int i=0; i<msg->feature.size();i++){
+		for(int i=0; i<msg->feature.size();i++){
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
 		keypoint.size=msg->feature[i].size;
@@ -187,6 +185,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == NAVIGATING){
 		keypoints_2.clear();
+		keypointsBest.clear();
+		keypointsGood.clear();
 		descriptors_2=Mat();
 
 		/*reconstitute features from the incoming message*/
