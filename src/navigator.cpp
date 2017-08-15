@@ -112,7 +112,8 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	ROS_INFO("Received a new reference map");
 	keypoints_1.clear();
 	descriptors_1=Mat();
-
+	keypointsBest.clear();
+	keypointsGood.clear();
 	for(int i=0; i<msg->feature.size();i++){
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
@@ -272,8 +273,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				if (histogram[i]>max)
 				{
 					max=histogram[i];
-					position=i;
-				}
+						position=i;
+					}
 			}
 
 			/* rotation between features based on histogram voting */
