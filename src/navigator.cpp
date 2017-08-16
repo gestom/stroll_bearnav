@@ -279,6 +279,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					position=i;
 				}
 			}
+			feedback.max = max;
 
 			/* rotation between features based on histogram voting */
 			int rotation=(position-numBins/2)*granularity;
@@ -294,6 +295,11 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					keypointsBest.push_back(keypointsGood[i]);
 				}
 			}
+			/* publish statistics */
+			feedback.correct = best_matches.size();
+			feedback.outliers = good_matches.size() - best_matches.size();
+			feedback.keypoints_avg = (keypoints_1.size() + keypoints_2.size() )/2;
+			feedback.matches = good_matches.size();
 			/*difference between features */
 			differenceRot=sum/count; 
 
@@ -307,11 +313,24 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		Mat haha; 
 		if(imgShow)
 		{
-			drawKeypoints(img_keypoints_1,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
+			//drawKeypoints(img_keypoints_1,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
 		//	drawMatches(img_keypoints_1,keypoints_1,img_keypoints_1,keypoints_2,good_matches,haha,Scalar(0,0,255),Scalar(0,0,255),vector<char>(),0);
-			imshow("Good Keypoints",img_goodKeypoints_1);
+			//imshow("Good Keypoints",img_goodKeypoints_1);
 			waitKey(1);
 		}
+
+		/* publish statistics */
+		std::vector<int> stats;
+		feedback.stats.clear();
+		stats.push_back(feedback.keypoints_avg);
+		feedback.stats.push_back(feedback.keypoints_avg);
+		stats.push_back(feedback.matches);
+		feedback.stats.push_back(feedback.matches);
+		stats.push_back(feedback.correct);
+		feedback.stats.push_back(feedback.correct);
+		stats.push_back(feedback.outliers);
+		feedback.stats.push_back(feedback.outliers);
+
 		server->publishFeedback(feedback);
 	}
 }
