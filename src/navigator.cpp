@@ -84,6 +84,7 @@ typedef enum
 ENavigationState state = IDLE;
 vector<SPathElement> path;
 float overshoot = 0;
+double velocityGain=0;
 
 void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 {
@@ -101,10 +102,12 @@ void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 	for (int i = 0;i<path.size();i++) printf("%.3f %.3f %.3f %.3f\n",path[i].distance,path[i].forward,path[i].angular,path[i].flipper);
 }
 
-/* dynamic reconfigure of showing images */
+/* dynamic reconfigure of showing images, velocity gain and matching ratio constant */
 void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 {
 	imgShow=config.showImageMatches;
+	velocityGain=config.velocityGain;
+	ratioMatchConstant=config.matchingRatio;
 }
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
@@ -112,7 +115,6 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	ROS_INFO("Received a new reference map");
 	keypoints_1.clear();
 	descriptors_1=Mat();
-
 	for(int i=0; i<msg->feature.size();i++){
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
@@ -173,7 +175,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	cv_bridge::CvImagePtr cv_ptr;
 	try
 	{
-		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 	}
 	catch (cv_bridge::Exception& e)
 	{
@@ -186,6 +188,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == NAVIGATING){
 		keypoints_2.clear();
+		keypointsBest.clear();
+		keypointsGood.clear();
 		descriptors_2=Mat();
 
 		/*reconstitute features from the incoming message*/
@@ -281,6 +285,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int rotation=(position-numBins/2)*granularity;
 			printf("\n");
 			float sum=0;
+			keypointsBest.clear();	
 			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
@@ -300,14 +305,18 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
+		velocityGain = fmin(fmax(count/20.0,0.5),3.0);
 		if (count<=minGoodFeatures) differenceRot = 0;
 		feedback.histogram.clear();
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
-		/*Show good image features (Green) */ 
+		/*Show good image features (Green) */
+		Mat haha; 
 		if(imgShow)
 		{
-			drawKeypoints(img_keypoints_1,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
-			imshow("Good Keypoints",img_goodKeypoints_1);
+			//drawKeypoints(img_keypoints_1,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
+		//	drawMatches(img_keypoints_1,keypoints_1,img_keypoints_1,keypoints_2,good_matches,haha,Scalar(0,0,255),Scalar(0,0,255),vector<char>(),0);
+			//imshow("Good Keypoints",img_goodKeypoints_1);
+			waitKey(1);
 		}
 
 		/* publish statistics */
@@ -345,10 +354,10 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		{
 			//ROS_INFO("MOVE %i %f",currentPathElement,path[currentPathElement].forward);
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-			twist.linear.x = path[currentPathElement].forward; 
+			if (fabs(path[currentPathElement].angular) > 0.001) velocityGain = 1.0;
+			twist.linear.x = path[currentPathElement].forward*velocityGain; 
 			twist.angular.y = twist.angular.x = 0.0;
-
-			twist.angular.z=path[currentPathElement].angular;
+			twist.angular.z=path[currentPathElement].angular*velocityGain;
 			twist.angular.z+=differenceRot*0.0001;
 			cmd_pub_.publish(twist);
 		}
@@ -367,7 +376,7 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
-	image_sub_ = it_.subscribe( "/image_converter/output_video", 1,imageCallback);
+	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
