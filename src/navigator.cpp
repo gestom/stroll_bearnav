@@ -84,6 +84,7 @@ typedef enum
 ENavigationState state = IDLE;
 vector<SPathElement> path;
 float overshoot = 0;
+double velocityGain=0;
 
 void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 {
@@ -101,10 +102,12 @@ void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 	for (int i = 0;i<path.size();i++) printf("%.3f %.3f %.3f %.3f\n",path[i].distance,path[i].forward,path[i].angular,path[i].flipper);
 }
 
-/* dynamic reconfigure of showing images */
+/* dynamic reconfigure of showing images, velocity gain and matching ratio constant */
 void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 {
 	imgShow=config.showImageMatches;
+	velocityGain=config.velocityGain;
+	ratioMatchConstant=config.matchingRatio;
 }
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
@@ -112,7 +115,6 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	ROS_INFO("Received a new reference map");
 	keypoints_1.clear();
 	descriptors_1=Mat();
-
 	for(int i=0; i<msg->feature.size();i++){
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
@@ -186,6 +188,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == NAVIGATING){
 		keypoints_2.clear();
+		keypointsBest.clear();
+		keypointsGood.clear();
 		descriptors_2=Mat();
 
 		/*reconstitute features from the incoming message*/
@@ -330,14 +334,9 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		{
 			//ROS_INFO("MOVE %i %f",currentPathElement,path[currentPathElement].forward);
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-			twist.linear.x = path[currentPathElement].forward; 
+			twist.linear.x = path[currentPathElement].forward*velocityGain; 
 			twist.angular.y = twist.angular.x = 0.0;
-
-			twist.angular.z=path[currentPathElement].angular;
-			if (false && msg->data > 40 && msg->data < 50){
-				twist.linear.x = twist.linear.x/2;
-				twist.angular.z = twist.angular.z/2;
-			}
+			twist.angular.z=path[currentPathElement].angular*velocityGain;
 			twist.angular.z+=differenceRot*0.0001;
 			cmd_pub_.publish(twist);
 		}
@@ -356,7 +355,7 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
-	image_sub_ = it_.subscribe( "/image_converter/output_video", 1,imageCallback);
+	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
