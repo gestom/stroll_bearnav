@@ -102,11 +102,12 @@ void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 	for (int i = 0;i<path.size();i++) printf("%.3f %.3f %.3f %.3f\n",path[i].distance,path[i].forward,path[i].angular,path[i].flipper);
 }
 
-/* dynamic reconfigure of showing images */
+/* dynamic reconfigure of showing images, velocity gain and matching ratio constant */
 void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 {
 	imgShow=config.showImageMatches;
 	velocityGain=config.velocityGain;
+	ratioMatchConstant=config.matchingRatio;
 }
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
