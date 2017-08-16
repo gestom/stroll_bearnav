@@ -84,6 +84,7 @@ typedef enum
 ENavigationState state = IDLE;
 vector<SPathElement> path;
 float overshoot = 0;
+double velocityGain=0;
 
 void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 {
@@ -105,6 +106,7 @@ void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 {
 	imgShow=config.showImageMatches;
+	velocityGain=config.velocityGain;
 }
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
@@ -328,10 +330,10 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		{
 			//ROS_INFO("MOVE %i %f",currentPathElement,path[currentPathElement].forward);
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-			twist.linear.x = path[currentPathElement].forward; 
+			twist.linear.x = path[currentPathElement].forward*velocityGain; 
 			twist.angular.y = twist.angular.x = 0.0;
 
-			twist.angular.z=path[currentPathElement].angular;
+			twist.angular.z=path[currentPathElement].angular*velocityGain;
 			twist.angular.z+=differenceRot*0.0001;
 			cmd_pub_.publish(twist);
 		}
