@@ -173,7 +173,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	cv_bridge::CvImagePtr cv_ptr;
 	try
 	{
-		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 	}
 	catch (cv_bridge::Exception& e)
 	{
@@ -280,6 +280,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int rotation=(position-numBins/2)*granularity;
 			printf("\n");
 			float sum=0;
+			keypointsBest.clear();	
 			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
@@ -297,11 +298,14 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		if (count<=minGoodFeatures) differenceRot = 0;
 		feedback.histogram.clear();
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
-		/*Show good image features (Green) */ 
+		/*Show good image features (Green) */
+		Mat haha; 
 		if(imgShow)
 		{
 			drawKeypoints(img_keypoints_1,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
+		//	drawMatches(img_keypoints_1,keypoints_1,img_keypoints_1,keypoints_2,good_matches,haha,Scalar(0,0,255),Scalar(0,0,255),vector<char>(),0);
 			imshow("Good Keypoints",img_goodKeypoints_1);
+			waitKey(1);
 		}
 		server->publishFeedback(feedback);
 	}
@@ -330,6 +334,10 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			twist.angular.y = twist.angular.x = 0.0;
 
 			twist.angular.z=path[currentPathElement].angular;
+			if (false && msg->data > 40 && msg->data < 50){
+				twist.linear.x = twist.linear.x/2;
+				twist.angular.z = twist.angular.z/2;
+			}
 			twist.angular.z+=differenceRot*0.0001;
 			cmd_pub_.publish(twist);
 		}
