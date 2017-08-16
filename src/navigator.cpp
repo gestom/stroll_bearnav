@@ -299,6 +299,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
+		velocityGain = fmin(fmax(count/20.0,0.5),3.0);
 		if (count<=minGoodFeatures) differenceRot = 0;
 		feedback.histogram.clear();
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
@@ -334,6 +335,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		{
 			//ROS_INFO("MOVE %i %f",currentPathElement,path[currentPathElement].forward);
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+			if (fabs(path[currentPathElement].angular) > 0.001) velocityGain = 1.0;
 			twist.linear.x = path[currentPathElement].forward*velocityGain; 
 			twist.angular.y = twist.angular.x = 0.0;
 			twist.angular.z=path[currentPathElement].angular*velocityGain;
