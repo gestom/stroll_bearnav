@@ -135,6 +135,10 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		}
 
 	}
+		
+	featureArray.id = "image_" + msg->header.seq;
+	featureArray.distance = msg->header.seq;
+
 	/* publish image features */
 	feat_pub_.publish(featureArray);
 	/* publish image with features */

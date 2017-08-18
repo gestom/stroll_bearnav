@@ -41,6 +41,8 @@ stroll_bearnav::Feature feature;
 /* map variables */
 Mat img,img2;
 vector<KeyPoint> keypoints_1,keypoints_2; 
+string currentMapName; 
+float currentDistance = -1.0; 
 Mat descriptors_1,descriptors_2;
 string folder;
 int numberOfUsedMaps=0;
@@ -57,6 +59,7 @@ bool stop = false;
 vector<vector<KeyPoint> > keypointsMap;
 vector<Mat> descriptorMap;
 vector<float> distanceMap;
+vector<string> namesMap;
 vector<Mat> imagesMap;
 
 
@@ -105,6 +108,7 @@ int loadMaps()
 	keypointsMap.clear();
 	descriptorMap.clear();
 	distanceMap.clear();
+	namesMap.clear();
 	char fileName[1000];
 	
 	numFeatures=0;
@@ -120,6 +124,7 @@ int loadMaps()
 			keypointsMap.push_back(keypoints_1);
 			descriptorMap.push_back(descriptors_1);
 			distanceMap.push_back(mapDistances[i]);
+			namesMap.push_back(fileName);
 			//imageMap.push_back(img);
 			numFeatures+=keypoints_1.size();
 			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
@@ -138,12 +143,15 @@ int loadMaps()
 	server->publishFeedback(feedback);
 	return numMaps;
 }
+
 /* load map based on distance travelled  */
 void loadMap(int index)
 {
 	lastLoadedMap = index;
 	keypoints_1 = keypointsMap[index];
 	descriptors_1 = descriptorMap[index];
+	currentMapName = namesMap[index];
+	currentDistance = distanceMap[index];
 	numFeatures=keypoints_1.size();
 	char fileName[1000];
 	sprintf(fileName,"%i features loaded from %ith map at %.3f",numFeatures,index,distanceMap[index]);
@@ -153,6 +161,7 @@ void loadMap(int index)
 	/* feedback returns name of loaded map, number of features in it and index */
 	server->publishFeedback(feedback);
 }
+
 /* load path profile 
    returns size of path profile */
 int loadPath()
@@ -249,6 +258,8 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 				feature.descriptor=descriptors_1.row(i);
 				featureArray.feature.push_back(feature);
 			}
+			featureArray.distance = currentDistance;
+			featureArray.id = currentMapName;
 			numberOfUsedMaps++;
 			/* publish loaded map */
 			feat_pub_.publish(featureArray);

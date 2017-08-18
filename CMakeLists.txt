@@ -55,6 +55,7 @@ find_package(OpenCV REQUIRED)
    Feature.msg
    FeatureArray.msg	
    PathProfile.msg
+   NavigationInfo.msg
 )
 
 ## Generate services in the 'srv' folder

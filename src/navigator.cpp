@@ -22,6 +22,7 @@
 #include <actionlib/server/simple_action_server.h>
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/navigatorConfig.h>
+#include <stroll_bearnav/NavigationInfo.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -29,6 +30,7 @@ static const std::string OPENCV_WINDOW = "Image window";
 
 
 ros::Publisher cmd_pub_;
+ros::Publisher info_pub_;
 ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
 ros::Subscriber speedSub_;
@@ -45,6 +47,8 @@ typedef actionlib::SimpleActionServer<stroll_bearnav::navigatorAction> Server;
 Server *server;
 stroll_bearnav::navigatorResult result;
 stroll_bearnav::navigatorFeedback feedback;
+stroll_bearnav::FeatureArray mapFeatures;
+
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
@@ -57,6 +61,7 @@ Mat img_goodKeypoints_1,img_keypoints_1;
 KeyPoint keypoint,keypoint2;
 float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
+float currentDistance = 0;
 int minGoodFeatures = 2;
 float differenceRot=0;
 bool imgShow;
@@ -112,6 +117,7 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
+	mapFeatures = *msg;
 	ROS_INFO("Received a new reference map");
 	keypoints_1.clear();
 	descriptors_1=Mat();
@@ -217,6 +223,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 		/*establish correspondences, build the histogram and determine robot heading*/
 		int count=0,bestc=0;
+		std::vector< DMatch > best_matches;
 		if (keypoints_1.size() >0 && keypoints_2.size() >0){
 
 			/*feature matching*/
@@ -241,7 +248,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			bestc=0;
 			int granularity = 20;
 			int differences[num];
-			std::vector< DMatch > best_matches;
 
 			for (int i=0;i<num;i++){
 
@@ -299,10 +305,35 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
-		velocityGain = fmin(fmax(count/20.0,0.5),3.0);
-		if (count<=minGoodFeatures) differenceRot = 0;
+		velocityGain = fmin(fmax(count/20.0,1.0),3.0);
+		stroll_bearnav::NavigationInfo info;
+
+				
 		feedback.histogram.clear();
+		if (count<=minGoodFeatures) differenceRot = 0;
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
+
+		/*forming navigation info messsage*/
+		//info.mapID = currentMapID;
+		info.histogram = feedback.histogram;
+		info.map = mapFeatures;
+		info.view = *msg;
+		info.mapMatchIndex.clear();
+		vector<int> mapIndex(mapFeatures.feature.size());
+		vector<int> mapEval(mapFeatures.feature.size());
+		std::fill(mapIndex.begin(),mapIndex.end(),-1); 
+		std::fill(mapEval.begin(),mapEval.end(),0); 
+		for (int i = 0;i<good_matches.size();i++)
+		{
+			mapIndex[good_matches[i].queryIdx] = good_matches[i].trainIdx;
+			mapEval[good_matches[i].queryIdx] = -1;
+		}	
+		for (int i = 0;i<best_matches.size();i++) mapEval[best_matches[i].queryIdx] = 1;
+		
+		info.mapMatchIndex = mapIndex;
+		info.mapMatchEval = mapEval;
+		info_pub_.publish(info);
+
 		/*Show good image features (Green) */
 		Mat haha; 
 		if(imgShow)
@@ -321,7 +352,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 
 	if (state == NAVIGATING){
 		/* check for end of path profile */
-		feedback.distance = msg->data;
+		feedback.distance = currentDistance = msg->data;
 		if (currentPathElement+2 <= path.size())
 		{
 			if (path[currentPathElement+1].distance < msg->data){
@@ -359,6 +390,7 @@ int main(int argc, char** argv)
 	image_transport::ImageTransport it_(nh);
 	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
+	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("navigationInfo",1);
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);

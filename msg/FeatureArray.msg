@@ -1,4 +1,4 @@
 Header header
 float32 distance
-string mapName
+string id 
 stroll_bearnav/Feature[] feature
