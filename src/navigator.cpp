@@ -90,6 +90,7 @@ ENavigationState state = IDLE;
 vector<SPathElement> path;
 float overshoot = 0;
 double velocityGain=0;
+int maxVerticalDifference = 0;
 
 void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 {
@@ -113,7 +114,9 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	imgShow=config.showImageMatches;
 	velocityGain=config.velocityGain;
 	ratioMatchConstant=config.matchingRatio;
+	maxVerticalDifference = config.maxVerticalDifference;
 }
+
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
@@ -261,7 +264,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				current.y=round(matched_points1[i].y-matched_points2[i].y);
 				int difference = current.x;
 				int index = (difference+granularity/2)/granularity + numBins/2;
-				if (fabs(current.y) > 50){
+				if (fabs(current.y) > maxVerticalDifference){
 					differences[i] = -1000000;
 				}else{
 					differences[i] = difference;
@@ -324,6 +327,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info.histogram = feedback.histogram;
 		info.map = mapFeatures;
 		info.view = *msg;
+		info.ratio = ratioMatchConstant;
 		info.mapMatchIndex.clear();
 		vector<int> mapIndex(mapFeatures.feature.size());
 		vector<int> mapEval(mapFeatures.feature.size());

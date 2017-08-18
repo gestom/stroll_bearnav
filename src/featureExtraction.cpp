@@ -112,6 +112,9 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		if(measure_time) printf("\nTime taken: %.4f\n", (float)(clock() - t)/CLOCKS_PER_SEC);
 	}
 
+	featureArray.id = "image_" + msg->header.seq;
+	featureArray.distance = msg->header.seq;
+	feat_pub_.publish(featureArray);
 }
 
 void extract_features(cv_bridge::CvImagePtr& cv_ptr, vector<KeyPoint>& keypoints, Mat& descriptors){
@@ -143,11 +146,6 @@ void extract_features(cv_bridge::CvImagePtr& cv_ptr, vector<KeyPoint>& keypoints
 		}
 
 	}
-	featureArray.id = "image_" + msg->header.seq;
-	featureArray.distance = msg->header.seq;
-
-	/* publish image features */
-	feat_pub_.publish(featureArray);
 	/* publish image with features */
 	if(publishImg)
 	{
