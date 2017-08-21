@@ -2,7 +2,7 @@
 
 <!-- tara camera driver -->
   <group ns="stereo">
-<node name="tara_camera" pkg="tara_camera_driver" type="tara_camera_node" >
+<!--node name="tara_camera" pkg="tara_camera_driver" type="tara_camera_node" >
  <param name="device_id" type="int" value="1" />
  <param name="width" type="int" value="752" />
  <param name="height" type="int" value="480" />
@@ -10,21 +10,24 @@
  <param name="right/camera_info_url" value="file://$(find tara_camera_driver)/calib/calib_right.yml"/>
  <param name="exposure" type="int" value="1000" />
  <param name="brightness" type="int" value="1" />
-</node>
+</node-->
   </group>
 
 <!-- Default folder with maps-->
-<arg name="folder" default="/home/gestom/stroll"/>
+<arg name="folder" default="/home/bot/data"/>
 
 <!-- Distance Measurement Node -->
   <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor_node"/>
 
 <!-- feature extraction -->
-  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction_node"/>
+  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction_node">
+  <remap from="/stereo/left/image_raw" to="/usb_cam/image_raw"/>
+  </node>
 
 <!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper_node">
   <param name="folder" value="$(arg folder)" />
+  <param name="angularSpeed" value="1.0" />
 </node>
 
 <!-- map loader node -->

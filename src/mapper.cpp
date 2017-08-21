@@ -256,13 +256,14 @@ int main(int argc, char** argv)
 	nh.param("axis_flipper", flipperAxis, 4);
 	nh.param("stopButton", stopButton, 2);
 	nh.param("pauseButton", pauseButton, 0);
-
+	
 	/* robot speed limits */
 	nh.param("angularSpeed", maxAngularSpeed, 0.2);
 	nh.param("forwardSpeed", maxForwardSpeed, 0.3);
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
-
+	
+	printf("%.3f\n",maxAngularSpeed);
 	vel_pub_ = nh.advertise<geometry_msgs::Twist>("cmd", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("joy", 10, joyCallback);

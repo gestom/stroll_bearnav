@@ -229,7 +229,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		if (keypoints_1.size() >0 && keypoints_2.size() >0){
 
 			/*feature matching*/
-			Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_HAMMING);
+			Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_L2);
 			vector< vector<DMatch> > matches;
 			matcher->knnMatch( descriptors_1, descriptors_2, matches, 2);
 
@@ -314,6 +314,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
 		velocityGain = fmin(fmax(count/20.0,1.0),3.0);
+		velocityGain = 1.0;
 		stroll_bearnav::NavigationInfo info;
 
 				
@@ -392,7 +393,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			twist.linear.x = path[currentPathElement].forward*velocityGain; 
 			twist.angular.y = twist.angular.x = 0.0;
 			twist.angular.z=path[currentPathElement].angular*velocityGain;
-			twist.angular.z+=differenceRot*0.0001;
+			twist.angular.z+=differenceRot*0.01;
 			cmd_pub_.publish(twist);
 		}
 	}
