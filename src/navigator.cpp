@@ -54,7 +54,6 @@ geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
 
 /* Image features parameters */
-Ptr<SURF> detector = SURF::create(100);
 vector<KeyPoint> keypoints_1, keypoints_2,keypointsGood,keypointsBest;
 Mat descriptors_1, descriptors_2;
 Mat img_goodKeypoints_1,img_keypoints_1;
@@ -230,7 +229,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		if (keypoints_1.size() >0 && keypoints_2.size() >0){
 
 			/*feature matching*/
-			Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_L2);
+			Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_HAMMING);
 			vector< vector<DMatch> > matches;
 			matcher->knnMatch( descriptors_1, descriptors_2, matches, 2);
 

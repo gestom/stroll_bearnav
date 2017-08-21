@@ -26,11 +26,12 @@ stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
 
 /* image feature parameters */
-float surfThreshold = 400;
+float surfThreshold = 1000000;
 vector<KeyPoint> keypoints_1; 
 Mat descriptors_1;
 Mat img_1;
-Ptr<SURF> detector = SURF::create(surfThreshold);
+Ptr<AgastFeatureDetector> detector = AgastFeatureDetector::create(surfThreshold,true,AgastFeatureDetector::OAST_9_16);
+Ptr<BriefDescriptorExtractor> extractor = BriefDescriptorExtractor::create();
 bool imgShow = false;
 bool publishImg = false;
 void extract_features(cv_bridge::CvImagePtr& cv_ptr, vector<KeyPoint>& keypoints, Mat& descriptors);
@@ -60,7 +61,7 @@ void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 	optimized = config.optimized;
 	measure_time = config.measure_time;
 	
-    detector->setHessianThreshold(surfThreshold);
+    detector->setThreshold(surfThreshold);
 
     ROS_DEBUG("Changing feature featureExtraction to %.3f, keypoints %i", surfThreshold, targetKeypoints);
 	/* show image with features */
@@ -104,11 +105,15 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 	} else {
 		if(measure_time) t = clock();
-		detector->detectAndCompute(img_1, Mat (), keypoints_1,descriptors_1);
+		detector->detect(img_1, keypoints_1, Mat() );
 
-		adaptive_threshold(keypoints_1);
+		extractor->compute(img_1,keypoints_1,descriptors_1);
+		//drawKeypoints( img_1, keypoints_1, cv_ptr->image, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );
+		if(adaptThreshold) adaptive_threshold(keypoints_1);
 		extract_features(cv_ptr,keypoints_1,descriptors_1);
-
+		//image_pub_.publish(cv_ptr->toImageMsg());
+		//imshow("Keypoints",cv_ptr->image);
+		//waitKey(1);
 		if(measure_time) printf("\nTime taken: %.4f\n", (float)(clock() - t)/CLOCKS_PER_SEC);
 	}
 
@@ -180,7 +185,7 @@ void adaptive_threshold(vector<KeyPoint>& keypoints){
 			}
 		}
 		surfThreshold = fmax(surfThreshold,0);
-		detector->setHessianThreshold(surfThreshold);
+		detector->setThreshold(surfThreshold);
 }
 
 int main(int argc, char** argv)
