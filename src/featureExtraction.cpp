@@ -86,30 +86,35 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 	/* Detect image features */
 	if(optimized && adaptThreshold){
+
+		/* measuring time of the whole process to find out whether this option is faster */
 		if(measure_time) t = clock();
 
+		/* firstly only detect keypoints */
 		detector->detect(img_1,keypoints_1, Mat () );
 
-		/* compute descriptors only for desired number of keypoints */
+		/* reduce keypoints size to desired number of keypoints */
 		int fend = target_over;
 		if (target_over > keypoints_1.size()) fend = keypoints_1.size();
 		keypoints_1.erase(keypoints_1.begin()+fend,keypoints_1.end());
 
+		/* then compute descriptors only for desired number of keypoints */
 		detector->compute(img_1,keypoints_1,descriptors_1);
 
 		adaptive_threshold(keypoints_1);
 		extract_features(cv_ptr,keypoints_1,descriptors_1);
 
-		if(measure_time) printf("\nTime taken: %.4f\n", (float)(clock() - t)/CLOCKS_PER_SEC);
+		if(measure_time) printf("\nTime taken: %.4f s\n", (float)(clock() - t)/CLOCKS_PER_SEC);
 
 	} else {
 		if(measure_time) t = clock();
+		/* detect keypoints and compute descriptors for all keypoints*/
 		detector->detectAndCompute(img_1, Mat (), keypoints_1,descriptors_1);
 
-		adaptive_threshold(keypoints_1);
+		if(adaptThreshold) adaptive_threshold(keypoints_1);
 		extract_features(cv_ptr,keypoints_1,descriptors_1);
 
-		if(measure_time) printf("\nTime taken: %.4f\n", (float)(clock() - t)/CLOCKS_PER_SEC);
+		if(measure_time) printf("\nTime taken: %.4f s\n", (float)(clock() - t)/CLOCKS_PER_SEC);
 	}
 
 	featureArray.id = "image_" + msg->header.seq;
