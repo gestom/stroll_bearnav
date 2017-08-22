@@ -247,7 +247,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 int main(int argc, char** argv)
 { 
 	ros::init(argc, argv, "mapper");
-	ros::NodeHandle nh;
+	ros::NodeHandle nh("~");
 	image_transport::ImageTransport it_(nh);
 	ros::param::get("~folder", folder);
 	/* joystick params */
