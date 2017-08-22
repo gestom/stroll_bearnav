@@ -247,7 +247,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 int main(int argc, char** argv)
 { 
 	ros::init(argc, argv, "mapper");
-	ros::NodeHandle nh;
+	ros::NodeHandle nh("~");
 	image_transport::ImageTransport it_(nh);
 	ros::param::get("~folder", folder);
 	/* joystick params */
@@ -263,7 +263,6 @@ int main(int argc, char** argv)
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 	
-	printf("%.3f\n",maxAngularSpeed);
 	vel_pub_ = nh.advertise<geometry_msgs::Twist>("cmd", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("joy", 10, joyCallback);

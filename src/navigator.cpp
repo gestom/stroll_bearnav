@@ -62,7 +62,10 @@ float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
 float currentDistance = 0;
 int minGoodFeatures = 2;
+float pixelTurnGain = 0.0001;
 float differenceRot=0;
+float minimalAdaptiveSpeed = 1.0;
+float maximalAdaptiveSpeed = 1.0;
 bool imgShow;
 
 /* Feature message */
@@ -114,6 +117,10 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	velocityGain=config.velocityGain;
 	ratioMatchConstant=config.matchingRatio;
 	maxVerticalDifference = config.maxVerticalDifference;
+	minGoodFeatures = config.minGoodFeatures;
+	pixelTurnGain = config.pixelTurnGain;
+	minimalAdaptiveSpeed = config.adaptiveSpeedMin;
+	maximalAdaptiveSpeed = config.adaptiveSpeedMax;
 }
 
 /* reference map received */
@@ -313,13 +320,12 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
-		velocityGain = fmin(fmax(count/20.0,1.0),3.0);
-		velocityGain = 1.0;
+		velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
 		stroll_bearnav::NavigationInfo info;
 
 				
 		feedback.histogram.clear();
-		if (count<=minGoodFeatures) differenceRot = 0;
+		if (count<minGoodFeatures) differenceRot = 0;
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
 
 		/*forming navigation info messsage*/
@@ -393,7 +399,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			twist.linear.x = path[currentPathElement].forward*velocityGain; 
 			twist.angular.y = twist.angular.x = 0.0;
 			twist.angular.z=path[currentPathElement].angular*velocityGain;
-			twist.angular.z+=differenceRot*0.01;
+			twist.angular.z+=differenceRot*pixelTurnGain;
 			cmd_pub_.publish(twist);
 		}
 	}
