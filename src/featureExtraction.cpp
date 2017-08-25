@@ -195,7 +195,7 @@ int main(int argc, char** argv)
 	server.setCallback(f);
 
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
-	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
+	image_sub_ = it_.subscribe( "/image", 1,imageCallback);
 	image_pub_ = it_.advertise("/image_with_features", 1);
 
 	ros::spin();

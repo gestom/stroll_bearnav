@@ -127,6 +127,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 			ROS_ERROR("cv_bridge exception: %s", e.what());
 			return;
 		}
+		img.release();
 		img=cv_ptr->image;
 	}	
 }
@@ -211,7 +212,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == SAVING){
 		keypoints.clear();
-		descriptors=Mat();
+		descriptors.release();
 
 		for(int i=0; i<msg->feature.size();i++){
 
@@ -233,6 +234,10 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypointsMap.push_back(keypoints);
 		descriptorMap.push_back(descriptors);
 		distanceMap.push_back(distanceTotalEvent);
+		if (img.rows >0 && img.cols > 0){
+			imshow("Current map",img);
+			waitKey(1);
+		}
 
 		/* publish feedback */
 		sprintf(name,"%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
@@ -263,7 +268,7 @@ int main(int argc, char** argv)
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
-	vel_pub_ = nh.advertise<geometry_msgs::Twist>("cmd", 1);
+	vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("joy", 10, joyCallback);
 
@@ -271,7 +276,7 @@ int main(int argc, char** argv)
 	featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
 	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance/events",1,distanceEventCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
+	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",1);
 	ROS_INFO( "Map folder is: %s", folder.c_str());
 
 	/* Initiate action server */
@@ -279,7 +284,7 @@ int main(int argc, char** argv)
 	server->start();
 
 	/* Initiate service */
-	client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
+	client = nh.serviceClient<stroll_bearnav::SetDistance>("/setDistance");
 
 	path.clear();
 	while (ros::ok()){
