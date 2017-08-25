@@ -471,7 +471,7 @@ int main(int argc, char** argv)
 	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
 	image_map_sub_ = it_.subscribe( "/map_image", 1,imageMapCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
-	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("navigationInfo",1);
+	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("/navigationInfo",1);
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
