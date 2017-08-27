@@ -234,10 +234,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypointsMap.push_back(keypoints);
 		descriptorMap.push_back(descriptors);
 		distanceMap.push_back(distanceTotalEvent);
-		if (img.rows >0 && img.cols > 0){
-			imshow("Current map",img);
-			waitKey(1);
-		}
 
 		/* publish feedback */
 		sprintf(name,"%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
