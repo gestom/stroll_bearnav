@@ -56,7 +56,6 @@ int numFeatures;
 float distanceT;
 string prefix;
 bool stop = false;
-bool publishImages = true;
 
 /*map to be preloaded*/
 vector<vector<KeyPoint> > keypointsMap;
@@ -130,7 +129,7 @@ int loadMaps()
 			descriptorMap.push_back(descriptors_1);
 			distanceMap.push_back(mapDistances[i]);
 			namesMap.push_back(fileName);
-			if (publishImages) imagesMap.push_back(img);
+			if (image_pub_.getNumSubscribers()>0) imagesMap.push_back(img);
 			numFeatures+=keypoints_1.size();
 			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
 			feedback.fileName = fileName;
@@ -269,16 +268,14 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 			featureArray.distance = currentDistance;
 			featureArray.id = currentMapName;
 			numberOfUsedMaps++;
+
 			/* publish loaded map */
 			feat_pub_.publish(featureArray);
-			if (publishImages){
-				//Encoding the exposure information in the image
+
+			/*if someone listens, then publish loaded image too*/
+			if (image_pub_.getNumSubscribers()>0){
 				std_msgs::Header header;
-				//header.seq = 0;
-				//header.stamp = ros::Time::now();
-				//header.frame_id = "bla";
 				cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::MONO8, imagesMap[mindex]);
-				//drawKeypoints( imagesMap[mindex], keypoints_1, bridge.image, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );
 				image_pub_.publish(bridge.toImageMsg());
 			}
 		}
@@ -295,7 +292,7 @@ int main(int argc, char** argv)
 	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/pathProfile",1);
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
-	if (publishImages) image_pub_ = it_.advertise("/map_image", 1);
+	image_pub_ = it_.advertise("/map_image", 1);
 
 	/* Initiate action server */
 	server = new Server (nh_, "map_preprocessor", boost::bind(&executeCB, _1, server), false);
