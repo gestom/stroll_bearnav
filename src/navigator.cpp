@@ -375,6 +375,12 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			twist.angular.z+=differenceRot*pixelTurnGain;
 			cmd_pub_.publish(twist);
 		}
+		if (path.size()==0){
+			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+			twist.angular.y = twist.angular.x = 0.0;
+			twist.angular.z=differenceRot*pixelTurnGain;
+			cmd_pub_.publish(twist);
+		}
 	}
 	if (state == COMPLETED){
 		if (path.size() > 0) overshoot = msg->data-path[path.size()-1].distance;

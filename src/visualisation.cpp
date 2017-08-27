@@ -83,7 +83,7 @@ void currentImageCallback(const sensor_msgs::ImageConstPtr& msg)
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 		return;
 	}
-	ROS_DEBUG("Current image ID %i",msg->header.seq);
+	ROS_INFO("Current image ID %i",msg->header.seq);
 	imageBuffer.push_back(cv_ptr->image);
 	idBuffer.push_back(msg->header.seq);
 	while (imageBuffer.size() > imageQueueLength) imageBuffer.erase(imageBuffer.begin()); 
@@ -104,6 +104,7 @@ void mapImageCallback(const sensor_msgs::ImageConstPtr& msg)
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 		return;
 	}
+	ROS_INFO("Current map ID %i",msg->header.seq);
 	mapImage=cv_ptr->image;
 }
 
@@ -152,7 +153,7 @@ void navigationInfoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 		} 
 	}
 	int id = atoi(&(msg->view.id.c_str())[7]); 
-	ROS_DEBUG("Image ID: %s %i",msg->view.id.c_str(),id);
+	ROS_INFO("Image ID: %s %i",msg->view.id.c_str(),id);
 
 	/*find the relevant image*/
 	std::vector<int>::iterator it;
@@ -161,6 +162,12 @@ void navigationInfoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 		int index = it-idBuffer.begin();
 		currentImage.release();
 		currentImage = imageBuffer[index];
+		ROS_INFO("Image position is %i",index);
+	}else{
+		currentImage.release();
+		int index = it-idBuffer.begin();
+		ROS_INFO("Image position is %i",index);
+		if (index>1) currentImage = imageBuffer[index-1];
 	}
 	if(showAllMatches || showGoodMatches)
 	{
@@ -210,8 +217,9 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
+	//image_transport::TransportHints("compressed");
 	currentImageSub = it_.subscribe( "/image", 1,currentImageCallback);
-	mapImageSub = it_.subscribe( "/map_image", 1,mapImageCallback);
+	//mapImageSub = it_.subscribe( "/map_image", 1,mapImageCallback);
 	//image_pub_ = it_.advertise("/navigationMatches", 1);
 	navigationInfoSub = nh.subscribe( "/navigationInfo", 1,navigationInfoCallback);
 
