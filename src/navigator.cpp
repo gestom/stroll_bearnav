@@ -406,8 +406,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					if (showGoodMatches) drawMatches(mapIm,kpMap,curIm,kpCur,best_matches,outtran,Scalar(0,255,0),Scalar(0,255,0),vector<char>(),2);
 				}
 				output = outtran.t();
-				imshow("Feature matching",output);
-				waitKey(1);
+				std_msgs::Header header;
+				cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::BGR8, output);
+				image_pub_.publish(bridge.toImageMsg());
 			}
 		}
 
@@ -440,7 +441,8 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 				 currentPathElement++;
 			}
 		}else{
-			state = COMPLETED;
+			/*if not in demo mode*/
+			if(path.size() > 0 || showAllMatches == false  && showGoodMatches == false) state = COMPLETED;
 		}
 		if (path.size()>currentPathElement)
 		{
@@ -464,7 +466,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "angle_from_features");
+	ros::init(argc, argv, "navigator");
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
@@ -472,10 +474,12 @@ int main(int argc, char** argv)
 	image_map_sub_ = it_.subscribe( "/map_image", 1,imageMapCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("/navigationInfo",1);
+	image_pub_ = it_.advertise("/navigationMatches", 1);
+
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
-	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
+	loadFeatureSub_ = nh.subscribe("/localMap", 1,loadFeatureCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-	speedSub_=nh.subscribe<stroll_bearnav::PathProfile>("/load/path",1,pathCallback);
+	speedSub_=nh.subscribe<stroll_bearnav::PathProfile>("/pathProfile",1,pathCallback);
   	/* Initiate action server */
 	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
 	server->start();

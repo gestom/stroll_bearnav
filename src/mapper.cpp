@@ -270,17 +270,17 @@ int main(int argc, char** argv)
 
 	vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
-	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("joy", 10, joyCallback);
+	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10, joyCallback);
 
-	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
+	image_sub_ = it_.subscribe( "/image", 1,imageCallback);
 	featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
-	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance/events",1,distanceEventCallback);
+	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance_events",1,distanceEventCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",1);
 	ROS_INFO( "Map folder is: %s", folder.c_str());
 
 	/* Initiate action server */
-	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
+	server = new Server (nh, "/mapper", boost::bind(&executeCB, _1, server), false);
 	server->start();
 
 	/* Initiate service */

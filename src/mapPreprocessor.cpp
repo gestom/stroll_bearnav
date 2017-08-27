@@ -287,18 +287,18 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 
 int main(int argc, char** argv)
 { 
-	ros::init(argc, argv, "feature_load");
+	ros::init(argc, argv, "map_preprocessor");
 	ros::NodeHandle nh_;
 	image_transport::ImageTransport it_(nh_);
 	ros::param::get("~folder", folder);
-	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
-	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/load/path",1);
-	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
+	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd",1);
+	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/pathProfile",1);
+	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
 	if (publishImages) image_pub_ = it_.advertise("/map_image", 1);
 
 	/* Initiate action server */
-	server = new Server (nh_, "loader", boost::bind(&executeCB, _1, server), false);
+	server = new Server (nh_, "map_preprocessor", boost::bind(&executeCB, _1, server), false);
 	server->start();
 	ros::spin();
 	return 0;
