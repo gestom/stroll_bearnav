@@ -121,7 +121,9 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		}
 
 	}
-	featureArray.id = "image_" + msg->header.seq;
+	char numStr[100];
+	sprintf(numStr,"Image_%09d",msg->header.seq);
+	featureArray.id =  numStr;
 	featureArray.distance = msg->header.seq;
 	feat_pub_.publish(featureArray);
 
