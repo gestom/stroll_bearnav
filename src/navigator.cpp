@@ -26,6 +26,8 @@
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
+static const std::string OPENCV_WINDOW = "Image window";
+
 
 ros::Publisher cmd_pub_;
 ros::Publisher info_pub_;
@@ -33,6 +35,9 @@ ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
 ros::Subscriber speedSub_;
 ros::Subscriber distSub_;
+image_transport::Subscriber image_sub_;
+image_transport::Subscriber image_map_sub_;
+image_transport::Publisher image_pub_;
 
 /* Service for set/reset distance */
 stroll_bearnav::SetDistance srv;
@@ -52,9 +57,11 @@ geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
 
 /* Image features parameters */
+Ptr<SURF> detector = SURF::create(100);
 vector<KeyPoint> mapKeypoints, currentKeypoints,keypointsGood,keypointsBest;
 Mat mapDescriptors, currentDescriptors;
-KeyPoint keypoint;
+Mat img_goodKeypoints_1,currentImage,mapImage;
+KeyPoint keypoint,keypoint2;
 float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
 float currentDistance = 0;
@@ -179,6 +186,40 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 	}
 	twist.linear.x = twist.linear.y = twist.linear.z = twist.angular.z = twist.angular.y = twist.angular.x = 0.0;	
 	cmd_pub_.publish(twist);
+}
+
+/* get image from camera */
+void imageCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+
+	cv_bridge::CvImagePtr cv_ptr;
+	try
+	{
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+	}
+	catch (cv_bridge::Exception& e)
+	{
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+		return;
+	}
+	currentImage=cv_ptr->image;
+}
+
+/* get image from map */
+void imageMapCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+
+	cv_bridge::CvImagePtr cv_ptr;
+	try
+	{
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+	}
+	catch (cv_bridge::Exception& e)
+	{
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+		return;
+	}
+	mapImage=cv_ptr->image;
 }
 
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
@@ -332,6 +373,45 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info.mapMatchEval = mapEval;
 		info_pub_.publish(info);
 
+		/*Show good image features (Green) */
+		Mat output,outtran; 
+		if(image_pub_.getNumSubscribers()>0)
+		{
+			//drawKeypoints(currentImage,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
+			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0)
+			{
+				if (mapImage.rows==0) mapImage = currentImage;
+				Mat mapIm = mapImage.t();  
+				Mat curIm = currentImage.t();
+				vector<KeyPoint> kpMap,kpCur;
+				KeyPoint tmp;
+				for (int i = 0;i<mapKeypoints.size();i++)
+				{
+					tmp = mapKeypoints[i];	
+					tmp.pt.y = mapKeypoints[i].pt.x;
+					tmp.pt.x = mapKeypoints[i].pt.y;
+					kpMap.push_back(tmp);
+				} 
+				for (int i = 0;i<currentKeypoints.size();i++)
+				{
+					tmp = currentKeypoints[i];	
+					tmp.pt.y = currentKeypoints[i].pt.x;
+					tmp.pt.x = currentKeypoints[i].pt.y;
+					kpCur.push_back(tmp);
+				}
+				if (showAllMatches){
+					drawMatches(mapIm,kpMap,curIm,kpCur,good_matches,outtran,Scalar(0,0,255),Scalar(0,0,255),vector<char>(),0);
+					if (showGoodMatches) drawMatches(mapIm,kpMap,curIm,kpCur,best_matches,outtran,Scalar(0,255,0),Scalar(0,255,0),vector<char>(),3);
+				}else{
+					if (showGoodMatches) drawMatches(mapIm,kpMap,curIm,kpCur,best_matches,outtran,Scalar(0,255,0),Scalar(0,255,0),vector<char>(),2);
+				}
+				output = outtran.t();
+				std_msgs::Header header;
+				cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::BGR8, output);
+				image_pub_.publish(bridge.toImageMsg());
+			}
+		}
+
 		/* publish statistics */
 		std::vector<int> stats;
 		feedback.stats.clear();
@@ -375,10 +455,12 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			twist.angular.z+=differenceRot*pixelTurnGain;
 			cmd_pub_.publish(twist);
 		}
-		if (path.size()==0){
+		/*used for testing and demos*/
+		if (path.size()==0)
+		{
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
 			twist.angular.y = twist.angular.x = 0.0;
-			twist.angular.z=differenceRot*pixelTurnGain;
+			twist.angular.z =differenceRot*pixelTurnGain;
 			cmd_pub_.publish(twist);
 		}
 	}
@@ -396,8 +478,11 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
-	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",1);
+	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
+	image_map_sub_ = it_.subscribe( "/map_image", 1,imageMapCallback);
+	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("/navigationInfo",1);
+	image_pub_ = it_.advertise("/navigationMatches", 1);
 
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	loadFeatureSub_ = nh.subscribe("/localMap", 1,loadFeatureCallback);

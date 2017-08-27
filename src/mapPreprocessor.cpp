@@ -290,9 +290,9 @@ int main(int argc, char** argv)
 	ros::param::get("~folder", folder);
 	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd",1);
 	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/pathProfile",1);
-	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
 	image_pub_ = it_.advertise("/map_image", 1);
+	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);
 
 	/* Initiate action server */
 	server = new Server (nh_, "map_preprocessor", boost::bind(&executeCB, _1, server), false);

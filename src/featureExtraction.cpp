@@ -31,7 +31,9 @@ float surfThreshold = 400;
 vector<KeyPoint> keypoints; 
 Mat descriptors;
 Mat img;
-Ptr<SURF> detector = SURF::create(surfThreshold);
+//Ptr<SURF> detector = SURF::create(surfThreshold);
+Ptr<AgastFeatureDetector> detector = AgastFeatureDetector::create(surfThreshold,true,AgastFeatureDetector::OAST_9_16);
+Ptr<BriefDescriptorExtractor> extractor = BriefDescriptorExtractor::create();
 
 /* optimization parameters */
 bool optimized = false;
@@ -56,10 +58,17 @@ void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 	/* optimize detecting features and measure time */
 	optimized = config.optimized;
 
-	detector->setHessianThreshold(surfThreshold);
+	detector->setThreshold(surfThreshold);
 
 	ROS_DEBUG("Changing feature featureExtraction to %.3f, keypoints %i", surfThreshold, targetKeypoints);
 }
+
+/*to select most responsive features*/
+bool compare_response(KeyPoint first, KeyPoint second)
+{
+	  if (first.response > second.response) return true; else return false;
+}
+
 
 /* Extract features from image recieved from camera */
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -83,6 +92,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 		/* firstly only detect keypoints */
 		detector->detect(img,keypoints, Mat () );
+		sort(keypoints.begin(),keypoints.end(),compare_response);
 		/* determine the next threshold */
 		adaptive_threshold(keypoints);
 	
@@ -90,12 +100,12 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		keypoints.erase(keypoints.begin()+ min(targetKeypoints,(int)keypoints.size()),keypoints.end());
 
 		/* then compute descriptors only for desired number of keypoints */
-		detector->compute(img,keypoints,descriptors);
+		extractor->compute(img,keypoints,descriptors);
 
 	} else {
 		t = clock();
 		/* detect keypoints and compute descriptors for all keypoints*/
-		detector->detectAndCompute(img, Mat (), keypoints,descriptors);
+		//detector->detectAndCompute(img, Mat (), keypoints,descriptors);
 
 		if(adaptThreshold) adaptive_threshold(keypoints);
 		keypoints.erase(keypoints.begin()+ min(targetKeypoints,(int)keypoints.size()),keypoints.end());
@@ -164,7 +174,7 @@ void adaptive_threshold(vector<KeyPoint>& keypoints)
 		}
 	}
 	surfThreshold = fmax(surfThreshold,0);
-	detector->setHessianThreshold(surfThreshold);
+	detector->setThreshold(surfThreshold);
 }
 
 int main(int argc, char** argv)
