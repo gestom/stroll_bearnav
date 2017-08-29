@@ -6,6 +6,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <stdio.h>
 #include <iostream>
+#include <algorithm>
 #include <stroll_bearnav/FeatureArray.h>
 #include <stroll_bearnav/Feature.h>
 #include <cmath>
@@ -27,46 +28,47 @@ ros::Publisher feat_pub_;
 
 /* image feature parameters */
 float surfThreshold = 400;
-vector<KeyPoint> keypoints_1; 
-Mat descriptors_1;
-Mat img_1;
-Ptr<SURF> detector = SURF::create(surfThreshold);
-bool imgShow = false;
-bool publishImg = false;
-void extract_features(cv_bridge::CvImagePtr& cv_ptr, vector<KeyPoint>& keypoints, Mat& descriptors);
+vector<KeyPoint> keypoints; 
+Mat descriptors;
+Mat img;
+//Ptr<SURF> detector = SURF::create(surfThreshold);
+Ptr<AgastFeatureDetector> detector = AgastFeatureDetector::create(surfThreshold,true,AgastFeatureDetector::OAST_9_16);
+Ptr<BriefDescriptorExtractor> extractor = BriefDescriptorExtractor::create();
 
 /* optimization parameters */
 bool optimized = false;
-bool measure_time = false;
 clock_t t;
 
 /* adaptive threshold parameters */
 bool adaptThreshold = true;
 int targetKeypoints = 100;
-float gain = 0.3;
+float featureOvershootRatio = 0.3;
 int target_over;
 void adaptive_threshold(vector<KeyPoint>& keypoints);
 
 /* dynamic reconfigure of surf threshold and showing images */
 void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 {
-    adaptThreshold = config.adaptThreshold;
-    if (!adaptThreshold) surfThreshold=config.thresholdParam;
-    targetKeypoints = config.targetKeypoints;
-    gain = config.gain;
-	target_over = targetKeypoints + gain * targetKeypoints;
+	adaptThreshold = config.adaptThreshold;
+	if (!adaptThreshold) surfThreshold=config.thresholdParam;
+	targetKeypoints = config.targetKeypoints;
+	featureOvershootRatio = config.featureOvershootRatio;
+	target_over = targetKeypoints + featureOvershootRatio/100.0 * targetKeypoints;
 
 	/* optimize detecting features and measure time */
 	optimized = config.optimized;
-	measure_time = config.measure_time;
-	
-    detector->setHessianThreshold(surfThreshold);
 
-    ROS_DEBUG("Changing feature featureExtraction to %.3f, keypoints %i", surfThreshold, targetKeypoints);
-	/* show image with features */
-	imgShow=config.showImage;
-	publishImg=config.publishImgMsg;
+	detector->setThreshold(surfThreshold);
+
+	ROS_DEBUG("Changing feature featureExtraction to %.3f, keypoints %i", surfThreshold, targetKeypoints);
 }
+
+/*to select most responsive features*/
+bool compare_response(KeyPoint first, KeyPoint second)
+{
+	  if (first.response > second.response) return true; else return false;
+}
+
 
 /* Extract features from image recieved from camera */
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -82,40 +84,34 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 		return;
 	}
-	img_1=cv_ptr->image;
+	img=cv_ptr->image;
 
 	/* Detect image features */
+	t = clock();
 	if(optimized && adaptThreshold){
 
-		/* measuring time of the whole process to find out whether this option is faster */
-		if(measure_time) t = clock();
-
 		/* firstly only detect keypoints */
-		detector->detect(img_1,keypoints_1, Mat () );
-
+		detector->detect(img,keypoints, Mat () );
+		sort(keypoints.begin(),keypoints.end(),compare_response);
+		/* determine the next threshold */
+		adaptive_threshold(keypoints);
+	
 		/* reduce keypoints size to desired number of keypoints */
-		int fend = target_over;
-		if (target_over > keypoints_1.size()) fend = keypoints_1.size();
-		keypoints_1.erase(keypoints_1.begin()+fend,keypoints_1.end());
+		keypoints.erase(keypoints.begin()+ min(targetKeypoints,(int)keypoints.size()),keypoints.end());
 
 		/* then compute descriptors only for desired number of keypoints */
-		detector->compute(img_1,keypoints_1,descriptors_1);
-
-		adaptive_threshold(keypoints_1);
-		extract_features(cv_ptr,keypoints_1,descriptors_1);
-
-		if(measure_time) printf("\nTime taken: %.4f s\n", (float)(clock() - t)/CLOCKS_PER_SEC);
+		extractor->compute(img,keypoints,descriptors);
 
 	} else {
-		if(measure_time) t = clock();
+		t = clock();
 		/* detect keypoints and compute descriptors for all keypoints*/
-		detector->detectAndCompute(img_1, Mat (), keypoints_1,descriptors_1);
+		//detector->detectAndCompute(img, Mat (), keypoints,descriptors);
 
-		if(adaptThreshold) adaptive_threshold(keypoints_1);
-		extract_features(cv_ptr,keypoints_1,descriptors_1);
+		if(adaptThreshold) adaptive_threshold(keypoints);
+		keypoints.erase(keypoints.begin()+ min(targetKeypoints,(int)keypoints.size()),keypoints.end());
 
-		if(measure_time) printf("\nTime taken: %.4f s\n", (float)(clock() - t)/CLOCKS_PER_SEC);
 	}
+	ROS_DEBUG("Time taken: %.4fs", (float)(clock() - t)/CLOCKS_PER_SEC);
 
 	//featureArray.id = "image_" + msg->header.seq;
 	featureArray.distance = msg->header.seq;
@@ -124,17 +120,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 void extract_features(cv_bridge::CvImagePtr& cv_ptr, vector<KeyPoint>& keypoints, Mat& descriptors){
 
+	/* publish image features */
 	featureArray.feature.clear();
-
-	/* Show all detected features in image (Red)*/
-	if(imgShow)
-	{
-		drawKeypoints( img_1, keypoints, cv_ptr->image, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );
-		//image_pub_.publish(cv_ptr->toImageMsg());
-		imshow("Keypoints",cv_ptr->image);
-		waitKey(1);
-	}
-	/* Save image features to variables */
 	for(int i=0;i<keypoints.size();i++){
 		feature.x=keypoints[i].pt.x;
 		feature.y=keypoints[i].pt.y;
@@ -151,22 +138,31 @@ void extract_features(cv_bridge::CvImagePtr& cv_ptr, vector<KeyPoint>& keypoints
 		}
 
 	}
-	/* publish image with features */
-	if(publishImg)
+	char numStr[100];
+	/*sprintf(numStr,"Image_%09d",msg->header.seq);
+	featureArray.id =  numStr;
+	featureArray.distance = msg->header.seq;
+	feat_pub_.publish(featureArray);*/
+
+	/*and if there are any consumers, publish image with features*/
+	if (image_pub_.getNumSubscribers()>0)
 	{
+		/* Show all detected features in image (Red)*/
+		drawKeypoints( img, keypoints, cv_ptr->image, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );
+		/* publish image with features */
 		image_pub_.publish(cv_ptr->toImageMsg());
+		ROS_INFO("Features extracted %ld %ld",featureArray.feature.size(),keypoints.size());
 	}
-	ROS_INFO("Features extracted %ld",featureArray.feature.size());
 }
 
 /* adaptive threshold - trying to target a given number of keypoints */
-void adaptive_threshold(vector<KeyPoint>& keypoints){
+void adaptive_threshold(vector<KeyPoint>& keypoints)
+{
 	// supposes keypoints are sorted according to response (applies to surf)
-
-		if(keypoints.size() > target_over) {
-			surfThreshold =  ((keypoints[target_over].response + keypoints[target_over + 1].response) / 2);
-			ROS_INFO("Keypoints %ld over %i , set threshold %.3f between responses %.3f %.3f, missing %ld",keypoints.size(),target_over,surfThreshold,keypoints[target_over].response,keypoints[target_over + 1].response, target_over - keypoints.size());
-		} else {
+	if(keypoints.size() > target_over) {
+		surfThreshold =  ((keypoints[target_over].response + keypoints[target_over + 1].response) / 2);
+		ROS_INFO("Keypoints %ld over  %i, missing %4ld, set threshold %.3f between responses %.3f %.3f",keypoints.size(),target_over, target_over - keypoints.size(),surfThreshold,keypoints[target_over].response,keypoints[target_over + 1].response);
+	} else {
 			/* compute average difference between responses of n last keypoints */
 			if( keypoints.size() > 7) {
 				int n_last = (int) round(keypoints.size()/5);
@@ -176,16 +172,16 @@ void adaptive_threshold(vector<KeyPoint>& keypoints){
 					avg_dif += keypoints[j].response - keypoints[j+1].response;
 				}
 
-				surfThreshold -= avg_dif/(n_last-1)*(target_over - keypoints.size());
-				ROS_INFO("Keypoints %ld under %i , set threshold %.3f, n_last %i, avg_dif %.3f, missing %ld ",keypoints.size(),target_over,surfThreshold,n_last,avg_dif,target_over - keypoints.size());
+			surfThreshold -= avg_dif/(n_last-1)*(target_over - keypoints.size());
+			ROS_INFO("Keypoints %ld under %i, missing %4ld, set threshold %.3f from %i last features with %.3f difference",keypoints.size(),target_over,target_over - keypoints.size(),surfThreshold,n_last,avg_dif);
 
-			} else {
-				surfThreshold = 0;
-				ROS_INFO("Keypoints %ld under %i , set threshold %.3f, missing %ld ",keypoints.size(),target_over,surfThreshold,target_over - keypoints.size());
-			}
+		} else {
+			surfThreshold = 0;
+			ROS_INFO("Keypoints %ld under %i, missing %4ld, set threshold %.3f ",keypoints.size(),target_over,target_over - keypoints.size(),surfThreshold);
 		}
-		surfThreshold = fmax(surfThreshold,0);
-		detector->setHessianThreshold(surfThreshold);
+	}
+	surfThreshold = fmax(surfThreshold,0);
+	detector->setThreshold(surfThreshold);
 }
 
 int main(int argc, char** argv)
@@ -200,7 +196,7 @@ int main(int argc, char** argv)
 	server.setCallback(f);
 
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
-	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
+	image_sub_ = it_.subscribe( "/image", 1,imageCallback);
 	image_pub_ = it_.advertise("/image_with_features", 1);
 
 

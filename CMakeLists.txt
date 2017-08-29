@@ -151,6 +151,7 @@ add_executable(feature_testing_node src/featureTesting.cpp)
 add_executable(odometry_monitor_node src/odometryMonitor.cpp)
 add_executable(map_preprocessor_node src/mapPreprocessor.cpp)
 add_executable(navigator_node src/navigator.cpp)
+add_executable(visualisation_node src/visualisation.cpp)
 add_executable(supervisor_node src/supervisor.cpp)
 add_executable(rosbag_node src/rosbag.cpp)
 
@@ -164,6 +165,7 @@ add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAM
 add_dependencies(map_preprocessor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(odometry_monitor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg  ${catkin_EXPORTED_TARGETS})
 add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+add_dependencies(visualisation_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(supervisor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(rosbag_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
@@ -178,6 +180,7 @@ target_link_libraries(feature_testing_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIE
 target_link_libraries(odometry_monitor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(map_preprocessor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(navigator_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(visualisation_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(supervisor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(rosbag_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #############

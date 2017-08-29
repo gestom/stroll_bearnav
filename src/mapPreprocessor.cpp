@@ -27,6 +27,7 @@ ros::Publisher cmd_pub_;
 ros::Publisher feat_pub_;
 ros::Subscriber dist_sub_;
 ros::Publisher pathPub;
+image_transport::Publisher image_pub_;
 
 /* Action server */
 typedef actionlib::SimpleActionServer<stroll_bearnav::loadMapAction> Server;
@@ -44,6 +45,7 @@ vector<KeyPoint> keypoints_1,keypoints_2;
 string currentMapName; 
 float currentDistance = -1.0; 
 Mat descriptors_1,descriptors_2;
+Mat currentImage;
 string folder;
 int numberOfUsedMaps=0;
 int lastLoadedMap=0;
@@ -117,6 +119,8 @@ int loadMaps()
 		ROS_INFO("Preloading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]); 
 		FileStorage fs(fileName, FileStorage::READ);
 		if(fs.isOpened()){
+			img.release();
+			descriptors_1.release();
 			fs["Keypoints"]>>keypoints_1;
 			fs["Descriptors"]>>descriptors_1;
 			fs["Image"]>>img;
@@ -125,7 +129,7 @@ int loadMaps()
 			descriptorMap.push_back(descriptors_1);
 			distanceMap.push_back(mapDistances[i]);
 			namesMap.push_back(fileName);
-			//imageMap.push_back(img);
+			if (image_pub_.getNumSubscribers()>0) imagesMap.push_back(img);
 			numFeatures+=keypoints_1.size();
 			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
 			feedback.fileName = fileName;
@@ -133,6 +137,7 @@ int loadMaps()
 			feedback.mapIndex=numMaps;
 			server->publishFeedback(feedback);
 		}
+
 	}
 
 	/* feedback returns name of loaded map, number of features in it and index */
@@ -196,8 +201,8 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 	
 	prefix = goal->prefix;
 	
-	if (loadMaps() > 0 && loadPath() > 0){
-			 state = ACTIVE;
+	if (loadMaps() > 0 && loadPath() >= 0){
+		state = ACTIVE;
 	}else{
 		result.distance=0;
 		result.numFeatures=0;
@@ -241,7 +246,9 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 				mindex = i;
 			}
 		}
-		//publish it
+
+		//and publish it
+		ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 		if (mindex > -1 && mindex != lastLoadedMap){
 			ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 			loadMap(mindex);
@@ -261,23 +268,34 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 			featureArray.distance = currentDistance;
 			featureArray.id = currentMapName;
 			numberOfUsedMaps++;
+
 			/* publish loaded map */
 			feat_pub_.publish(featureArray);
+
+			/*if someone listens, then publish loaded image too*/
+			if (image_pub_.getNumSubscribers()>0){
+				std_msgs::Header header;
+				cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::MONO8, imagesMap[mindex]);
+				image_pub_.publish(bridge.toImageMsg());
+			}
 		}
 	}
 }
 
 int main(int argc, char** argv)
 { 
-	ros::init(argc, argv, "feature_load");
+	ros::init(argc, argv, "map_preprocessor");
 	ros::NodeHandle nh_;
+	image_transport::ImageTransport it_(nh_);
 	ros::param::get("~folder", folder);
-	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd",1);
-	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/load/path",1);
-	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/load/features",1);
+	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd",1);
+	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/pathProfile",1);
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
+	image_pub_ = it_.advertise("/map_image", 1);
+	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);
+
 	/* Initiate action server */
-	server = new Server (nh_, "loader", boost::bind(&executeCB, _1, server), false);
+	server = new Server (nh_, "map_preprocessor", boost::bind(&executeCB, _1, server), false);
 	server->start();
 	ros::spin();
 	return 0;

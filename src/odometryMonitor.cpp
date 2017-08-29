@@ -37,6 +37,8 @@ bool setDistance(stroll_bearnav::SetDistance::Request &req, stroll_bearnav::SetD
 	lastY = currentY;
 	eventCounter = totalDist/distanceThreshold-1;
 	ROS_INFO("Setting current travelled distance to %.3f, event counter to %i",(float)req.distance,eventCounter);
+	dist_.data=totalDist;
+	dist_pub_.publish(dist_);
 	return true;
 }
 
@@ -77,7 +79,7 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
 
 int main(int argc, char** argv)
 { 
-	ros::init(argc, argv, "distance");
+	ros::init(argc, argv, "odometry_monitor");
 	ros::NodeHandle nh;
 
 	//initiate action server
@@ -87,11 +89,11 @@ int main(int argc, char** argv)
 	server.setCallback(f);
 
 	/* initiate service */
-    ros::ServiceServer service = nh.advertiseService("setDistance", setDistance);
+	ros::ServiceServer service = nh.advertiseService("/setDistance", setDistance);
 
 	odometrySub = nh.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
 	dist_pub_=nh.advertise<std_msgs::Float32>("/distance",1);
-	distEvent_pub_=nh.advertise<std_msgs::Float32>("/distance/events",1);
+	distEvent_pub_=nh.advertise<std_msgs::Float32>("/distance_events",1);
 	ros::spin();
 	return 0;
 }

@@ -127,6 +127,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 			ROS_ERROR("cv_bridge exception: %s", e.what());
 			return;
 		}
+		img.release();
 		img=cv_ptr->image;
 	}	
 }
@@ -211,7 +212,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == SAVING){
 		keypoints.clear();
-		descriptors=Mat();
+		descriptors.release();
 
 		for(int i=0; i<msg->feature.size();i++){
 
@@ -263,23 +264,23 @@ int main(int argc, char** argv)
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
-	vel_pub_ = nh.advertise<geometry_msgs::Twist>("cmd", 1);
+	vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
-	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("joy", 10, joyCallback);
+	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10, joyCallback);
 
-	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
+	image_sub_ = it_.subscribe( "/image", 1,imageCallback);
 	featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
-	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance/events",1,distanceEventCallback);
+	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance_events",1,distanceEventCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
+	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",1);
 	ROS_INFO( "Map folder is: %s", folder.c_str());
 
 	/* Initiate action server */
-	server = new Server (nh, "mapping", boost::bind(&executeCB, _1, server), false);
+	server = new Server (nh, "/mapper", boost::bind(&executeCB, _1, server), false);
 	server->start();
 
 	/* Initiate service */
-	client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
+	client = nh.serviceClient<stroll_bearnav::SetDistance>("/setDistance");
 
 	path.clear();
 	while (ros::ok()){
