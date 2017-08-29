@@ -1,28 +1,28 @@
 <launch>
 
 <!-- Default folder with maps-->
-<arg name="folder" default="/home/gestom/stroll"/>
+<arg name="folder" default="/home/lucie/vision_ws/mapy/day"/>
 
 <!-- Distance Measurement Node -->
-  <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor_node"/>
+  <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor_node" output="screen"/>
 
 <!-- feature extraction -->
-  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction_node"/>
+  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction_node" output="screen"/>
 
 <!-- mapping node -->
-<node pkg="stroll_bearnav" type="mapper_node" name="mapper_node" output="screen">
+<!--<node pkg="stroll_bearnav" type="mapper_node" name="mapper_node" output="screen">
   <param name="folder" value="$(arg folder)" />
   <param name="angularSpeed" value="1.0" />
-</node>
+</node>-->
 
 <!-- map loader node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_node">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_node" output="screen">
  <param name="folder" value="$(arg folder)" />
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="navigator_node" name="navigator_node" output="screen">
-  <param name="folder" value="$(arg folder)" />
+ <node pkg="stroll_bearnav" type="navigator_node" name="navigator_node" output="screen">
+ <!-- <param name="folder" value="$(arg folder)" /> -->
 </node>
 
 </launch>

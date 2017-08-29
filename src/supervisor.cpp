@@ -15,6 +15,9 @@
 
 #include <opencv2/opencv.hpp>
 
+#include <std_msgs/Int32.h>
+//#include <stroll_bearnav/featureExtractionConfig.h>
+
 using namespace cv;
 using namespace std;
 
@@ -61,7 +64,30 @@ bool is_loaded = false;
 /* suffix of newly saved maps of parameters */
 std::string suffix = ".sup";
 
+bool saving = false;
+//dynamic_reconfigure::Config::ConstPtr nav_msg;
+//stroll_bearnav::featureExtractionConfig config;
+dynamic_reconfigure::Config config2;
 
+/*vector <dynamic_reconfigure::BoolParameter> bools;
+vector <dynamic_reconfigure::IntParameter> ints;
+vector <dynamic_reconfigure::StrParameter> strs;
+vector <dynamic_reconfigure::DoubleParameter> doubles;
+vector <dynamic_reconfigure::GroupState> groups;*/
+
+//dynamic_reconfigure::BoolParameter bool_msg;
+dynamic_reconfigure::IntParameter int_msg;
+/*dynamic_reconfigure::StrParameter str_msg;
+dynamic_reconfigure::DoubleParameter double_msg;
+dynamic_reconfigure::GroupState group_msg;*/
+
+dynamic_reconfigure::ReconfigureRequest srv_req;
+dynamic_reconfigure::ReconfigureResponse srv_resp;
+
+ros::Publisher bag_pub_;
+std_msgs::Int32 msg_bag;
+int counter=0;
+bool paused=true;
 /* time when all maps are loaded */
 void loaderCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 {
@@ -106,6 +132,13 @@ void mapCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 {
     ROS_INFO("New view: %.0f",msg->view.distance);
+    paused = false;
+    //msg_bag.data = 1;
+    /*if(msg_bag.data == 1 && counter>5){
+        msg_bag.data=0;
+        counter=0;
+    } else msg_bag.data=1;counter++;
+    bag_pub_.publish(msg_bag);*/
 
     /* save keypoints and descriptors */
     view.keypoints.clear();
@@ -132,8 +165,13 @@ void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
     sprintf(tmp2,"%.0f",msg->view.distance);
     //printf("distance: %s\n", tmp2);
     view.id = tmp2;
-    view.threshold = msg->view.feature[msg->view.feature.size()-1].response;
+    if(msg->view.feature.size() != 0) {
+        view.threshold = msg->view.feature[msg->view.feature.size() - 1].response;
+    } else {
+        view.threshold = 10000;
+    }
     view.targetKeypoints = targetKeypoints;
+
     view.targetBrightness = targetBrightness;
     view.velocityGain = velocityGain;
     view.ratio = msg->ratio;
@@ -155,6 +193,11 @@ void navigatorCallback(const dynamic_reconfigure::Config::ConstPtr& msg)
 void extractorCallback(const dynamic_reconfigure::Config::ConstPtr& msg)
 {
     targetKeypoints = msg->ints[1].value;
+   // nav_msg = *msg;
+    //config.targetKeypoints = targetKeypoints;
+    //config2 = *msg;
+    //config2.ints = msg->ints;
+    printf("targetKeypoints %i\n",msg->ints[1].value);
 }
 
 /* dynamic reconfigure of tara camera */
@@ -180,42 +223,45 @@ void cancelCallback(const actionlib_msgs::GoalID::ConstPtr& msg)
 {
     ROS_INFO("Navigator goal canceled.");
 
-    /* save last map info into memory */
-    mapsInfo.push_back(mapInfo);
-    mapInfo.viewInfo.clear();
+    if(saving) {
 
-    /* save parameters of all maps into files */
-    for (int k = 0; k < mapsInfo.size(); ++k) {
-        sprintf(name,"%s%s", mapsInfo[k].id.c_str(),suffix.c_str());
-        ROS_INFO("Saving map to %s", name);
-        FileStorage fs(name, FileStorage::WRITE);
+        /* save last map info into memory */
+        mapsInfo.push_back(mapInfo);
+        mapInfo.viewInfo.clear();
 
-        write(fs, "Time", mapsInfo[k].time.c_str());
-        /* save parameters of all views of the current map */
-        for (int i = 0; i < mapsInfo[k].viewInfo.size(); ++i) {
-            sprintf(name,"TargetBrightness_%s", mapsInfo[k].viewInfo[i].id.c_str());
-            write(fs, name,mapsInfo[k].viewInfo[i].targetBrightness);
-            sprintf(name,"TargetKeypoints_%s", mapsInfo[k].viewInfo[i].id.c_str());
-            write(fs, name, mapsInfo[k].viewInfo[i].targetKeypoints);
-            sprintf(name,"Keypoints_%s", mapsInfo[k].viewInfo[i].id.c_str());
-            write(fs, name, mapsInfo[k].viewInfo[i].keypoints);
-            sprintf(name,"Descriptors_%s", mapsInfo[k].viewInfo[i].id.c_str());
-            write(fs, name,mapsInfo[k].viewInfo[i].descriptors);
-            sprintf(name,"Ratio_%s", mapsInfo[k].viewInfo[i].id.c_str());
-            write(fs, name, mapsInfo[k].viewInfo[i].ratio);
-            sprintf(name,"Histogram_%s", mapsInfo[k].viewInfo[i].id.c_str());
-            write(fs, name, mapsInfo[k].viewInfo[i].histogram);
-            sprintf(name,"VelocityGain_%s", mapsInfo[k].viewInfo[i].id.c_str());
-            write(fs, name, mapsInfo[k].viewInfo[i].velocityGain);
-            sprintf(name,"Threshold_%s", mapsInfo[k].viewInfo[i].id.c_str());
-            write(fs, name, mapsInfo[k].viewInfo[i].threshold);
+        /* save parameters of all maps into files */
+        for (int k = 0; k < mapsInfo.size(); ++k) {
+            sprintf(name, "%s%s", mapsInfo[k].id.c_str(), suffix.c_str());
+            ROS_INFO("Saving map to %s", name);
+            FileStorage fs(name, FileStorage::WRITE);
+
+            write(fs, "Time", mapsInfo[k].time.c_str());
+            /* save parameters of all views of the current map */
+            for (int i = 0; i < mapsInfo[k].viewInfo.size(); ++i) {
+                sprintf(name, "TargetBrightness_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].targetBrightness);
+                sprintf(name, "TargetKeypoints_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].targetKeypoints);
+                sprintf(name, "Keypoints_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].keypoints);
+                sprintf(name, "Descriptors_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].descriptors);
+                sprintf(name, "Ratio_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].ratio);
+                sprintf(name, "Histogram_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].histogram);
+                sprintf(name, "VelocityGain_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].velocityGain);
+                sprintf(name, "Threshold_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].threshold);
+            }
+            write(fs, "Note", mapsInfo[k].note.c_str());
+
+            fs.release();
         }
-        write(fs, "Note", mapsInfo[k].note.c_str());
 
-        fs.release();
+        ROS_INFO("Saving maps finished. ");
     }
-
-    ROS_INFO("Saving maps finished. ");
 }
 
 int main(int argc, char** argv)
@@ -232,7 +278,220 @@ int main(int argc, char** argv)
     ros::Subscriber feat_sub = nh_.subscribe("/feature_extraction_node/parameter_updates", 1, extractorCallback);
     ros::Subscriber cancel_sub = nh_.subscribe("/navigator/cancel", 1, cancelCallback);
 
-    ros::spin();
+    bag_pub_ = nh_.advertise<std_msgs::Int32>("/rosbag/pause",1);
+    //ros::Publisher feat_pub_ = nh_.advertise<dynamic_reconfigure::Config>("/feature_extraction/parameter_updates",1);
+    //ROS_INFO("should work");
+    int bin_count = 10;
+    int bins[bin_count];
+    for (int l = 0; l < 10; ++l) {
+        bins[l]=0;
+    }
+    //ROS_INFO("work1");
+
+    /*int_msg.name="thresholdParam";
+    int_msg.value=400;
+    ints.push_back(int_msg);*/
+    int_msg.name="targetKeypoints";
+    int_msg.value=0;
+    //ints.push_back(int_msg);
+    //config2.ints = ints;
+    config2.ints.push_back(int_msg);
+
+    srv_req.config = config2;
+
+    if (ros::service::call("/feature_extraction_node/set_parameters", srv_req, srv_resp)) {
+        ROS_INFO("call to set feature_extraction_node parameters succeeded");
+    } else {
+        ROS_INFO("call to set feature_extraction_node parameters failed");
+    }
+
+
+    //ROS_INFO("work2");
+   // config.targetKeypoints = 0;
+    //if(config2.ints == NULL){
+    //    printf("config2 is null\n");
+    //} else {
+        //printf("config2 is not null, %ld\n",config2.ints.size());
+    //}
+    //config2.ints[1].value = 0;
+    //nav_msg->ints[1].value = 0;
+    //ROS_INFO("work2.5");
+    //feat_pub_.publish(nav_msg);
+   // feat_pub_.publish(config2);
+    //ROS_INFO("work3");
+    //for (int in = 0; in < 5; ++in) ros::spinOnce();
+    //ROS_INFO("work4");
+    int j = 0;
+    int start = 0;
+    int end = 5000;
+    int increment = end/bin_count; //500
+    int max = 0;
+    int max_ind = -1;
+    int count = 0;
+    int center = 0;
+    int size = 0;
+    ROS_INFO("start");
+    int ind = 0;
+    /*while(ros::ok()) {
+        msg_bag.data = false;
+        bag_pub_.publish(msg_bag);
+        ros::spinOnce();
+    }*/
+    /*while(ros::ok()) {
+            //for (; ; ) {
+
+            //config2.ints[1].value = ind;
+                int_msg.value=ind;
+
+                config2.ints.clear();
+                config2.ints.push_back(int_msg);
+
+                srv_req.config = config2;
+
+                if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp)) {
+                    ROS_INFO("call to set feature_extraction parameters succeeded");
+                } else {
+                    ROS_INFO("call to set feature_extraction parameters failed");
+                }
+
+            ind++;
+            if(ind > 5000){
+                ind=0;
+                ROS_INFO("parameter reaches 5000, request for new frame");
+                msg_bag.data = false;
+                bag_pub_.publish(msg_bag);
+            }
+            //feat_pub_.publish(config2);
+
+
+            ros::spinOnce();
+           //}
+
+    }*/
+    //ros::spin();
+    /*while(paused && ros::ok()) ros::spinOnce();
+    paused=true;*/
+    while(ros::ok()) {
+        ROS_INFO("new while");
+        for (int m = start; m < end; m += increment) {
+            ROS_INFO("eval size %ld increment %i m %i",view.mapMatchEval.size(), increment,m);
+            usleep(2000);
+            // count correct matches
+           /* for (int i = 0; i < view.mapMatchEval.size(); i++) {
+                if (view.mapMatchEval[i] == 1) bins[j]++;
+                ROS_INFO("counting correct matches");
+            }
+            ROS_INFO("m %i j %i",m,j);
+            j++;*/
+
+            // change targetKeypoints
+            //nav_msg.ints[1].value += increment; // targetKeypoints
+            //feat_pub_.publish(nav_msg);
+            int_msg.value+=increment;
+
+            config2.ints.clear();
+            config2.ints.push_back(int_msg);
+
+            srv_req.config = config2;
+
+           /* if (ros::service::call("/feature_extraction_node/set_parameters", srv_req, srv_resp)) {
+                ROS_INFO("call to set feature_extraction_node parameters succeeded");
+            } else {
+                ROS_INFO("call to set feature_extraction_node parameters failed");
+            }*/
+
+            // update params through callbacks
+            ros::spinOnce();
+            paused=true;
+        }
+        j = 0;
+
+        // find max of correct matches
+       /* for (int k = 0; k < bin_count; ++k) {
+            ROS_INFO("finding max of correct matches %i %i",k,bins[k]);
+            if(bins[k] > max){
+                max = bins[k];
+                max_ind = k;
+            } else if(bins[k] == max){
+                count++;
+            }
+            // if there are more indexes with max, then take the center
+            if(count > 0){
+                max_ind+= (int) round(count/2);
+            }
+        }
+        count = 0;*/
+
+        // reduce step
+        center = (max_ind+1)*increment;
+        increment = (int) round(increment/2);
+        size = increment*bin_count;
+        start = center - (int) round(size/2);
+        if(start<0) start = 0;
+        end = center + (int) round(size/2);
+        if(end > 5000) end = 5000;
+        for (int l = 0; l < 10; ++l) {
+            bins[l]=0;
+        }
+        ROS_INFO("max is %i on index %i, increment %i, start %i, end %i, size is %i",center,max_ind,increment,start,end,size);
+
+        int_msg.value=0;
+
+        config2.ints.clear();
+        config2.ints.push_back(int_msg);
+
+        srv_req.config = config2;
+
+       /* if (ros::service::call("/feature_extraction_node/set_parameters", srv_req, srv_resp)) {
+            ROS_INFO("call to set feature_extraction_node parameters succeeded");
+        } else {
+            ROS_INFO("call to set feature_extraction_node parameters failed");
+        }*/
+
+        // update callbacks
+        ros::spinOnce();
+        paused=true;
+
+
+        // next image
+        if(increment < 500){
+            ROS_INFO("next image request");
+            //usleep(1000000);
+            //continue rosbag
+            msg_bag.data = false;
+            bag_pub_.publish(msg_bag);
+            // set targetKeypoints to 0
+            //nav_msg.ints[1].value = 0;
+            //feat_pub_.publish(nav_msg);
+            int_msg.value=0;
+
+            config2.ints.clear();
+            config2.ints.push_back(int_msg);
+
+            srv_req.config = config2;
+
+          /*  if (ros::service::call("/feature_extraction_node/set_parameters", srv_req, srv_resp)) {
+                ROS_INFO("call to set feature_extraction_node parameters succeeded");
+            } else {
+                ROS_INFO("call to set feature_extraction_node parameters failed");
+            }*/
+
+            // update callbacks
+            ros::spinOnce();
+            paused=true;
+            // reset variables
+            j = 0;
+            start = 0;
+            end = 5000;
+            increment = end/bin_count; //500
+            max = 0;
+            max_ind = -1;
+            count = 0;
+            center = 0;
+            size = 0;
+        }
+    }
+
     return 0;
 }
 

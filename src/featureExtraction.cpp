@@ -117,7 +117,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		if(measure_time) printf("\nTime taken: %.4f s\n", (float)(clock() - t)/CLOCKS_PER_SEC);
 	}
 
-	featureArray.id = "image_" + msg->header.seq;
+	//featureArray.id = "image_" + msg->header.seq;
 	featureArray.distance = msg->header.seq;
 	feat_pub_.publish(featureArray);
 }
@@ -168,8 +168,8 @@ void adaptive_threshold(vector<KeyPoint>& keypoints){
 			ROS_INFO("Keypoints %ld over %i , set threshold %.3f between responses %.3f %.3f, missing %ld",keypoints.size(),target_over,surfThreshold,keypoints[target_over].response,keypoints[target_over + 1].response, target_over - keypoints.size());
 		} else {
 			/* compute average difference between responses of n last keypoints */
-			if( keypoints.size() > 1) {
-				int n_last = keypoints.size()/5;
+			if( keypoints.size() > 7) {
+				int n_last = (int) round(keypoints.size()/5);
 				float avg_dif = 0;
 
 				for (int j = (keypoints.size() - n_last); j < keypoints.size() - 1; ++j) {
@@ -202,6 +202,7 @@ int main(int argc, char** argv)
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
 	image_sub_ = it_.subscribe( "/stereo/left/image_raw", 1,imageCallback);
 	image_pub_ = it_.advertise("/image_with_features", 1);
+
 
 	ros::spin();
 	return 0;
