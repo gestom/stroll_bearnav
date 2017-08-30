@@ -298,12 +298,12 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 			feature.x=matched_points1[i].x+((matched_points2[i].x-matched_points2[i].x)/(distanceMap[mindex2]-distanceMap[mindex]))*(distanceT-distanceMap[mindex]);	
 			feature.y=matched_points1[i].y+((matched_points2[i].y-matched_points2[i].y)/(distanceMap[mindex2]-distanceMap[mindex]))*(distanceT-distanceMap[mindex]);	
 
-			feature.size=keypoints_1[i].size;
-			feature.angle=keypoints_1[i].angle;
-			feature.response=keypoints_1[i].response;
-			feature.octave=keypoints_1[i].octave;
-			feature.class_id=keypoints_1[i].class_id;
-			feature.descriptor=descriptors_1.row(i);
+			feature.size=keypoints_1[idx1].size;
+			feature.angle=keypoints_1[idx1].angle;
+			feature.response=keypoints_1[idx1].response;
+			feature.octave=keypoints_1[idx1].octave;
+			feature.class_id=keypoints_1[idx1].class_id;
+			feature.descriptor=descriptors_1.row(idx1);
 			featureArray.feature.push_back(feature);
 		}
 		featureArray.distance = distanceT;
