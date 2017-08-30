@@ -52,10 +52,11 @@ int lastLoadedMap=0;
 float mapDistances[1000];
 int numProcessedMaps = 0;
 int numMaps = 1;
-int numFeatures;
+int numFeatures,numFeatures_2;
 float distanceT;
 string prefix;
 bool stop = false;
+float ratioMatchConstant = 0.7;
 
 /*map to be preloaded*/
 vector<vector<KeyPoint> > keypointsMap;
@@ -149,10 +150,10 @@ int loadMaps()
 	return numMaps;
 }
 
-/* load map based on distance travelled  */
-void loadMap(int index)
-{
-	lastLoadedMap = index;
+/* load map two nearest maps based on distance travelled  */
+void loadMap(int index,int index2)
+{	
+	lastLoadedMap=index;	
 	keypoints_1 = keypointsMap[index];
 	descriptors_1 = descriptorMap[index];
 	currentMapName = namesMap[index];
@@ -165,6 +166,13 @@ void loadMap(int index)
 	feedback.mapIndex=index;
 	/* feedback returns name of loaded map, number of features in it and index */
 	server->publishFeedback(feedback);
+	
+	//	lastLoadedMap = index;
+	keypoints_2 = keypointsMap[index2];
+	descriptors_2 = descriptorMap[index2];
+	numFeatures_2=keypoints_2.size();
+	char fileName2[1000];
+	sprintf(fileName2,"Second map: %i features loaded from %ith map at %.3f",numFeatures_2,index2,distanceMap[index2]);
 }
 
 /* load path profile 
@@ -231,55 +239,87 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 	}
 }
 
+/*listens when navigator requests map */
 void distCallback(const std_msgs::Float32::ConstPtr& msg)
 {	
 	if(state == ACTIVE){
 		distanceT=msg->data;
 		featureArray.feature.clear();
 
-		//find the closest map
+		//find the two closest maps
 		int mindex = -1;
+		int mindex2= -1;
 		float minDistance = FLT_MAX;
 		for (int i = 0;i<numMaps;i++){
 			if (fabs(distanceT-mapDistances[i]) < minDistance){
 				minDistance = fabs(distanceT-mapDistances[i]);
 				mindex = i;
+
+				if(mapDistances[mindex]<distanceT) {
+					mindex2=mindex+1;	
+				}else{ 
+					mindex2=mindex-1; 
+				}
 			}
 		}
 
-		//and publish it
-		ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
-		if (mindex > -1 && mindex != lastLoadedMap){
-			ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
-			loadMap(mindex);
-//			ROS_INFO("Sending a map %i features with %i descriptors",(int)keypoints_1.size(),descriptors_1.rows);
-			for(int i=0;i<keypoints_1.size();i++)
-			{
-				feature.x=keypoints_1[i].pt.x;
-				feature.y=keypoints_1[i].pt.y;
-				feature.size=keypoints_1[i].size;
-				feature.angle=keypoints_1[i].angle;
-				feature.response=keypoints_1[i].response;
-				feature.octave=keypoints_1[i].octave;
-				feature.class_id=keypoints_1[i].class_id;
-				feature.descriptor=descriptors_1.row(i);
-				featureArray.feature.push_back(feature);
-			}
-			featureArray.distance = currentDistance;
-			featureArray.id = currentMapName;
-			numberOfUsedMaps++;
+		ROS_INFO("Current distance is %.3f Closest map found at %i",distanceT,mindex);
+		ROS_INFO("Current distance is %.3f 2nd Closest map found at %i",distanceT,mindex2);
 
-			/* publish loaded map */
-			feat_pub_.publish(featureArray);
+			std::vector< DMatch > good_matches;
+		if (mindex > -1 && mindex2> -1 && mindex!=lastLoadedMap){
+			/*load two closest maps */
+			loadMap(mindex,mindex2);
 
-			/*if someone listens, then publish loaded image too*/
-			if (image_pub_.getNumSubscribers()>0){
-				std_msgs::Header header;
-				cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::MONO8, imagesMap[mindex]);
-				image_pub_.publish(bridge.toImageMsg());
+			/*feature matching*/
+			Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_L2);
+			vector< vector<DMatch> > matches;
+			matcher->knnMatch(descriptors_1, descriptors_2, matches, 2);
+
+			/*perform ratio matching*/ 
+			good_matches.reserve(matches.size());  
+			for (size_t i = 0; i < matches.size(); i++)
+			{ 
+				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance) good_matches.push_back(matches[i][0]);
 			}
+		}	
+		int num=good_matches.size();
+		vector<Point2f> matched_points1;
+		vector<Point2f> matched_points2;
+
+		for (int i=0;i<num;i++){
+
+			int idx2=good_matches[i].trainIdx;
+			int idx1=good_matches[i].queryIdx;
+			matched_points1.push_back(keypoints_1[idx1].pt);
+			matched_points2.push_back(keypoints_2[idx2].pt);
+
+			/* linear interpolation */
+			feature.x=matched_points1[i].x+((matched_points2[i].x-matched_points2[i].x)/(distanceMap[mindex2]-distanceMap[mindex]))*(distanceT-distanceMap[mindex]);	
+			feature.y=matched_points1[i].y+((matched_points2[i].y-matched_points2[i].y)/(distanceMap[mindex2]-distanceMap[mindex]))*(distanceT-distanceMap[mindex]);	
+
+			feature.size=keypoints_1[i].size;
+			feature.angle=keypoints_1[i].angle;
+			feature.response=keypoints_1[i].response;
+			feature.octave=keypoints_1[i].octave;
+			feature.class_id=keypoints_1[i].class_id;
+			feature.descriptor=descriptors_1.row(i);
+			featureArray.feature.push_back(feature);
 		}
-	}
+		featureArray.distance = distanceT;
+		featureArray.id = currentMapName;
+		numberOfUsedMaps++;
+
+		/* publish loaded map */
+		feat_pub_.publish(featureArray);
+
+		/*if someone listens, then publish loaded image too*/
+		if (image_pub_.getNumSubscribers()>0){
+			std_msgs::Header header;
+			cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::MONO8, imagesMap[mindex]);
+			image_pub_.publish(bridge.toImageMsg());
+		}
+	}	
 }
 
 int main(int argc, char** argv)
@@ -290,7 +330,7 @@ int main(int argc, char** argv)
 	ros::param::get("~folder", folder);
 	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd",1);
 	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/pathProfile",1);
-	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
+	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/navigator/distance", 1,distCallback);
 	image_pub_ = it_.advertise("/map_image", 1);
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);
 

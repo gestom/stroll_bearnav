@@ -35,6 +35,7 @@ ros::Subscriber featureSub_;
 ros::Subscriber loadFeatureSub_;
 ros::Subscriber speedSub_;
 ros::Subscriber distSub_;
+ros::Publisher distPub_;
 image_transport::Subscriber image_sub_;
 image_transport::Subscriber image_map_sub_;
 image_transport::Publisher image_pub_;
@@ -55,7 +56,7 @@ bool showGoodMatches=true;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
-
+std_msgs::Float32 distanceMsg;
 /* Image features parameters */
 Ptr<SURF> detector = SURF::create(100);
 vector<KeyPoint> mapKeypoints, currentKeypoints,keypointsGood,keypointsBest;
@@ -128,9 +129,13 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	maximalAdaptiveSpeed = config.adaptiveSpeedMax;
 }
 
-/* reference map received */
+/* reference map received, received features from camera */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
-{	 
+{
+	/*when recieved features, request map from mapPreprocesor */
+	distanceMsg.data=currentDistance;	
+	distPub_.publish(distanceMsg); 
+
 	mapFeatures = *msg;
 	ROS_INFO("Received a new reference map");
 	mapKeypoints.clear();
@@ -221,7 +226,7 @@ void imageMapCallback(const sensor_msgs::ImageConstPtr& msg)
 	}
 	mapImage=cv_ptr->image;
 }
-
+/* received reference map */
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == NAVIGATING){
@@ -483,9 +488,9 @@ int main(int argc, char** argv)
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("/navigationInfo",1);
 	image_pub_ = it_.advertise("/navigationMatches", 1);
-
-	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
-	loadFeatureSub_ = nh.subscribe("/localMap", 1,loadFeatureCallback);
+	distPub_=nh.advertise<std_msgs::Float32>("/navigator/distance",1);
+	featureSub_ = nh.subscribe( "/localMap", 1,featureCallback);
+	loadFeatureSub_ = nh.subscribe("/features", 1,loadFeatureCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	speedSub_=nh.subscribe<stroll_bearnav::PathProfile>("/pathProfile",1,pathCallback);
   	/* Initiate action server */
