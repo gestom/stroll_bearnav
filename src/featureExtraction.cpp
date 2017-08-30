@@ -113,13 +113,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	}
 	ROS_DEBUG("Time taken: %.4fs", (float)(clock() - t)/CLOCKS_PER_SEC);
 
-	//featureArray.id = "image_" + msg->header.seq;
-	featureArray.distance = msg->header.seq;
-	feat_pub_.publish(featureArray);
-}
-
-void extract_features(cv_bridge::CvImagePtr& cv_ptr, vector<KeyPoint>& keypoints, Mat& descriptors){
-
 	/* publish image features */
 	featureArray.feature.clear();
 	for(int i=0;i<keypoints.size();i++){
@@ -139,10 +132,10 @@ void extract_features(cv_bridge::CvImagePtr& cv_ptr, vector<KeyPoint>& keypoints
 
 	}
 	char numStr[100];
-	/*sprintf(numStr,"Image_%09d",msg->header.seq);
+	sprintf(numStr,"Image_%09d",msg->header.seq);
 	featureArray.id =  numStr;
 	featureArray.distance = msg->header.seq;
-	feat_pub_.publish(featureArray);*/
+	feat_pub_.publish(featureArray);
 
 	/*and if there are any consumers, publish image with features*/
 	if (image_pub_.getNumSubscribers()>0)
