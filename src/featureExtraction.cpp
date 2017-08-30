@@ -15,6 +15,7 @@
 #include <opencv2/features2d.hpp>
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/featureExtractionConfig.h>
+#include <std_msgs/Int32.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -229,6 +230,14 @@ void adaptive_threshold(vector<KeyPoint>& keypoints)
 	setThreshold(detectionThreshold);
 }
 
+void keypointCallback(const std_msgs::Int32::ConstPtr& msg)
+{
+    targetKeypoints = msg->data;
+    target_over = targetKeypoints + featureOvershootRatio/100.0 * targetKeypoints;
+    ROS_INFO("targetKeypoints set to %i, overshoot: %i",targetKeypoints,target_over);
+
+}
+
 int main(int argc, char** argv)
 { 
 	ros::init(argc, argv, "feature_extraction");
@@ -242,6 +251,7 @@ int main(int argc, char** argv)
 
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
 	image_sub_ = it_.subscribe( "/image", 1,imageCallback);
+    ros::Subscriber key_sub = nh_.subscribe("/targetKeypoints", 1, keypointCallback);
 	image_pub_ = it_.advertise("/image_with_features", 1);
 
 

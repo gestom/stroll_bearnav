@@ -85,8 +85,11 @@ dynamic_reconfigure::ReconfigureRequest srv_req;
 dynamic_reconfigure::ReconfigureResponse srv_resp;
 
 ros::Publisher bag_pub_;
+ros::Publisher key_pub_;
 std_msgs::Int32 msg_bag;
+std_msgs::Int32 key_msg;
 int counter=0;
+int iter=0;
 bool paused=true;
 /* time when all maps are loaded */
 void loaderCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
@@ -132,7 +135,14 @@ void mapCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 {
     ROS_INFO("New view: %.0f",msg->view.distance);
-    paused = false;
+    key_pub_.publish(key_msg);
+    ROS_INFO("targetKeyponts published %i",key_msg.data);
+    if(msg->view.feature.size() == key_msg.data || iter>=5) paused = false;
+    iter++;
+    if(iter==6) {
+        ROS_INFO("cannot reach targetKeypoints");
+        iter = 0;
+    }
     //msg_bag.data = 1;
     /*if(msg_bag.data == 1 && counter>5){
         msg_bag.data=0;
@@ -264,8 +274,7 @@ void cancelCallback(const actionlib_msgs::GoalID::ConstPtr& msg)
     }
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     ros::init(argc, argv, "supervisor");
     ros::NodeHandle nh_;
 
@@ -278,53 +287,58 @@ int main(int argc, char** argv)
     ros::Subscriber feat_sub = nh_.subscribe("/feature_extraction_node/parameter_updates", 1, extractorCallback);
     ros::Subscriber cancel_sub = nh_.subscribe("/navigator/cancel", 1, cancelCallback);
 
-    bag_pub_ = nh_.advertise<std_msgs::Int32>("/rosbag/pause",1);
+    bag_pub_ = nh_.advertise<std_msgs::Int32>("/rosbag/pause", 1);
+    key_pub_ = nh_.advertise<std_msgs::Int32>("/targetKeypoints", 1);
+
     //ros::Publisher feat_pub_ = nh_.advertise<dynamic_reconfigure::Config>("/feature_extraction/parameter_updates",1);
     //ROS_INFO("should work");
     int bin_count = 10;
     int bins[bin_count];
     for (int l = 0; l < 10; ++l) {
-        bins[l]=0;
+        bins[l] = 0;
     }
     //ROS_INFO("work1");
 
     /*int_msg.name="thresholdParam";
     int_msg.value=400;
     ints.push_back(int_msg);*/
-    int_msg.name="targetKeypoints";
-    int_msg.value=0;
+    int_msg.name = "targetKeypoints";
+    int_msg.value = 0;
+
+    key_msg.data = 0;
+    key_pub_.publish(key_msg);
     //ints.push_back(int_msg);
     //config2.ints = ints;
     config2.ints.push_back(int_msg);
 
     srv_req.config = config2;
 
-    if (ros::service::call("/feature_extraction_node/set_parameters", srv_req, srv_resp)) {
-        ROS_INFO("call to set feature_extraction_node parameters succeeded");
+    /*if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp)) {
+        ROS_INFO("call to set feature_extraction parameters succeeded");
     } else {
-        ROS_INFO("call to set feature_extraction_node parameters failed");
-    }
+        ROS_INFO("call to set feature_extraction parameters failed");
+    }*/
 
 
     //ROS_INFO("work2");
-   // config.targetKeypoints = 0;
+    // config.targetKeypoints = 0;
     //if(config2.ints == NULL){
     //    printf("config2 is null\n");
     //} else {
-        //printf("config2 is not null, %ld\n",config2.ints.size());
+    //printf("config2 is not null, %ld\n",config2.ints.size());
     //}
     //config2.ints[1].value = 0;
     //nav_msg->ints[1].value = 0;
     //ROS_INFO("work2.5");
     //feat_pub_.publish(nav_msg);
-   // feat_pub_.publish(config2);
+    // feat_pub_.publish(config2);
     //ROS_INFO("work3");
     //for (int in = 0; in < 5; ++in) ros::spinOnce();
     //ROS_INFO("work4");
     int j = 0;
     int start = 0;
     int end = 5000;
-    int increment = end/bin_count; //500
+    int increment = end / bin_count; //500
     int max = 0;
     int max_ind = -1;
     int count = 0;
@@ -369,45 +383,52 @@ int main(int argc, char** argv)
 
     }*/
     //ros::spin();
-    /*while(paused && ros::ok()) ros::spinOnce();
-    paused=true;*/
+    key_msg.data = 0;
+    key_pub_.publish(key_msg);
+    ROS_INFO("targetKeyponts published");
+    ros::spinOnce();
+
+    while(paused && ros::ok()) ros::spinOnce();
+    paused=true;
     while(ros::ok()) {
         ROS_INFO("new while");
         for (int m = start; m < end; m += increment) {
             ROS_INFO("eval size %ld increment %i m %i",view.mapMatchEval.size(), increment,m);
-            usleep(2000);
+            //usleep(2000);
             // count correct matches
-           /* for (int i = 0; i < view.mapMatchEval.size(); i++) {
+            for (int i = 0; i < view.mapMatchEval.size(); i++) {
                 if (view.mapMatchEval[i] == 1) bins[j]++;
-                ROS_INFO("counting correct matches");
+                //ROS_INFO("counting correct matches");
             }
             ROS_INFO("m %i j %i",m,j);
-            j++;*/
+            j++;
 
             // change targetKeypoints
             //nav_msg.ints[1].value += increment; // targetKeypoints
             //feat_pub_.publish(nav_msg);
             int_msg.value+=increment;
+            key_msg.data+=increment;
+            key_pub_.publish(key_msg);
 
             config2.ints.clear();
             config2.ints.push_back(int_msg);
 
             srv_req.config = config2;
 
-           /* if (ros::service::call("/feature_extraction_node/set_parameters", srv_req, srv_resp)) {
-                ROS_INFO("call to set feature_extraction_node parameters succeeded");
+           /* if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp)) {
+                ROS_INFO("call to set feature_extraction parameters succeeded");
             } else {
-                ROS_INFO("call to set feature_extraction_node parameters failed");
+                ROS_INFO("call to set feature_extraction parameters failed");
             }*/
 
             // update params through callbacks
-            ros::spinOnce();
+            while(paused && ros::ok()) ros::spinOnce();
             paused=true;
         }
         j = 0;
 
         // find max of correct matches
-       /* for (int k = 0; k < bin_count; ++k) {
+        for (int k = 0; k < bin_count; ++k) {
             ROS_INFO("finding max of correct matches %i %i",k,bins[k]);
             if(bins[k] > max){
                 max = bins[k];
@@ -420,7 +441,7 @@ int main(int argc, char** argv)
                 max_ind+= (int) round(count/2);
             }
         }
-        count = 0;*/
+        count = 0;
 
         // reduce step
         center = (max_ind+1)*increment;
@@ -442,19 +463,21 @@ int main(int argc, char** argv)
 
         srv_req.config = config2;
 
-       /* if (ros::service::call("/feature_extraction_node/set_parameters", srv_req, srv_resp)) {
-            ROS_INFO("call to set feature_extraction_node parameters succeeded");
+        /*if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp)) {
+            ROS_INFO("call to set feature_extraction parameters succeeded");
         } else {
-            ROS_INFO("call to set feature_extraction_node parameters failed");
+            ROS_INFO("call to set feature_extraction parameters failed");
         }*/
+        key_msg.data=0;
+        key_pub_.publish(key_msg);
 
         // update callbacks
-        ros::spinOnce();
+        while(paused && ros::ok()) ros::spinOnce();
         paused=true;
 
 
         // next image
-        if(increment < 500){
+        if(increment < 250){
             ROS_INFO("next image request");
             //usleep(1000000);
             //continue rosbag
@@ -470,11 +493,13 @@ int main(int argc, char** argv)
 
             srv_req.config = config2;
 
-          /*  if (ros::service::call("/feature_extraction_node/set_parameters", srv_req, srv_resp)) {
-                ROS_INFO("call to set feature_extraction_node parameters succeeded");
+            /*if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp)) {
+                ROS_INFO("call to set feature_extraction parameters succeeded");
             } else {
-                ROS_INFO("call to set feature_extraction_node parameters failed");
+                ROS_INFO("call to set feature_extraction parameters failed");
             }*/
+            //key_msg.data=0;
+            //key_pub_.publish(key_msg);
 
             // update callbacks
             ros::spinOnce();
