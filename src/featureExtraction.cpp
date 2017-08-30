@@ -72,6 +72,7 @@ int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 {
 	if (usedDetector==DET_AGAST) agastDetector->detect(img,keypoints, Mat () );
 	if (usedDetector==DET_SURF) surf->detect(img,keypoints, Mat () );
+	if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
 }
 
 int describeKeyPoints(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
@@ -154,7 +155,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		describeKeyPoints(img,keypoints,descriptors);
 
 	} else {
-		t = clock();
 
 		/* detect keypoints and compute descriptors for all keypoints*/
 		detectAndDescribe(img, keypoints,descriptors);
