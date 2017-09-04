@@ -27,6 +27,7 @@ struct ViewInfo {
     Mat descriptors;
     std::string id;
     std::vector<int> histogram;
+    std::vector<int> mapMatchIndex;
     std::vector<int> mapMatchEval;
 
     float threshold;
@@ -171,6 +172,7 @@ void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
         view.velocityGain = velocityGain;
         view.ratio = msg->ratio;
         view.histogram = msg->histogram;
+        view.mapMatchIndex = msg->mapMatchIndex;
         view.mapMatchEval = msg->mapMatchEval;
 
         /* save this view with the best targetKeypoints*/
@@ -245,6 +247,10 @@ void cancelCallback(const actionlib_msgs::GoalID::ConstPtr& msg)
                 write(fs, name, mapsInfo[k].viewInfo[i].velocityGain);
                 sprintf(name, "Threshold_%s", mapsInfo[k].viewInfo[i].id.c_str());
                 write(fs, name, mapsInfo[k].viewInfo[i].threshold);
+                sprintf(name, "MapMatchIndex_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].mapMatchIndex);
+                sprintf(name, "MapMatchEval_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].mapMatchEval);
             }
             write(fs, "Note", mapsInfo[k].note.c_str());
 
