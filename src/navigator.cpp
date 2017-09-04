@@ -36,6 +36,7 @@ ros::Subscriber loadFeatureSub_;
 ros::Subscriber speedSub_;
 ros::Subscriber distSub_;
 image_transport::Subscriber image_sub_;
+image_transport::Subscriber image_map_sub_;
 image_transport::Publisher image_pub_;
 
 /* Service for set/reset distance */
@@ -49,15 +50,17 @@ stroll_bearnav::navigatorResult result;
 stroll_bearnav::navigatorFeedback feedback;
 stroll_bearnav::FeatureArray mapFeatures;
 
+bool showAllMatches=true;
+bool showGoodMatches=true;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
 
 /* Image features parameters */
 Ptr<SURF> detector = SURF::create(100);
-vector<KeyPoint> keypoints_1, keypoints_2,keypointsGood,keypointsBest;
-Mat descriptors_1, descriptors_2;
-Mat img_goodKeypoints_1,img_keypoints_1;
+vector<KeyPoint> mapKeypoints, currentKeypoints,keypointsGood,keypointsBest;
+Mat mapDescriptors, currentDescriptors;
+Mat img_goodKeypoints_1,currentImage,mapImage;
 KeyPoint keypoint,keypoint2;
 float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
@@ -114,7 +117,8 @@ void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 /* dynamic reconfigure of showing images, velocity gain and matching ratio constant */
 void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 {
-	imgShow=config.showImageMatches;
+	showAllMatches=config.showAllMatches;
+	showGoodMatches=config.showGoodMatches;
 	velocityGain=config.velocityGain;
 	ratioMatchConstant=config.matchingRatio;
 	maxVerticalDifference = config.maxVerticalDifference;
@@ -129,8 +133,8 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {	 
 	mapFeatures = *msg;
 	ROS_INFO("Received a new reference map");
-	keypoints_1.clear();
-	descriptors_1=Mat();
+	mapKeypoints.clear();
+	mapDescriptors=Mat();
 	for(int i=0; i<msg->feature.size();i++){
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
@@ -139,10 +143,10 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypoint.response=msg->feature[i].response;
 		keypoint.octave=msg->feature[i].octave;
 		keypoint.class_id=msg->feature[i].class_id;
-		keypoints_1.push_back(keypoint);
+		mapKeypoints.push_back(keypoint);
 		int size=msg->feature[i].descriptor.size();
 		Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
-		descriptors_1.push_back(mat);
+		mapDescriptors.push_back(mat);
 	}
 }
 
@@ -184,7 +188,7 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 	cmd_pub_.publish(twist);
 }
 
-/* Extract features from image recieved from camera */
+/* get image from camera */
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 
@@ -198,15 +202,33 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 		return;
 	}
-	img_keypoints_1=cv_ptr->image;
+	currentImage=cv_ptr->image;
 }
+
+/* get image from map */
+void imageMapCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+
+	cv_bridge::CvImagePtr cv_ptr;
+	try
+	{
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+	}
+	catch (cv_bridge::Exception& e)
+	{
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+		return;
+	}
+	mapImage=cv_ptr->image;
+}
+
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(state == NAVIGATING){
-		keypoints_2.clear();
+		currentKeypoints.clear();
 		keypointsBest.clear();
 		keypointsGood.clear();
-		descriptors_2=Mat();
+		currentDescriptors=Mat();
 
 		/*reconstitute features from the incoming message*/
 		for(int i=0; i<msg->feature.size();i++)
@@ -218,11 +240,11 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			keypoint.response=msg->feature[i].response;
 			keypoint.octave=msg->feature[i].octave;
 			keypoint.class_id=msg->feature[i].class_id;
-			keypoints_2.push_back(keypoint);
+			currentKeypoints.push_back(keypoint);
 
 			int size=msg->feature[i].descriptor.size();
 			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
-			descriptors_2.push_back(mat);
+			currentDescriptors.push_back(mat);
 		}
 
 		std::vector< DMatch > good_matches;
@@ -234,12 +256,12 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		/*establish correspondences, build the histogram and determine robot heading*/
 		int count=0,bestc=0;
 		std::vector< DMatch > best_matches;
-		if (keypoints_1.size() >0 && keypoints_2.size() >0){
+		if (mapKeypoints.size() >0 && currentKeypoints.size() >0){
 
 			/*feature matching*/
 			Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_L2);
 			vector< vector<DMatch> > matches;
-			matcher->knnMatch( descriptors_1, descriptors_2, matches, 2);
+			matcher->knnMatch( mapDescriptors, currentDescriptors, matches, 2);
 
 			/*perform ratio matching*/ 
 			good_matches.reserve(matches.size());  
@@ -263,9 +285,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 				int idx2=good_matches[i].trainIdx;
 				int idx1=good_matches[i].queryIdx;
-				matched_points1.push_back(keypoints_1[idx1].pt);
-				matched_points2.push_back(keypoints_2[idx2].pt);
-				keypointsGood.push_back(keypoints_2[idx2]);
+				matched_points1.push_back(mapKeypoints[idx1].pt);
+				matched_points2.push_back(currentKeypoints[idx2].pt);
+				keypointsGood.push_back(currentKeypoints[idx2]);
 				/*difference in x and y positions*/
 				current.x=round(matched_points1[i].x-matched_points2[i].x);	
 				current.y=round(matched_points1[i].y-matched_points2[i].y);
@@ -314,7 +336,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/* publish statistics */
 			feedback.correct = best_matches.size();
 			feedback.outliers = good_matches.size() - best_matches.size();
-			feedback.keypoints_avg = (keypoints_1.size() + keypoints_2.size() )/2;
+			feedback.keypoints_avg = (mapKeypoints.size() + currentKeypoints.size() )/2;
 			feedback.matches = good_matches.size();
 			/*difference between features */
 			differenceRot=sum/count; 
@@ -352,13 +374,42 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info_pub_.publish(info);
 
 		/*Show good image features (Green) */
-		Mat haha; 
-		if(imgShow)
+		Mat output,outtran; 
+		if(image_pub_.getNumSubscribers()>0)
 		{
-			//drawKeypoints(img_keypoints_1,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
-		//	drawMatches(img_keypoints_1,keypoints_1,img_keypoints_1,keypoints_2,good_matches,haha,Scalar(0,0,255),Scalar(0,0,255),vector<char>(),0);
-			//imshow("Good Keypoints",img_goodKeypoints_1);
-			waitKey(1);
+			//drawKeypoints(currentImage,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
+			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0)
+			{
+				if (mapImage.rows==0) mapImage = currentImage;
+				Mat mapIm = mapImage.t();  
+				Mat curIm = currentImage.t();
+				vector<KeyPoint> kpMap,kpCur;
+				KeyPoint tmp;
+				for (int i = 0;i<mapKeypoints.size();i++)
+				{
+					tmp = mapKeypoints[i];	
+					tmp.pt.y = mapKeypoints[i].pt.x;
+					tmp.pt.x = mapKeypoints[i].pt.y;
+					kpMap.push_back(tmp);
+				} 
+				for (int i = 0;i<currentKeypoints.size();i++)
+				{
+					tmp = currentKeypoints[i];	
+					tmp.pt.y = currentKeypoints[i].pt.x;
+					tmp.pt.x = currentKeypoints[i].pt.y;
+					kpCur.push_back(tmp);
+				}
+				if (showAllMatches){
+					drawMatches(mapIm,kpMap,curIm,kpCur,good_matches,outtran,Scalar(0,0,255),Scalar(0,0,255),vector<char>(),0);
+					if (showGoodMatches) drawMatches(mapIm,kpMap,curIm,kpCur,best_matches,outtran,Scalar(0,255,0),Scalar(0,255,0),vector<char>(),3);
+				}else{
+					if (showGoodMatches) drawMatches(mapIm,kpMap,curIm,kpCur,best_matches,outtran,Scalar(0,255,0),Scalar(0,255,0),vector<char>(),2);
+				}
+				output = outtran.t();
+				std_msgs::Header header;
+				cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::BGR8, output);
+				image_pub_.publish(bridge.toImageMsg());
+			}
 		}
 
 		/* publish statistics */
@@ -390,7 +441,8 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 				 currentPathElement++;
 			}
 		}else{
-			state = COMPLETED;
+			/*if not in demo mode*/
+			if(path.size() > 0 || showAllMatches == false  && showGoodMatches == false) state = COMPLETED;
 		}
 		if (path.size()>currentPathElement)
 		{
@@ -401,6 +453,14 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			twist.angular.y = twist.angular.x = 0.0;
 			twist.angular.z=path[currentPathElement].angular*velocityGain;
 			twist.angular.z+=differenceRot*pixelTurnGain;
+			cmd_pub_.publish(twist);
+		}
+		/*used for testing and demos*/
+		if (path.size()==0)
+		{
+			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+			twist.angular.y = twist.angular.x = 0.0;
+			twist.angular.z =differenceRot*pixelTurnGain;
 			cmd_pub_.publish(twist);
 		}
 	}
@@ -414,17 +474,20 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "angle_from_features");
+	ros::init(argc, argv, "navigator");
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
 	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
+	image_map_sub_ = it_.subscribe( "/map_image", 1,imageMapCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
-	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("navigationInfo",1);
+	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("/navigationInfo",1);
+	image_pub_ = it_.advertise("/navigationMatches", 1);
+
 	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
-	loadFeatureSub_ = nh.subscribe("/load/features", 1,loadFeatureCallback);
+	loadFeatureSub_ = nh.subscribe("/localMap", 1,loadFeatureCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-	speedSub_=nh.subscribe<stroll_bearnav::PathProfile>("/load/path",1,pathCallback);
+	speedSub_=nh.subscribe<stroll_bearnav::PathProfile>("/pathProfile",1,pathCallback);
   	/* Initiate action server */
 	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
 	server->start();

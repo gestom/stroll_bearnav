@@ -1,0 +1,22 @@
+<launch>
+
+<!-- Default folder with maps-->
+<arg name="folder" default="$(env HOME)"/>
+
+<!-- Distance Measurement Node -->
+  <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor">
+	  <remap from="image" to="/usb_cam/image_raw"/>
+  </node>
+
+<!-- feature extraction -->
+  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
+	  <remap from="image" to="/usb_cam/image_raw"/>
+  </node>
+
+<!-- mapping node -->
+<node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
+  <param name="folder" value="$(arg folder)" />
+  <param name="angularSpeed" value="1.1" />
+</node>
+
+</launch>
