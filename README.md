@@ -47,7 +47,7 @@ The second video demonstrates the robot working as it traverses a closed path. Y
 
 Finally, the third video shows a robot slowly converging to the originally taught smooth path with an error injected at the start of each loop.
 
-[![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_1.jpg)](https://youtu.be/aEMa03LRVDw)
+[![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_0.jpg)](https://youtu.be/1ATh0FF48Ao)
 
 The principal advantage of the system is that it does not require a lot of features to be matched and thus it's robust to adverse illumination conditions -- it works even at night.
 
