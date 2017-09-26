@@ -28,8 +28,7 @@ During the navigation phase, the robot traverses the learned path by itself usin
 
 [![UAV autonomous flight](https://img.youtube.com/vi/QR5G3qubKsk/0.jpg)](https://www.youtube.com/watch?v=QR5G3qubKsk)
 
-[![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_1.jpg)](https://youtu.be/aEMa03LRVDw)
-<b>Click for video of the second indoor experiment - taught path in red, autonomously traversed path in green.</b>
+[![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_0.jpg)](https://youtu.be/1ATh0FF48Ao)
 
 When moving, the robot retrieves image features from a relevant map (green crosses), extracts image features from its on-board camera (blue crosses), matches them  (green/blue lines) and calculates a histogram of their horizontal distances (green). The histogram maximum is then used to steer the robot close to the learned path.
 
@@ -47,7 +46,7 @@ The second video demonstrates the robot working as it traverses a closed path. Y
 
 Finally, the third video shows a robot slowly converging to the originally taught smooth path with an error injected at the start of each loop.
 
-[![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_0.jpg)](https://youtu.be/1ATh0FF48Ao)
+[![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_1.jpg)](https://youtu.be/aEMa03LRVDw)
 
 The principal advantage of the system is that it does not require a lot of features to be matched and thus it's robust to adverse illumination conditions -- it works even at night.
 
