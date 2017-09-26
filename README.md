@@ -2,7 +2,7 @@
 
 ### Authors: Filip Majer, Lucie Halodová, Tomáš Vintr and Tomáš Krajník
 
-** For supporting materials of RA-L 17-0862, see also [WiKi](https://github.com/gestom/stroll_bearnav/wiki/RA-L-supporting-materials) **
+** For supporting materials of RA-L 17-0862, see also [WiKi](https://github.com/gestom/stroll_bearnav/wiki/RA-L-17-0862-supporting-materials) **
 
 Bearnav is a simple teach-and-repeat visual navigation system robust to appearance changes induced by varying illumination and naturally-occurring environment changes. It's core method is computationally efficient, it does not require camera calibration and it can learn and autonomously traverse arbitrarily-shaped paths. During the teaching phase, where the robot is driven by a human operator, the robot stores its velocities and image features visible from its on-board camera.  During autonomous navigation, the method does not perform explicit robot localisation in the 2d/3d space but it simply replays the velocities that it learned during a teaching phase, while correcting its heading relatively to the path based on its camera data. The experiments performed indicate that the proposed navigation system corrects position errors of the robot as it moves along the path. Therefore, the robot can repeatedly drive along the desired path, which was previously taught by the human operator.
 Early versions of the system proved their ability to reliably traverse polygonal trajectories indoors and outdoors during adverse illumination conditions [[1,2](#references)], in environments undergoing drastic appearance changes [[2,3](#references)] and on flying robots[[4](#references)].
