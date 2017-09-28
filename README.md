@@ -2,11 +2,13 @@
 
 ### Authors: Filip Majer, Lucie Halodová, Tomáš Vintr and Tomáš Krajník
 
+** For supporting materials of RA-L 17-0862, see also [WiKi](https://github.com/gestom/stroll_bearnav/wiki/RA-L-17-0862-supporting-materials) **
+
 Bearnav is a simple teach-and-repeat visual navigation system robust to appearance changes induced by varying illumination and naturally-occurring environment changes. It's core method is computationally efficient, it does not require camera calibration and it can learn and autonomously traverse arbitrarily-shaped paths. During the teaching phase, where the robot is driven by a human operator, the robot stores its velocities and image features visible from its on-board camera.  During autonomous navigation, the method does not perform explicit robot localisation in the 2d/3d space but it simply replays the velocities that it learned during a teaching phase, while correcting its heading relatively to the path based on its camera data. The experiments performed indicate that the proposed navigation system corrects position errors of the robot as it moves along the path. Therefore, the robot can repeatedly drive along the desired path, which was previously taught by the human operator.
 Early versions of the system proved their ability to reliably traverse polygonal trajectories indoors and outdoors during adverse illumination conditions [[1,2](#references)], in environments undergoing drastic appearance changes [[2,3](#references)] and on flying robots[[4](#references)].
 The version presented here is described in [[5](#references)] and it allows to learn arbitrary, smooth paths, is fully integrated in the ROS operating system and is available on-line in this repository.
 
-### System working
+### System overview
 
 The navigation system works in two steps: teach and repeat. During the learning phase, a robot is guided by an operator along a path, which is the robot supposed to autonomously navigate in the repeat phase. When learning, the robot extracts salient features from its on-board camera image and stores its current traveled distance and velocity. During autonomous navigation, the robot sets its velocity according to the traveled distance and compares the currently detected and previously mapped features to correct its heading. 
 
@@ -18,7 +20,7 @@ During this phase, the robot is driven through the environment by a human operat
 
 ### Navigation phase
 
-During the navigation phase, the robot traverses the learned path by itself using the speeds in the *path profile* and *visual features* in the local maps. The path profile is simply 'replayed', i.e. the robot sets a relevant steering and forward velocity according to the distance traveled. The local maps are used to correct the robot heading. Videos 2, 3 and 4 show an early version of the system
+During the navigation phase, the robot traverses the learned path by itself using the speeds in the *path profile* and *visual features* in the local maps. The path profile is simply 'replayed', i.e. the robot sets a relevant steering and forward velocity according to the distance traveled. The local maps are used to correct the robot heading. Videos 2 shows the navigation principle, videos 3 and 4 show an early version of the system where robots traverse a polyline-shaped path and finally, video 5 shows the robot traversing a smooth path.
 
 [![P3AT moving along a straight line](https://img.youtube.com/vi/cfN587IjhKw/0.jpg)](https://www.youtube.com/watch?v=cfN587IjhKw)
 
@@ -26,7 +28,9 @@ During the navigation phase, the robot traverses the learned path by itself usin
 
 [![UAV autonomous flight](https://img.youtube.com/vi/QR5G3qubKsk/0.jpg)](https://www.youtube.com/watch?v=QR5G3qubKsk)
 
-where robots traverse a polyline-shaped path. When moving, the robot retrieves image features from a relevant map (green crosses), extracts image features from its on-board camera (blue crosses), matches them  (green/blue lines) and calculates a histogram of their horizontal distances (green). The histogram maximum is then used to steer the robot close to the learned path.
+[![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_0.jpg)](https://youtu.be/1ATh0FF48Ao)
+
+When moving, the robot retrieves image features from a relevant map (green crosses), extracts image features from its on-board camera (blue crosses), matches them  (green/blue lines) and calculates a histogram of their horizontal distances (green). The histogram maximum is then used to steer the robot close to the learned path.
 
 ### Navigation accuracy and reliability
 
@@ -40,7 +44,13 @@ The second video demonstrates the robot working as it traverses a closed path. Y
 
 [![Closed path convergence](https://img.youtube.com/vi/M2krTZCbdaY/0.jpg)](https://www.youtube.com/watch?v=M2krTZCbdaY)
 
-The principal advantage of the system is that it does not require a lot of features to be matched and thus it's robust to appearance changes.
+Finally, the third video shows a robot slowly converging to the originally taught smooth path with an error injected at the start of each loop.
+
+[![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_1.jpg)](https://youtu.be/aEMa03LRVDw)
+
+The principal advantage of the system is that it does not require a lot of features to be matched and thus it's robust to adverse illumination conditions -- it works even at night.
+
+[![Night outdoor experiment](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/outdoor_0.jpg)](https://www.youtube.com/watch?v=XR5RzPOBX_8)
 
 ### System implementation
 
