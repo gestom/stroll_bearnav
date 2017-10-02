@@ -1,4 +1,4 @@
-# Stroll-bearnav
+# STRoLL BearNav - Simple and Robust Visual Teach-and-replay Navigation System
 
 ### Authors: Filip Majer, Lucie Halodová, Tomáš Vintr and Tomáš Krajník
 
