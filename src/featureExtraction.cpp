@@ -44,7 +44,7 @@ stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
 
 /* image feature parameters */
-float detectionThreshold = 400;
+float detectionThreshold = 0;
 vector<KeyPoint> keypoints; 
 Mat descriptors;
 Mat img;

@@ -154,6 +154,7 @@ add_executable(navigator_node src/navigator.cpp)
 add_executable(visualisation_node src/visualisation.cpp)
 add_executable(supervisor_node src/supervisor.cpp)
 add_executable(rosbag_node src/rosbag.cpp)
+add_executable(feature_holder_node src/featureHolder.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -167,7 +168,8 @@ add_dependencies(odometry_monitor_node ${PROJECT_NAME}_generate_messages_cpp ${P
 add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(visualisation_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(supervisor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(rosbag_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+add_dependencies(feature_holder_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+
 ## Specify libraries to link a library or executable target against
 #target_link_libraries(cameleon_ros_driver cameleon_message_client cameleon_message cameleon_timer${catkin_LIBRARIES})
 #target_link_libraries(cameleon_video ${catkin_LIBRARIES})
@@ -183,6 +185,8 @@ target_link_libraries(navigator_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(visualisation_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(supervisor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(rosbag_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(feature_holder_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
 #############
 ## Install ##
 #############

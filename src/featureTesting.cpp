@@ -53,8 +53,8 @@ int main( int argc, char** argv )
     if( dist < min_dist ) min_dist = dist;
     if( dist > max_dist ) max_dist = dist;
   }
-  //printf("-- Max dist : %f \n", max_dist );
-  //printf("-- Min dist : %f \n", min_dist );
+  printf("-- Max dist : %f \n", max_dist );
+  printf("-- Min dist : %f \n", min_dist );
   //-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist,
   //-- or a small arbitary value ( 0.02 ) in the event that min_dist is very
   //-- small)
@@ -180,24 +180,24 @@ int main( int argc, char** argv )
 
     //-- Draw only "good" matches
     Mat img_matches;
-    drawMatches( img_1, keypoints_1, img_2, keypoints_2,
+    /*drawMatches( img_1, keypoints_1, img_2, keypoints_2,
                  good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-                 vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+                 vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );*/
     // draw matches
     Mat img_matches_good;
     drawMatches( img_1, keypoints_1, img_2, keypoints_2,
-                 correct_matches, img_matches_good, Scalar(0,0,255), Scalar::all(-1),
-                 vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+                 correct_matches, img_matches, Scalar(255,0,0), Scalar(0,255,0),
+                 vector<char>(), 0 );
     Mat img_matches_bad;
     drawMatches( img_1, keypoints_1, img_2, keypoints_2,
-                 outliers_matches, img_matches_bad,  Scalar(255,0,0), Scalar::all(-1),
-                 vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+                 outliers_matches, img_matches,  Scalar(0,0,255), Scalar(0,0,255),
+                 vector<char>(), 3 );
 
     if(atoi(argv[7])) {
         //-- Show detected matches
-        imshow("Good Matches", img_matches);
-        imshow("Correct Matches", img_matches_good);
-        imshow("Outliers Matches", img_matches_bad);
+        imshow("All Matches", img_matches);
+        //imshow("Correct Matches", img_matches_good);
+        //imshow("Outliers Matches", img_matches_bad);
     }
    /* for( int i = 0; i < (int)good_matches.size(); i++ )
     { printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
