@@ -15,6 +15,7 @@
 #include <opencv2/features2d.hpp>
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/featureExtractionConfig.h>
+#include <std_msgs/Int32.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -43,7 +44,7 @@ stroll_bearnav::Feature feature;
 ros::Publisher feat_pub_;
 
 /* image feature parameters */
-float detectionThreshold = 400;
+float detectionThreshold = 0;
 vector<KeyPoint> keypoints; 
 Mat descriptors;
 Mat img;
@@ -208,14 +209,14 @@ void adaptive_threshold(vector<KeyPoint>& keypoints)
 		detectionThreshold =  ((keypoints[target_over].response + keypoints[target_over + 1].response) / 2);
 		ROS_INFO("Keypoints %ld over  %i, missing %4ld, set threshold %.3f between responses %.3f %.3f",keypoints.size(),target_over, target_over - keypoints.size(),detectionThreshold,keypoints[target_over].response,keypoints[target_over + 1].response);
 	} else {
-		/* compute average difference between responses of n last keypoints */
-		if( keypoints.size() > 1) {
-			int n_last = keypoints.size()/5;
-			float avg_dif = 0;
+			/* compute average difference between responses of n last keypoints */
+			if( keypoints.size() > 7) {
+				int n_last = (int) round(keypoints.size()/5);
+				float avg_dif = 0;
 
-			for (int j = (keypoints.size() - n_last); j < keypoints.size() - 1; ++j) {
-				avg_dif += keypoints[j].response - keypoints[j+1].response;
-			}
+				for (int j = (keypoints.size() - n_last); j < keypoints.size() - 1; ++j) {
+					avg_dif += keypoints[j].response - keypoints[j+1].response;
+				}
 
 			detectionThreshold -= avg_dif/(n_last-1)*(target_over - keypoints.size());
 			ROS_INFO("Keypoints %ld under %i, missing %4ld, set threshold %.3f from %i last features with %.3f difference",keypoints.size(),target_over,target_over - keypoints.size(),detectionThreshold,n_last,avg_dif);
@@ -227,6 +228,14 @@ void adaptive_threshold(vector<KeyPoint>& keypoints)
 	}
 	detectionThreshold = fmax(detectionThreshold,0);
 	setThreshold(detectionThreshold);
+}
+
+void keypointCallback(const std_msgs::Int32::ConstPtr& msg)
+{
+    targetKeypoints = msg->data;
+    target_over = targetKeypoints + featureOvershootRatio/100.0 * targetKeypoints;
+    ROS_INFO("targetKeypoints set to %i, overshoot: %i",targetKeypoints,target_over);
+
 }
 
 int main(int argc, char** argv)
@@ -242,7 +251,9 @@ int main(int argc, char** argv)
 
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
 	image_sub_ = it_.subscribe( "/image", 1,imageCallback);
+    ros::Subscriber key_sub = nh_.subscribe("/targetKeypoints", 1, keypointCallback);
 	image_pub_ = it_.advertise("/image_with_features", 1);
+
 
 	ros::spin();
 	return 0;
