@@ -22,8 +22,10 @@ using namespace std;
 
 int paused = false;
 string folder;
+/* rosbag message parameters*/
 string current_time;
-int stop = false;
+sensor_msgs::ImageConstPtr msg_img;
+image_transport::Publisher cam_img_pub_;
 
 /* pause/continue rosbag */
 void pauseCallback(const std_msgs::Int32::ConstPtr& msg)
@@ -33,12 +35,12 @@ void pauseCallback(const std_msgs::Int32::ConstPtr& msg)
     ROS_INFO("Rosbag: %i",paused);
 }
 
-/* waiting for the maximum of extracted features - for safety */
-void stopCallback(const std_msgs::Int32::ConstPtr& msg)
+/* publishing last image */
+void pubCallback(const std_msgs::Int32::ConstPtr& msg)
 {
-    stop = msg->data;
 
-    ROS_INFO("Stop: %i",stop);
+    if (msg_img != NULL) cam_img_pub_.publish(msg_img);
+    ros::spinOnce();
 }
 
 int main(int argc, char** argv)
@@ -54,16 +56,16 @@ int main(int argc, char** argv)
     folder=argv[1];
 
     ros::Subscriber bag_sub = nh_.subscribe("/rosbag/pause", 1, pauseCallback);
-    ros::Subscriber fh_sub = nh_.subscribe("/rosbag/stop", 1, stopCallback);
+    ros::Subscriber fh_sub = nh_.subscribe("/rosbag/publish_img", 1, pubCallback);
 
     /* to publish messages from rosbag */
     ros::Publisher cam_info_pub_ = nh_.advertise<sensor_msgs::CameraInfo>("/stereo/left/camera_info",1);
     ros::Publisher cam_param_pub_ = nh_.advertise<dynamic_reconfigure::Config>("/stereo/tara_camera/parameter_updates",1);
-    image_transport::Publisher cam_img_pub_ = it_.advertise("/stereo/left/image_raw",1);
+    cam_img_pub_ = it_.advertise("/stereo/left/image_raw",1);
     ros::Publisher odom_pub_ = nh_.advertise<nav_msgs::Odometry>("/odom",1);
     /* messages for publishers */
     sensor_msgs::CameraInfo::ConstPtr msg_info;
-    sensor_msgs::ImageConstPtr msg_img;
+
     dynamic_reconfigure::Config::ConstPtr msg_param;
     nav_msgs::Odometry::ConstPtr msg_odom;
 
@@ -102,12 +104,6 @@ int main(int argc, char** argv)
                 paused = true;
                 ROS_INFO("/stereo/left/image_raw");
                 msg_img = m.instantiate<sensor_msgs::Image>();
-                /* publish the image until the maximum of features is extracted - for safety */
-                do {
-                    if (msg_img != NULL) cam_img_pub_.publish(msg_img);
-                    ros::spinOnce();
-                } while(ros::ok() && !stop);
-                stop = false;
             }
             if (m.getTopic() == "/stereo/tara_camera/parameter_updates") {
                 ROS_INFO("/stereo/tara_camera/parameter_updates");
@@ -122,8 +118,8 @@ int main(int argc, char** argv)
             ros::spinOnce();
 
             while(paused && ros::ok()){
-                // waiting for next image request
-                // do not publish anything
+                // waiting for the next image request
+                // callback publishes the last image
                 ros::spinOnce();
             }
 
