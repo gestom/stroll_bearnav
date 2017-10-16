@@ -72,8 +72,6 @@ dynamic_reconfigure::ReconfigureRequest srv_req;
 dynamic_reconfigure::ReconfigureResponse srv_resp;
 dynamic_reconfigure::IntParameter thre_msg;
 dynamic_reconfigure::BoolParameter adapt_msg;
-int iter=0;
-int max_iter = 3;
 
 /* for new image from rosbag */
 ros::Publisher bag_pub_;
@@ -84,16 +82,18 @@ int value;
 bool paused=true;
 bool view_saving = false;
 
-/* signal for feature holder node to start sending features */
+/* signal for feature holder node to send features */
 ros::Publisher fh_pub_;
 std_msgs::Int32 fh_msg;
 
-/* signal for rosbag node to stop publishing the image */
-ros::Publisher stop_pub_;
-std_msgs::Int32 stop_msg;
+/* signal for rosbag node to publish the image */
+ros::Publisher img_pub_;
+std_msgs::Int32 img_msg;
 
 /* clock for time measuring - what slows down the algorithm */
 clock_t t;
+
+int range_max = 5000;
 
 /* when all maps are loaded */
 void loaderCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
@@ -144,44 +144,38 @@ void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 
         /* wait for message with requested targetKeypoints */
         ROS_INFO("targetKeyponts is %i = msg is %ld", int_msg.value, msg->view.feature.size());
-        if (msg->view.feature.size() == int_msg.value || iter >= max_iter) {
+        /* number of extracted features is equal to requested */
+        if (msg->view.feature.size() == int_msg.value ) {
             paused = false;
-            if (iter >= max_iter) {
-                ROS_INFO("cannot reach targetKeypoints, taking actual size");
-                targetKeypoints = msg->view.feature.size();
-                iter = 0;
-
-                /* update target keypoints in dynamic reconfigurator */
-                int_msg.value = targetKeypoints;
-                config.ints.clear();
-                config.ints.push_back(int_msg);
-                srv_req.config = config;
-                ROS_INFO("Setting targetKeypoints to %i", int_msg.value);
-                t = clock();
-                if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp)) {
-                    ROS_INFO("Call to set feature_extraction parameters succeeded.");
-                } else {
-                    ROS_INFO("Call to set feature_extraction parameters failed.");
-                }
-                ROS_INFO("Service Time taken: %.4f s", (float) (clock() - t) / CLOCKS_PER_SEC);
-
-                /* stop publishing the image from rosbag */
-                stop_msg.data = true;
-                stop_pub_.publish(stop_msg);
-                ros::spinOnce();
-            }
         } else {
-            iter++;
+            /* threshold is 0, no more features */
+            if( msg->view.feature.size() > 0 && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) < 0.2){
+                ROS_INFO("cannot reach targetKeypoints, threshold is 0: %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
+                paused = false;
+            } else {
+                if(msg->view.feature.size() > 0) ROS_INFO("threshold is %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
+                if(int_msg.value != range_max) {
+                    /* number of features is maximal - take features from feature holder node*/
+                    ROS_INFO("feature holder publishing...");
+                    fh_msg.data = true;
+                    fh_pub_.publish(fh_msg);
+                    ros::spinOnce();
+                } else {
+                    /* take features from feature extractor - publish img from rosbag */
+                    ROS_INFO("extracting...");
+                    img_pub_.publish(img_msg);
+                }
+            }
         }
 
         /* if requested targetKeypoints, update view variables */
         if (!paused) {
-            /* feature holder node starts sending features */
+            targetKeypoints = msg->view.feature.size();
+            /* feature holder node sends new features */
             fh_msg.data = true;
             fh_pub_.publish(fh_msg);
             ros::spinOnce();
 
-            iter = 0;
             /* save keypoints and descriptors */
             view.keypoints.clear();
             view.descriptors = Mat();
@@ -319,14 +313,12 @@ int main(int argc, char** argv) {
 
     bag_pub_ = nh_.advertise<std_msgs::Int32>("/rosbag/pause", 1);
     fh_pub_ = nh_.advertise<std_msgs::Int32>("/featureHolder/start_img", 1);
-    stop_pub_ = nh_.advertise<std_msgs::Int32>("/rosbag/stop", 1);
+    img_pub_ = nh_.advertise<std_msgs::Int32>("/rosbag/publish_img", 1);
 
     /* optimization function to find the best targetKeypoints of each image according to correct matches */
     /* optimization parameters */
     int range_min = 0;
-    int range_max = 5000;
     int min_step = 4;
-
 
     int granularity = 10;
     int bins[granularity];
@@ -347,7 +339,7 @@ int main(int argc, char** argv) {
     thre_msg.value = 0;
     adapt_msg.name = "adaptThreshold";
     adapt_msg.value = false;
-    int_msg.value = 5000;
+    int_msg.value = range_max;
     config.ints.clear();
     config.ints.push_back(int_msg);
     config.ints.push_back(thre_msg);
@@ -368,6 +360,8 @@ int main(int argc, char** argv) {
 
     /* waiting for loaded maps */
     while(!is_loaded && ros::ok()) ros::spinOnce();
+    /* publish the first image from rosbag */
+    img_pub_.publish(img_msg);
 
     while(ros::ok()) {
         ROS_INFO("Running next iteration with step %i",step);
@@ -463,9 +457,6 @@ int main(int argc, char** argv) {
             /* continue rosbag */
             bag_msg.data = false;
             bag_pub_.publish(bag_msg);
-            /* stop publishing features from feature holder node */
-            fh_msg.data = false;
-            fh_pub_.publish(fh_msg);
             /* reset variables */
             start = range_min;
             end = range_max;
@@ -473,7 +464,7 @@ int main(int argc, char** argv) {
             ROS_INFO("Step %i, start %i, end %i", step, start, end);
 
             /* set up dynamic reconfigurator */
-            int_msg.value = 5000;
+            int_msg.value = range_max;
             config.ints.clear();
             config.ints.push_back(int_msg);
             config.ints.push_back(thre_msg);
@@ -486,7 +477,6 @@ int main(int argc, char** argv) {
                 ROS_INFO("Call to set feature_extraction parameters failed.");
             }
             ROS_INFO("Service Time taken: %.4f s", (float)(clock() - t)/CLOCKS_PER_SEC);
-
 
             /* update callbacks */
             ros::spinOnce();
