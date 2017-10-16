@@ -153,7 +153,7 @@ void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
                 ROS_INFO("cannot reach targetKeypoints, threshold is 0: %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
                 paused = false;
             } else {
-                ROS_INFO("threshold is %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
+                if(msg->view.feature.size() > 0) ROS_INFO("threshold is %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
                 if(int_msg.value != range_max) {
                     /* number of features is maximal - take features from feature holder node*/
                     ROS_INFO("feature holder publishing...");
