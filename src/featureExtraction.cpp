@@ -66,11 +66,14 @@ clock_t t;
 bool adaptThreshold = true;
 int targetKeypoints = 100;
 float featureOvershootRatio = 0.3;
+float maxLine = 0.5;
 int target_over;
 void adaptive_threshold(vector<KeyPoint>& keypoints);
 
 int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 {
+	cv::Mat img;
+	if (maxLine < 1.0) img = image(cv::Rect(0,0,image.cols,(int)(image.rows*maxLine))); else img = image;
 	if (usedDetector==DET_AGAST) agastDetector->detect(img,keypoints, Mat () );
 	if (usedDetector==DET_SURF) surf->detect(img,keypoints, Mat () );
 	if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
@@ -106,6 +109,7 @@ void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 	targetKeypoints = config.targetKeypoints;
 	featureOvershootRatio = config.featureOvershootRatio;
 	target_over = targetKeypoints + featureOvershootRatio/100.0 * targetKeypoints;
+	maxLine = config.maxLine;
 
 	/* optimize detecting features and measure time */
 	optimized = config.optimized;
@@ -188,6 +192,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	sprintf(numStr,"Image_%09d",msg->header.seq);
 	featureArray.id =  numStr;
 	featureArray.distance = msg->header.seq;
+	printf("Features: %i\n",(int)featureArray.feature.size());
 	feat_pub_.publish(featureArray);
 
 	/*and if there are any consumers, publish image with features*/
