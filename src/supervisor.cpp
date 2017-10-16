@@ -149,7 +149,7 @@ void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
             paused = false;
         } else {
             /* threshold is 0, no more features */
-            if( abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) < 0.2){
+            if( msg->view.feature.size() > 0 && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) < 0.2){
                 ROS_INFO("cannot reach targetKeypoints, threshold is 0: %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
                 paused = false;
             } else {
