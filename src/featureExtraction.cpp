@@ -198,6 +198,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	sprintf(numStr,"Image_%09d",msg->header.seq);
 	featureArray.id =  numStr;
 	featureArray.distance = msg->header.seq;
+	featureArray.header.stamp = ros::Time::now();
 	printf("Features: %i\n",(int)featureArray.feature.size());
 	feat_pub_.publish(featureArray);
 
