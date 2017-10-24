@@ -57,6 +57,7 @@ Ptr<SURF> upSurf = SURF::create(detectionThreshold,4,3,false,true);
 
 EDetectorType usedDetector = DET_NONE;
 EDescriptorType usedDescriptor = DES_NONE;
+NormTypes featureNorm = NORM_INF;
 
 /* optimization parameters */
 bool optimized = false;
@@ -115,6 +116,11 @@ void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 	optimized = config.optimized;
 	usedDescriptor = (EDescriptorType) config.descriptor;
 	usedDetector = (EDetectorType) config.detector;
+	switch (usedDescriptor)
+	{
+		case DES_BRIEF:featureNorm = NORM_HAMMING;break;
+		case DES_SURF:featureNorm = NORM_L2;break;
+	}
 	setThreshold(detectionThreshold);
 
 	ROS_DEBUG("Changing feature featureExtraction to %.3f, keypoints %i", detectionThreshold, targetKeypoints);
@@ -179,7 +185,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		feature.angle=keypoints[i].angle;
 		feature.response=keypoints[i].response;
 		feature.octave=keypoints[i].octave;
-		feature.class_id=keypoints[i].class_id;
+		feature.class_id=featureNorm;
 		descriptors.row(i).copyTo(feature.descriptor);
 		if(adaptThreshold) {
 			if(i < targetKeypoints) featureArray.feature.push_back(feature);
