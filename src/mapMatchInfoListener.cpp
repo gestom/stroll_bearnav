@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 
 #include "std_msgs/Float32.h"
@@ -16,11 +17,15 @@ using namespace std;
 char* fname;
 
 struct MatchInfo{
-  int id;
+  char id[300];
   int eval;
   float x;
   float y;
-  uint64_t time;
+  float size;
+  float angle;
+  float response;
+  int octave;
+  int time;
   string t;
 };
 
@@ -31,13 +36,21 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
    if(size>0){
      for(int i = 0; i<size;i++){
          MatchInfo new_mi;
-         new_mi.id = i;
+
+         sprintf(new_mi.id,"%d",i);
+         strcat(new_mi.id, "_");
+         strcat(new_mi.id,msg->map.id.c_str());
+         strcat(new_mi.id, "\0");
+
          new_mi.eval = msg->mapMatchEval[i];
          new_mi.x = msg->map.feature[i].x;
          new_mi.y = msg->map.feature[i].y;
-         new_mi.t = msg->view.header.stamp.sec;
+         new_mi.size = msg->map.feature[i].size;
+         new_mi.angle = msg->map.feature[i].angle;
+         new_mi.response = msg->map.feature[i].response;
+         new_mi.octave = msg->map.feature[i].octave;
+         new_mi.time = msg->view.header.stamp.sec;
          mi.push_back(new_mi);
-
      }
 
      FILE * f;
@@ -47,7 +60,6 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
        char * line = NULL;
        size_t len = 0;
        ssize_t read;
-       int id = 0;
        long int pos_now=0;
        fseek(f, 0L, SEEK_END);
        int length = ftell(f);;
@@ -56,10 +68,13 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
        char* rest_f = (char *)malloc(sizeof(char)*length);
 
        while ((read = getline(&line, &len, f)) != -1) {
+         char  id[300];
          pos_now += read;
-         sscanf(line,"%d ",&id);
+         sscanf(line,"%s ",&id);
          for(int i=0;i<mi.size();i++){
-           if(id==mi[i].id){
+
+
+           if(!strcmp(mi[i].id,id)){
              int rest_l = 0;
              while((read = getline(&line, &len, f)) != -1){
                strcpy(&rest_f[rest_l], line);
@@ -67,31 +82,25 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
              }
              rest_f[rest_l+1] = '\0';
              fseek(f,(pos_now-1),SEEK_SET);
-             pos_now += fprintf(f," %ld %d\n",mi[i].time, mi[i].eval)-1;
+             pos_now += fprintf(f," %d %d\n",mi[i].time, mi[i].eval)-1;
              fputs(rest_f,f);
              fseek(f,pos_now,SEEK_SET);
              mi.erase(mi.begin()+i);
-             i--;
+             break;
            }
          }
        }
        free(rest_f);
        fclose(f);
       }
-      //pridat vypsani stejnejch;
+
+
      if(mi.size()>0){
        f = fopen(fname,"a+");
        while(mi.size()>0){
-         int id = mi[0].id;
-         fprintf(f,"%d %.02f %.02f %ld %d",mi[0].id, mi[0].x, mi[0].y,mi[0].time, mi[0].eval);
+
+         fprintf(f,"%s %.02f %.02f %.02f %.02f %.02f %d %d %d",mi[0].id, mi[0].x, mi[0].y,mi[0].size, mi[0].angle, mi[0].response, mi[0].octave, mi[0].time, mi[0].eval);
          mi.erase(mi.begin());
-         for(int j=0;j<mi.size();j++){
-            if(mi[j].id == id){
-              fprintf(f," %d",mi[j].eval);
-              mi.erase(mi.begin()+j);
-              j--;
-            }
-         }
          fprintf(f,"\n");
        }
        fclose(f);
