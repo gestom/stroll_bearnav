@@ -1,8 +1,13 @@
 #include <ros/ros.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <algorithm>
 #include <iostream>
-
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <iterator>
 #include "std_msgs/Float32.h"
 #include <stroll_bearnav/NavigationInfo.h>
 #include <stroll_bearnav/FeatureArray.h>
@@ -33,8 +38,10 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
  {
    int size = msg->mapMatchIndex.size();
    vector<MatchInfo> mi;
-   if(size>0){
-     for(int i = 0; i<size;i++){
+   if(size>0)
+   {
+     for(int i = 0; i<size;i++)
+     {
          MatchInfo new_mi;
 
          sprintf(new_mi.id,"%d",i);
@@ -53,60 +60,65 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
          mi.push_back(new_mi);
      }
 
-     FILE * f;
+     ostringstream file_content;
+     string line;
+     ifstream f (fname);
 
+     if (f.is_open())
+     {
+       while ( getline (f,line) )
+       {
+         vector<string> strings;
+         istringstream l(line);
+         string s;
+         int i = 0;
+         int j = 0;
+         ostringstream end_line;
+         //end_line  << "\n";
+         while (getline(l, s, ' ') && i == 0)
+         {
 
-     if((f = fopen(fname,"r+"))!= NULL){
-       char * line = NULL;
-       size_t len = 0;
-       ssize_t read;
-       long int pos_now=0;
-       fseek(f, 0L, SEEK_END);
-       int length = ftell(f);;
-       length = std::max(1000,length);
-       fseek(f, 0L, SEEK_SET);
-       char* rest_f = (char *)malloc(sizeof(char)*length);
-
-       while ((read = getline(&line, &len, f)) != -1) {
-         char  id[300];
-         pos_now += read;
-         sscanf(line,"%s ",&id);
-         for(int i=0;i<mi.size();i++){
-
-
-           if(!strcmp(mi[i].id,id)){
-             int rest_l = 0;
-             while((read = getline(&line, &len, f)) != -1){
-               strcpy(&rest_f[rest_l], line);
-               rest_l+=read;
+           for(j = 0;j<mi.size();j++)
+           {
+             if(s.compare(mi[j].id) == 0){
+               end_line.str("");
+               end_line.clear();
+               end_line << " " << mi[j].time << " " <<  mi[j].eval << endl;
+               mi.erase(mi.begin() +j );
+               break;
              }
-             rest_f[rest_l+1] = '\0';
-             fseek(f,(pos_now-1),SEEK_SET);
-             pos_now += fprintf(f," %d %d\n",mi[i].time, mi[i].eval)-1;
-             fputs(rest_f,f);
-             fseek(f,pos_now,SEEK_SET);
-             mi.erase(mi.begin()+i);
-             break;
            }
+           file_content << line << end_line.str();
+           i++;
          }
        }
-       free(rest_f);
-       fclose(f);
-      }
+       f.close();
+     }
 
-
-     if(mi.size()>0){
-       f = fopen(fname,"a+");
-       while(mi.size()>0){
-
-         fprintf(f,"%s %.02f %.02f %.02f %.02f %.02f %d %d %d",mi[0].id, mi[0].x, mi[0].y,mi[0].size, mi[0].angle, mi[0].response, mi[0].octave, mi[0].time, mi[0].eval);
-         mi.erase(mi.begin());
-         fprintf(f,"\n");
+     if(mi.size()>0)
+     {
+       for(int i = 0; i<mi.size(); i++)
+       {
+         file_content << mi[i].id << " ";
+         file_content << mi[i].x << " ";
+         file_content << mi[i].y << " ";
+         file_content << mi[i].size << " ";
+         file_content << mi[i].angle << " ";
+         file_content << mi[i].response << " ";
+         file_content << mi[i].octave << " ";
+         file_content << mi[i].time << " ";
+         file_content << mi[i].eval << endl;
        }
-       fclose(f);
      }
      mi.clear();
-   }
+
+     ofstream f2 (fname);
+     if((f2.is_open()))
+     {
+       f2 << file_content.str();
+     }
+     f2.close();
+  }
 }
 
 
