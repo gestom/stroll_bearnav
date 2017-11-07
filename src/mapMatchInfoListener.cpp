@@ -1,7 +1,6 @@
 #include <ros/ros.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -12,7 +11,9 @@
 #include <stroll_bearnav/NavigationInfo.h>
 #include <stroll_bearnav/FeatureArray.h>
 #include <actionlib/server/simple_action_server.h>
-
+#include <signal.h>
+#include <ros/xmlrpc_manager.h>
+#include <ros/callback_queue.h>
 #include <opencv2/opencv.hpp>
 
 #include <std_msgs/Int32.h>
@@ -34,8 +35,46 @@ struct MatchInfo{
   string t;
 };
 
+bool volatile is_running = 1;
+bool volatile is_working = 0;
+ros::CallbackQueue* my_queue;
+
+void mySigHandler(int sig)
+{
+  my_queue = ros::getGlobalCallbackQueue();
+  while(!my_queue->isEmpty() || is_working){
+    printf("Is NOT Empty or working -> WAIT\n");
+    sleep(10000);
+    my_queue = ros::getGlobalCallbackQueue();
+  }
+  printf("Is Empty -> Quitting\n");
+  is_running = 0;
+}
+
+
+void shutdownCallback(XmlRpc::XmlRpcValue& params, XmlRpc::XmlRpcValue& result)
+{
+  int num_params = 0;
+  if (params.getType() == XmlRpc::XmlRpcValue::TypeArray)
+    num_params = params.size();
+  if (num_params > 1)
+  {
+    my_queue = ros::getGlobalCallbackQueue();
+    while(!my_queue->isEmpty() || is_working){
+      printf("Is NOT Empty or working -> WAIT\n");
+      sleep(10000);
+      my_queue = ros::getGlobalCallbackQueue();
+    }
+    printf("Is Empty -> Quitting for misterious reasons \n");
+    is_running = 0;
+  }
+
+  result = ros::xmlrpc::responseInt(1, "", 0);
+}
+
 void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
  {
+   //is_working = 1;
    int size = msg->mapMatchIndex.size();
    vector<MatchInfo> mi;
    if(size>0)
@@ -60,21 +99,23 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
          mi.push_back(new_mi);
      }
 
-     ostringstream file_content;
+     ofstream file_content(".statistics.txt");
+     //ostringstream file_content;
      string line;
      ifstream f (fname);
 
-     if (f.is_open())
+     if (f.is_open() && file_content.is_open())
      {
        while ( getline (f,line) )
        {
          vector<string> strings;
-         istringstream l(line);
+         string line2;
+         line2.assign(line);
+         istringstream l(line2);
          string s;
          int i = 0;
          int j = 0;
          ostringstream end_line;
-         //end_line  << "\n";
          while (getline(l, s, ' ') && i == 0)
          {
 
@@ -88,7 +129,8 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
                break;
              }
            }
-           file_content << line << end_line.str();
+           file_content << line;
+           file_content << end_line.str();
            i++;
          }
        }
@@ -111,14 +153,20 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
        }
      }
      mi.clear();
-
-     ofstream f2 (fname);
-     if((f2.is_open()))
+     file_content.close();
+     if( remove( fname ))
      {
-       f2 << file_content.str();
+       perror( "Error deleting file" );
      }
-     f2.close();
-  }
+
+     char oldname[] =".statistics.txt";
+
+     if ( rename( oldname , fname ) )
+     {
+       perror( "Error renaming file" );
+     }
+   }
+  is_working = 0;
 }
 
 
@@ -129,13 +177,21 @@ int main(int argc, char **argv)
     return 1;
   }
   fname = argv[1];
-  ros::init(argc, argv, "listener");
+  signal(SIGINT, mySigHandler);
+  ros::init(argc, argv, "listener", ros::init_options::NoSigintHandler);
+
+  ros::XMLRPCManager::instance()->unbind("shutdown");
+  ros::XMLRPCManager::instance()->bind("shutdown", shutdownCallback);
 
   ros::NodeHandle n;
 
   ros::Subscriber sub = n.subscribe("/navigationInfo", 1000, infoMapMatch);
+  while(is_running && ros::ok )
+  {
+    ros::spinOnce();
+    usleep(100000);
+  }
 
-  ros::spin();
 
   return 0;
 }

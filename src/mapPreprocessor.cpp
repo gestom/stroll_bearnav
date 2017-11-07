@@ -41,9 +41,9 @@ stroll_bearnav::Feature feature;
 
 /* map variables */
 Mat img,img2;
-vector<KeyPoint> keypoints_1,keypoints_2; 
-string currentMapName; 
-float currentDistance = -1.0; 
+vector<KeyPoint> keypoints_1,keypoints_2;
+string currentMapName;
+float currentDistance = -1.0;
 Mat descriptors_1,descriptors_2;
 Mat currentImage;
 string folder;
@@ -73,7 +73,7 @@ typedef enum
 }EMapLoaderState;
 EMapLoaderState state = IDLE;
 
-/* Loads all maps from a folder 
+/* Loads all maps from a folder
    returns number of loaded maps  */
 int loadMaps()
 {
@@ -83,7 +83,7 @@ int loadMaps()
 	cout << folder << endl;
 	if ((dir = opendir (folder.c_str())) != NULL) {
 		/* print all the files and directories within directory */
-		while ((ent = readdir (dir)) != NULL) 
+		while ((ent = readdir (dir)) != NULL)
 		{
 			char filter[strlen(prefix.c_str())+10];
 			sprintf(filter,"%s_",prefix.c_str());
@@ -112,11 +112,11 @@ int loadMaps()
 	distanceMap.clear();
 	namesMap.clear();
 	char fileName[1000];
-	
+
 	numFeatures=0;
 	for (int i = 0;i<numMaps;i++){
-		sprintf(fileName,"%s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]); 
-		ROS_INFO("Preloading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]); 
+		sprintf(fileName,"%s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
+		ROS_INFO("Preloading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
 		FileStorage fs(fileName, FileStorage::READ);
 		if(fs.isOpened()){
 			img.release();
@@ -167,13 +167,13 @@ void loadMap(int index)
 	server->publishFeedback(feedback);
 }
 
-/* load path profile 
+/* load path profile
    returns size of path profile */
 int loadPath()
-{	
+{
 	char fileName[1000];
-	sprintf(fileName,"%s/%s.yaml",folder.c_str(),prefix.c_str()); 
-	ROS_DEBUG("Loading %s/%s.yaml",folder.c_str(),prefix.c_str()); 
+	sprintf(fileName,"%s/%s.yaml",folder.c_str(),prefix.c_str());
+	ROS_DEBUG("Loading %s/%s.yaml",folder.c_str(),prefix.c_str());
 	FileStorage fsp(fileName, FileStorage::READ);
 	vector<float> path;
 	path.clear();
@@ -198,9 +198,9 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 	lastLoadedMap = -1;
 	numProcessedMaps = 0;
 	stroll_bearnav::loadMapFeedback feedback;
-	
+
 	prefix = goal->prefix;
-	
+
 	if (loadMaps() > 0 && loadPath() >= 0){
 		state = ACTIVE;
 	}else{
@@ -213,7 +213,7 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 	   and number of loaded map on preempt request*/
 	while(state != IDLE){
 		usleep(200000);
-		
+
 		if(server->isPreemptRequested()){
 			result.distance=distanceT;
 			result.numFeatures=numFeatures;
@@ -232,7 +232,7 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 }
 
 void distCallback(const std_msgs::Float32::ConstPtr& msg)
-{	
+{
 	if(state == ACTIVE){
 		distanceT=msg->data;
 		featureArray.feature.clear();
@@ -253,17 +253,65 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 			ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 			loadMap(mindex);
 //			ROS_INFO("Sending a map %i features with %i descriptors",(int)keypoints_1.size(),descriptors_1.rows);
+
+			int stcs[keypoints_1.size()];
+			for(int i = 0; i<keypoints_1.size();i++){
+				stcs[i] = 0;
+			}
+			string line;
+			ifstream f("/home/eliska/stroll/statistics/statistics.txt");
+			int max = 0;
+			if (f.is_open())
+			{
+				ROS_INFO("Predisting kyes on map with index %i and MapID = %s",mindex, currentMapName);
+				while ( getline (f,line) )
+				{
+					int was_ok = 0;
+					vector<string> strings;
+					istringstream l(line);
+					string s;
+					int index = -1;
+
+					bool right_map_id = false;
+					if(getline(l, s, ' ')){
+						if(s.find(currentMapName) != string::npos){
+							right_map_id=true;
+							size_t pos = s.find("_");
+							string s_index = s.substr(0,pos);
+							index = atoi(s_index.c_str());
+							for(int i = 0; i<6;i++){
+								getline(l, s, ' ');
+							}
+						}
+					}
+					while (getline(l, s, ' ') && right_map_id)
+					{
+						getline(l, s, ' ');
+						was_ok += atoi(s.c_str());
+					}
+					if(max<was_ok){
+						max = was_ok;
+					}
+					stcs[index] = was_ok;
+				}
+				f.close();
+			}
+
+
 			for(int i=0;i<keypoints_1.size();i++)
 			{
-				feature.x=keypoints_1[i].pt.x;
-				feature.y=keypoints_1[i].pt.y;
-				feature.size=keypoints_1[i].size;
-				feature.angle=keypoints_1[i].angle;
-				feature.response=keypoints_1[i].response;
-				feature.octave=keypoints_1[i].octave;
-				feature.class_id=keypoints_1[i].class_id;
-				feature.descriptor=descriptors_1.row(i);
-				featureArray.feature.push_back(feature);
+				if(stcs[i]>=(max/2))
+				{
+					feature.x=keypoints_1[i].pt.x;
+					feature.y=keypoints_1[i].pt.y;
+					feature.size=keypoints_1[i].size;
+					feature.angle=keypoints_1[i].angle;
+					feature.response=keypoints_1[i].response;
+					feature.octave=keypoints_1[i].octave;
+					feature.class_id=keypoints_1[i].class_id;
+					feature.descriptor=descriptors_1.row(i);
+					featureArray.feature.push_back(feature);
+				}
 			}
 			featureArray.distance = currentDistance;
 			featureArray.id = currentMapName;
@@ -283,7 +331,7 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 }
 
 int main(int argc, char** argv)
-{ 
+{
 	ros::init(argc, argv, "map_preprocessor");
 	ros::NodeHandle nh_;
 	image_transport::ImageTransport it_(nh_);
