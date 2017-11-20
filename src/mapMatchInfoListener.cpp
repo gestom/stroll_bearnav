@@ -116,6 +116,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
          int i = 0;
          int j = 0;
          ostringstream end_line;
+         end_line<<"\n";
          while (getline(l, s, ' ') && i == 0)
          {
 

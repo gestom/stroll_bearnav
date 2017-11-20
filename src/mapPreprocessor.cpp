@@ -263,7 +263,6 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 			int max = 0;
 			if (f.is_open())
 			{
-				ROS_INFO("Predisting kyes on map with index %i and MapID = %s",mindex, currentMapName);
 				while ( getline (f,line) )
 				{
 					int was_ok = 0;
