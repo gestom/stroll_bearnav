@@ -24,7 +24,7 @@ ros::Publisher feat_pub_;
 float distance_nav;
 string id;
 int targetKeypoints;
-int started = false;
+
 
 /* image publishing */
 Mat img;
@@ -33,32 +33,20 @@ cv_bridge::CvImagePtr cv_ptr;
 
 void startCallback(const std_msgs::Int32::ConstPtr& msg)
 {
-    started = msg->data;
 
-    ROS_INFO("Feature holder started: %i",started);
+
+    ROS_INFO("Feature holder start");
 
     /* publish image features */
-    if(started) {
-        /* form the message with desired number of features */
-        featureArray.feature.clear();
-        for(int i=0;i<keypoints.size();i++){
-            feature.x=keypoints[i].pt.x;
-            feature.y=keypoints[i].pt.y;
-            feature.size=keypoints[i].size;
-            feature.angle=keypoints[i].angle;
-            feature.response=keypoints[i].response;
-            feature.octave=keypoints[i].octave;
-            feature.class_id=keypoints[i].class_id;
-            descriptors.row(i).copyTo(feature.descriptor);
-            if(i < targetKeypoints) featureArray.feature.push_back(feature); else break;
-        }
-        featureArray.id =  id;
-        featureArray.distance = distance_nav;
+    // erase features
+    if( targetKeypoints <= featureArray.feature.size()) {
+        featureArray.feature.erase(featureArray.feature.begin() + targetKeypoints, featureArray.feature.end());
+    }
 
         ROS_INFO("Published feature array size %ld, targetkeypoints %i", featureArray.feature.size(), targetKeypoints);
         feat_pub_.publish(featureArray);
         ros::spinOnce();
-    }
+
 }
 
 /* clear keypoints when new image published */
@@ -98,6 +86,24 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
         distance_nav = msg->distance;
     }
 
+        /* form the message with desired number of features */
+        featureArray.feature.clear();
+        for (int i = 0; i < keypoints.size(); i++) {
+            feature.x = keypoints[i].pt.x;
+            feature.y = keypoints[i].pt.y;
+            feature.size = keypoints[i].size;
+            feature.angle = keypoints[i].angle;
+            feature.response = keypoints[i].response;
+            feature.octave = keypoints[i].octave;
+            feature.class_id = keypoints[i].class_id;
+            descriptors.row(i).copyTo(feature.descriptor);
+            if (i < targetKeypoints) featureArray.feature.push_back(feature); else break;
+        }
+        featureArray.id = id;
+        featureArray.distance = distance_nav;
+    ROS_INFO("Formed feature array of size %ld, targetkeypoints %i", featureArray.feature.size(), targetKeypoints);
+
+
     /*publish image with features*/
     if(cv_ptr != NULL)
     {
@@ -105,7 +111,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
         drawKeypoints( img, keypoints, img, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );
         /* publish image with features */
         image_pub_.publish(cv_ptr->toImageMsg());
-        ROS_INFO("Features extracted %ld %ld",featureArray.feature.size(),keypoints.size());
+        ROS_INFO("FH: Features extracted %ld %ld",featureArray.feature.size(),keypoints.size());
     }
 
     ros::spinOnce();
@@ -118,9 +124,9 @@ void extractorCallback(const dynamic_reconfigure::Config::ConstPtr& msg)
     printf("extractorCallback in featureHolder, targetKeypoints %i\n",targetKeypoints);
 
     /* publish image features */
-    if(keypoints.size() > 0 ) {
+ //   if(keypoints.size() > 0 ) {
         /* form the message with desired number of features */
-        featureArray.feature.clear();
+ /*       featureArray.feature.clear();
         for (int i = 0; i < keypoints.size(); i++) {
             feature.x = keypoints[i].pt.x;
             feature.y = keypoints[i].pt.y;
@@ -139,7 +145,7 @@ void extractorCallback(const dynamic_reconfigure::Config::ConstPtr& msg)
         feat_pub_.publish(featureArray);
 
         ros::spinOnce();
-    }
+    }*/
 }
 
 /* save incoming image */
@@ -150,6 +156,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     }
     catch (cv_bridge::Exception &e) {
         ROS_ERROR("cv_bridge exception: %s", e.what());
+        ROS_INFO("cv_bridge exception: %s", e.what());
         return;
     }
     img = cv_ptr->image;

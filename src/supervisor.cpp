@@ -17,6 +17,9 @@
 #include <stroll_bearnav/navigatorActionResult.h>
 //#include "actionlib_msgs/GoalID.h"
 //#include <actionlib/server/simple_action_server.h>
+#include <stroll_bearnav/navigatorAction.h>
+#include <actionlib/client/simple_action_client.h>
+
 
 #include <opencv2/opencv.hpp>
 
@@ -24,6 +27,11 @@
 
 using namespace cv;
 using namespace std;
+
+typedef actionlib::SimpleActionClient<stroll_bearnav::navigatorAction> navigatorClient;
+//navigatorClient ac("navClient", true);
+stroll_bearnav::navigatorActionGoal goal;
+stroll_bearnav::navigatorGoal navgoal;
 
 /* parameters from one view obtained from navigator */
 struct ViewInfo {
@@ -107,6 +115,15 @@ void loaderCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
     is_loaded = true;
 
     ROS_INFO("Maps are loaded.");
+
+   /* ac.sendGoal(navgoal);
+
+    ac.waitForResult();
+
+    if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+        ROS_INFO("Success");
+    else
+        ROS_INFO("Fail");*/
 }
 
 /* map from loader */
@@ -155,24 +172,43 @@ void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
             paused = false;
         } else {
             /* threshold is 0, no more features */
-            if( msg->view.feature.size() > 0
-                    && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) < accuracy
-                    && int_msg.value > msg->view.feature.size() ){
-                ROS_INFO("cannot reach targetKeypoints, threshold is 0: %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
+            if( msg->view.feature.size() > 0 // at least 1 feature to obtain threshold
+                    && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) < accuracy // threshold == 0
+                    && int_msg.value > msg->view.feature.size() ){ // requested more than can be extracted
+                ROS_INFO("cannot reach targetKeypoints, more than can be extracted, threshold is 0: %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
                 paused = false;
             } else {
                 if(msg->view.feature.size() > 0) ROS_INFO("threshold is %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
-                if(int_msg.value != range_max) {
-                    /* number of features is maximal - take features from feature holder node*/
-                    ROS_INFO("feature holder publishing...");
+                if((msg->view.feature.size() <= 0 && int_msg.value > 0) // zero features but not requested
+                    || (msg->view.feature.size() > 0 // at least 1 feature to obtain threshold
+                        && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) >= accuracy && int_msg.value == range_max) ){ // threshold !=0 but requested maximum keypoints
+
+                    /* take features from feature extractor - publish img from rosbag */
+                    ROS_INFO("extracting...");
+                    img_pub_.publish(img_msg);
+                    ros::spinOnce();
+                } else {
+                    // requested less keypoints than obtained
+                    ROS_INFO("feature holder publishing... requested less");
+                    fh_msg.data = true;
+                    fh_pub_.publish(fh_msg);
+                    ros::spinOnce();
+                }
+            /*    if(//int_msg.value != range_max ||
+                        msg->view.feature.size() > 0 // at least 1 feature to obtain threshold
+                        && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) < accuracy // threshold == 0
+                        &&
+                                int_msg.value < msg->view.feature.size()) { // requested less than incoming
+                   //  number of requested features is not maximal - take features from feature holder node
+                    ROS_INFO("feature holder publishing... requested less");
                     fh_msg.data = true;
                     fh_pub_.publish(fh_msg);
                     ros::spinOnce();
                 } else {
-                    /* take features from feature extractor - publish img from rosbag */
+                   // take features from feature extractor - publish img from rosbag
                     ROS_INFO("extracting...");
                     img_pub_.publish(img_msg);
-                }
+                }*/
             }
         }
 
@@ -386,6 +422,11 @@ int main(int argc, char** argv) {
     dynamic_reconfigure::Server<stroll_bearnav::supervisorConfig>::CallbackType f = boost::bind(&callback, _1, _2);
     server.setCallback(f);
 
+
+    /*while(!ac.waitForServer(ros::Duration(5.0))){
+        ROS_INFO("Waiting for the navClient action server to come up");
+    }*/
+
     /* optimization function to find the best targetKeypoints of each image according to correct matches */
     /* optimization parameters */
     int range_min = 0;
@@ -549,6 +590,8 @@ int main(int argc, char** argv) {
             }
             ROS_INFO("Service Time taken: %.4f s", (float)(clock() - t)/CLOCKS_PER_SEC);
 
+            /* send image from rosbag */
+            img_pub_.publish(img_msg);
             /* update callbacks */
             ros::spinOnce();
         }
