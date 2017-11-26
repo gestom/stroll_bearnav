@@ -4,27 +4,19 @@
 #check arguments
 case $# in
     3);;
-    *) echo "wrong number of argument! 1st: path to folder containing maps. 2nd: path to file to same statistics. 3rd: path to folder containg rosbags to be played."  1>&2
+    *) echo "wrong number of argument! 1st: path to folder containing maps. 2nd: path to file to save statistics. 3rd: path to folder containg rosbags to be played."  1>&2
         exit -1
         ;;
 esac
 
 source ~/bc_ros/devel/setup.bash
 
+rosparam set use_sim_time true
+
 roslaunch stroll_bearnav stroll-core.launch folder:=$1 &            	 
 P1=$!
 
-sleep 3s
 
-rosrun stroll_bearnav map_match_info_listener $2 &
-P2=$!
-
-time=$(date +%s)
-time2=$(date +%s.%3N)
-
-
-
-rosparam set use_sim_time true
 rosrun dynamic_reconfigure dynparam set /feature_extraction detector 2
 rosrun dynamic_reconfigure dynparam set /feature_extraction descriptor 2
 
@@ -33,6 +25,8 @@ rostopic pub -1 /map_preprocessor/goal stroll_bearnav/loadMapActionGoal '{ heade
 cd $3
 
 TXT_FILES=( `ls` )
+
+#Udelat to neprustrelny!  treba jako kontrolovat priponu
 
 for i in ${TXT_FILES[*]}
 do
@@ -44,6 +38,6 @@ do
 	kill $P4
 	
 done
-sleep 120s
-kill -2 $P2
+
 kill $P1
+
