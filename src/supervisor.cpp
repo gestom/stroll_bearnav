@@ -194,21 +194,6 @@ void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
                     fh_pub_.publish(fh_msg);
                     ros::spinOnce();
                 }
-            /*    if(//int_msg.value != range_max ||
-                        msg->view.feature.size() > 0 // at least 1 feature to obtain threshold
-                        && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) < accuracy // threshold == 0
-                        &&
-                                int_msg.value < msg->view.feature.size()) { // requested less than incoming
-                   //  number of requested features is not maximal - take features from feature holder node
-                    ROS_INFO("feature holder publishing... requested less");
-                    fh_msg.data = true;
-                    fh_pub_.publish(fh_msg);
-                    ros::spinOnce();
-                } else {
-                   // take features from feature extractor - publish img from rosbag
-                    ROS_INFO("extracting...");
-                    img_pub_.publish(img_msg);
-                }*/
             }
         }
 
