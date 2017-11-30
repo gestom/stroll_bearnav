@@ -371,9 +371,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			feedback.outliers = good_matches.size() - best_matches.size();
 			feedback.keypoints_avg = (mapKeypoints.size() + currentKeypoints.size() )/2;
 			feedback.matches = good_matches.size();
-			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << endl;
 			/*difference between features */
 			differenceRot=sum/count; 
+			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  endl;
 
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
@@ -490,13 +490,13 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			cmd_pub_.publish(twist);
 		}
 		/*used for testing and demos*/
-		printf("BAA: %.3f\n",differenceRot);
+//		printf("BAA: %.3f\n",differenceRot);
 		if (path.size()==0)
 		{
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
 			twist.angular.y = twist.angular.x = 0.0;
-			twist.angular.z =differenceRot*pixelTurnGain;
-			printf("AAA: %.3f\n",differenceRot);
+			twist.angular.z = differenceRot*pixelTurnGain;
+//			printf("AAA: %.3f\n",differenceRot);
 			cmd_pub_.publish(twist);
 		}
 	}
