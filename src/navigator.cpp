@@ -261,7 +261,13 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/*feature matching*/
 			Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_L2);
 			vector< vector<DMatch> > matches;
-			matcher->knnMatch( mapDescriptors, currentDescriptors, matches, 2);
+
+			try{
+				matcher->knnMatch( mapDescriptors, currentDescriptors, matches, 2);
+			}catch (Exception& e){
+				matches.clear();
+				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
+			}
 
 			/*perform ratio matching*/ 
 			good_matches.reserve(matches.size());  
