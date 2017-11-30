@@ -49,7 +49,7 @@ Mat currentImage;
 string folder;
 int numberOfUsedMaps=0;
 int lastLoadedMap=0;
-float mapDistances[1000];
+float mapDistances[10000];
 int numProcessedMaps = 0;
 int numMaps = 1;
 int numFeatures;

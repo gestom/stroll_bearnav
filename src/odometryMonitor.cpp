@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <nav_msgs/Odometry.h>
+#include <sensor_msgs/JointState.h>
 #include <std_msgs/Float32.h>
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/distanceConfig.h>
@@ -14,6 +15,7 @@ using namespace std;
 ros::Publisher dist_pub_;
 ros::Publisher distEvent_pub_;
 ros::Subscriber odometrySub;
+ros::Subscriber jointSub;
 nav_msgs::Odometry odometry;
 std_msgs::Float32 dist_;
 std_msgs::Float32 distEvent_;
@@ -48,6 +50,33 @@ void callback(stroll_bearnav::distanceConfig &config, uint32_t level)
 	 eventCounter = eventCounter*distanceThreshold/config.distance_param;
 	 distanceThreshold=config.distance_param;
  	 ROS_INFO("Changing distance event threshold: %f", config.distance_param);
+}
+
+/*FOR thorvald*/
+void jointcallback(const sensor_msgs::JointState::ConstPtr& msg)
+{
+	/*if lastX and lastY are not initialized*/
+	if (lastX == FLT_MAX && lastY == FLT_MAX){
+		lastX=msg->position[5]/10;
+		lastY=0;
+	}	
+
+	/*calculate eucledian distance from the last odometric position*/
+	currentX=msg->position[5]/10;
+	currentY=0;
+	totalDist += sqrt(pow(currentX-lastX,2)+pow(currentY-lastY,2));
+	lastX=currentX;
+	lastY=currentY;
+
+	/*if it exceeds distanceThreshold from the last send position, then send an event*/
+	if (totalDist-eventCounter*distanceThreshold >= distanceThreshold)
+	{
+		eventCounter++;
+		distEvent_.data=totalDist;
+		distEvent_pub_.publish(distEvent_);
+	} 
+	dist_.data=totalDist;
+	dist_pub_.publish(dist_);
 }
 
 void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
@@ -92,6 +121,7 @@ int main(int argc, char** argv)
 	ros::ServiceServer service = nh.advertiseService("/setDistance", setDistance);
 
 	odometrySub = nh.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
+	jointSub = nh.subscribe<sensor_msgs::JointState>("/joint_states",10 ,jointcallback);
 	dist_pub_=nh.advertise<std_msgs::Float32>("/distance",1);
 	distEvent_pub_=nh.advertise<std_msgs::Float32>("/distance_events",1);
 	ros::spin();

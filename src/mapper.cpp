@@ -262,7 +262,7 @@ int main(int argc, char** argv)
 
 	/* robot speed limits */
 	nh.param("angularSpeed", maxAngularSpeed, 0.2);
-	nh.param("forwardSpeed", maxForwardSpeed, 0.3);
+	nh.param("forwardSpeed", maxForwardSpeed, 1.0);
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 

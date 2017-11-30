@@ -490,11 +490,13 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			cmd_pub_.publish(twist);
 		}
 		/*used for testing and demos*/
+		printf("BAA: %.3f\n",differenceRot);
 		if (path.size()==0)
 		{
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
 			twist.angular.y = twist.angular.x = 0.0;
 			twist.angular.z =differenceRot*pixelTurnGain;
+			printf("AAA: %.3f\n",differenceRot);
 			cmd_pub_.publish(twist);
 		}
 	}
