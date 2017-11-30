@@ -13,12 +13,25 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include <actionlib/server/simple_action_server.h>
 
+#include <stroll_bearnav/supervisorConfig.h>
+#include <stroll_bearnav/navigatorActionResult.h>
+//#include "actionlib_msgs/GoalID.h"
+//#include <actionlib/server/simple_action_server.h>
+#include <stroll_bearnav/navigatorAction.h>
+#include <actionlib/client/simple_action_client.h>
+
+
 #include <opencv2/opencv.hpp>
 
 #include <std_msgs/Int32.h>
 
 using namespace cv;
 using namespace std;
+
+typedef actionlib::SimpleActionClient<stroll_bearnav::navigatorAction> navigatorClient;
+//navigatorClient ac("navClient", true);
+stroll_bearnav::navigatorActionGoal goal;
+stroll_bearnav::navigatorGoal navgoal;
 
 /* parameters from one view obtained from navigator */
 struct ViewInfo {
@@ -81,6 +94,8 @@ std_msgs::Int32 bag_msg;
 int value;
 bool paused=true;
 bool view_saving = false;
+int range_max = 5000;
+float accuracy = 0.3;
 
 /* signal for feature holder node to send features */
 ros::Publisher fh_pub_;
@@ -93,7 +108,6 @@ std_msgs::Int32 img_msg;
 /* clock for time measuring - what slows down the algorithm */
 clock_t t;
 
-int range_max = 5000;
 
 /* when all maps are loaded */
 void loaderCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
@@ -101,6 +115,15 @@ void loaderCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
     is_loaded = true;
 
     ROS_INFO("Maps are loaded.");
+
+   /* ac.sendGoal(navgoal);
+
+    ac.waitForResult();
+
+    if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+        ROS_INFO("Success");
+    else
+        ROS_INFO("Fail");*/
 }
 
 /* map from loader */
@@ -149,21 +172,27 @@ void infoCallback(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
             paused = false;
         } else {
             /* threshold is 0, no more features */
-            if( msg->view.feature.size() > 0 && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) < 0.2){
-                ROS_INFO("cannot reach targetKeypoints, threshold is 0: %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
+            if( msg->view.feature.size() > 0 // at least 1 feature to obtain threshold
+                    && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) < accuracy // threshold == 0
+                    && int_msg.value > msg->view.feature.size() ){ // requested more than can be extracted
+                ROS_INFO("cannot reach targetKeypoints, more than can be extracted, threshold is 0: %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
                 paused = false;
             } else {
                 if(msg->view.feature.size() > 0) ROS_INFO("threshold is %.3f",msg->view.feature[msg->view.feature.size() - 1].response);
-                if(int_msg.value != range_max) {
-                    /* number of features is maximal - take features from feature holder node*/
-                    ROS_INFO("feature holder publishing...");
-                    fh_msg.data = true;
-                    fh_pub_.publish(fh_msg);
-                    ros::spinOnce();
-                } else {
+                if((msg->view.feature.size() <= 0 && int_msg.value > 0) // zero features but not requested
+                    || (msg->view.feature.size() > 0 // at least 1 feature to obtain threshold
+                        && abs( msg->view.feature[msg->view.feature.size() - 1].response - 0) >= accuracy && int_msg.value == range_max) ){ // threshold !=0 but requested maximum keypoints
+
                     /* take features from feature extractor - publish img from rosbag */
                     ROS_INFO("extracting...");
                     img_pub_.publish(img_msg);
+                    ros::spinOnce();
+                } else {
+                    // requested less keypoints than obtained
+                    ROS_INFO("feature holder publishing... requested less");
+                    fh_msg.data = true;
+                    fh_pub_.publish(fh_msg);
+                    ros::spinOnce();
                 }
             }
         }
@@ -298,6 +327,63 @@ void cancelCallback(const actionlib_msgs::GoalID::ConstPtr& msg)
 
 }
 
+/* dynamic reconfigure of supervisor */
+void callback(stroll_bearnav::supervisorConfig &config, uint32_t level)
+{
+    // accuracy of zero threshold
+    accuracy = config.accuracy;
+
+    ROS_INFO("accuracy: %.3f",accuracy);
+}
+
+void resultCallback(const stroll_bearnav::navigatorActionResult::ConstPtr& msg)
+{
+    bool result = msg->result.success;
+
+    if(result) {
+        /* save last map info into memory */
+        mapsInfo.push_back(mapInfo);
+        mapInfo.viewInfo.clear();
+
+        /* save parameters of all maps into files */
+        for (int k = 0; k < mapsInfo.size(); ++k) {
+            sprintf(name, "%s%s", mapsInfo[k].id.c_str(), suffix.c_str());
+            ROS_INFO("Saving map to %s", name);
+            FileStorage fs(name, FileStorage::WRITE);
+
+            write(fs, "Time", mapsInfo[k].time.c_str());
+            /* save parameters of all views of the current map */
+            for (int i = 0; i < mapsInfo[k].viewInfo.size(); ++i) {
+                sprintf(name, "TargetBrightness_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].targetBrightness);
+                sprintf(name, "TargetKeypoints_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].targetKeypoints);
+                sprintf(name, "Keypoints_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].keypoints);
+                sprintf(name, "Descriptors_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].descriptors);
+                sprintf(name, "Ratio_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].ratio);
+                sprintf(name, "Histogram_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].histogram);
+                sprintf(name, "VelocityGain_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].velocityGain);
+                sprintf(name, "Threshold_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].threshold);
+                sprintf(name, "MapMatchIndex_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].mapMatchIndex);
+                sprintf(name, "MapMatchEval_%s", mapsInfo[k].viewInfo[i].id.c_str());
+                write(fs, name, mapsInfo[k].viewInfo[i].mapMatchEval);
+            }
+            write(fs, "Note", mapsInfo[k].note.c_str());
+
+            fs.release();
+        }
+
+        ROS_INFO("Saving maps finished. ");
+    }
+}
+
 int main(int argc, char** argv) {
     ros::init(argc, argv, "supervisor");
     ros::NodeHandle nh_;
@@ -310,10 +396,21 @@ int main(int argc, char** argv) {
     ros::Subscriber nav_sub = nh_.subscribe("/navigator/parameter_updates", 1, navigatorCallback);
     ros::Subscriber feat_sub = nh_.subscribe("/feature_extraction/parameter_updates", 1, extractorCallback);
     ros::Subscriber cancel_sub = nh_.subscribe("/navigator/cancel", 1, cancelCallback);
+    ros::Subscriber result_sub = nh_.subscribe("/navigator/result", 1, resultCallback);
 
     bag_pub_ = nh_.advertise<std_msgs::Int32>("/rosbag/pause", 1);
     fh_pub_ = nh_.advertise<std_msgs::Int32>("/featureHolder/start_img", 1);
     img_pub_ = nh_.advertise<std_msgs::Int32>("/rosbag/publish_img", 1);
+
+    /* Initiate dynamic reconfiguration */
+    dynamic_reconfigure::Server<stroll_bearnav::supervisorConfig> server;
+    dynamic_reconfigure::Server<stroll_bearnav::supervisorConfig>::CallbackType f = boost::bind(&callback, _1, _2);
+    server.setCallback(f);
+
+
+    /*while(!ac.waitForServer(ros::Duration(5.0))){
+        ROS_INFO("Waiting for the navClient action server to come up");
+    }*/
 
     /* optimization function to find the best targetKeypoints of each image according to correct matches */
     /* optimization parameters */
@@ -478,6 +575,8 @@ int main(int argc, char** argv) {
             }
             ROS_INFO("Service Time taken: %.4f s", (float)(clock() - t)/CLOCKS_PER_SEC);
 
+            /* send image from rosbag */
+            img_pub_.publish(img_msg);
             /* update callbacks */
             ros::spinOnce();
         }

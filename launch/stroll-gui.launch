@@ -1,6 +1,7 @@
 <launch>
 
 <!-- action and reconfigure clients to control the system -->
+<node pkg="actionlib" type="axclient.py" args="/mapper" name="Action_client_mapper"/>
 <node pkg="actionlib" type="axclient.py" args="/navigator" name="Action_client_navigator"/>
 <node pkg="actionlib" type="axclient.py" args="/map_preprocessor" name="Action_client_loader"/>
 <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="Reconfigurator"/>
@@ -9,9 +10,9 @@
 <node pkg="image_view" type="image_view" name="Image_viewer">
   <param name="~image_transport" value="compressed" />
   <remap from="image" to="/navigationMatches"/>
-  <param name="autosize" value="false" />
+  <param name="autosize" value="true" />
 </node>
 
-<node pkg="stroll_bearnav" type="gui_setup.sh" name="Configure_gui" output="screen"/>
+<node pkg="stroll_bearnav" type="gui_setup.sh" name="Configure_gui"/>
 
 </launch>
