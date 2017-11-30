@@ -131,6 +131,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		img=cv_ptr->image;
 	}	
 }
+
 /*Action server */
 void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 {
@@ -143,6 +144,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	srv.request.distance = distanceTravelled = distanceTotalEvent = 0;
 	userStop = false;
 	baseName = goal->fileName;
+	path.clear();
 	state = SAVING;
 	if (!client.call(srv)) ROS_ERROR("Failed to call service SetDistance provided by odometry_monitor node!");
 	while(state == MAPPING || state == SAVING){
@@ -260,7 +262,7 @@ int main(int argc, char** argv)
 
 	/* robot speed limits */
 	nh.param("angularSpeed", maxAngularSpeed, 0.2);
-	nh.param("forwardSpeed", maxForwardSpeed, 1.0);
+	nh.param("forwardSpeed", maxForwardSpeed, 0.3);
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 

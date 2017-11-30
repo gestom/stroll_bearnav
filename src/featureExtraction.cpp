@@ -57,6 +57,7 @@ Ptr<SURF> upSurf = SURF::create(detectionThreshold,4,3,false,true);
 
 EDetectorType usedDetector = DET_NONE;
 EDescriptorType usedDescriptor = DES_NONE;
+NormTypes featureNorm = NORM_INF;
 
 /* optimization parameters */
 bool optimized = false;
@@ -66,11 +67,14 @@ clock_t t;
 bool adaptThreshold = true;
 int targetKeypoints = 100;
 float featureOvershootRatio = 0.3;
+float maxLine = 0.5;
 int target_over;
 void adaptive_threshold(vector<KeyPoint>& keypoints);
 
 int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 {
+	cv::Mat img;
+	if (maxLine < 1.0) img = image(cv::Rect(0,0,image.cols,(int)(image.rows*maxLine))); else img = image;
 	if (usedDetector==DET_AGAST) agastDetector->detect(img,keypoints, Mat () );
 	if (usedDetector==DET_SURF) surf->detect(img,keypoints, Mat () );
 	if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
@@ -106,11 +110,17 @@ void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 	targetKeypoints = config.targetKeypoints;
 	featureOvershootRatio = config.featureOvershootRatio;
 	target_over = targetKeypoints + featureOvershootRatio/100.0 * targetKeypoints;
+	maxLine = config.maxLine;
 
 	/* optimize detecting features and measure time */
 	optimized = config.optimized;
 	usedDescriptor = (EDescriptorType) config.descriptor;
 	usedDetector = (EDetectorType) config.detector;
+	switch (usedDescriptor)
+	{
+		case DES_BRIEF:featureNorm = NORM_HAMMING;break;
+		case DES_SURF:featureNorm = NORM_L2;break;
+	}
 	setThreshold(detectionThreshold);
 
 	ROS_DEBUG("Changing feature featureExtraction to %.3f, keypoints %i", detectionThreshold, targetKeypoints);
@@ -175,7 +185,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 		feature.angle=keypoints[i].angle;
 		feature.response=keypoints[i].response;
 		feature.octave=keypoints[i].octave;
-		feature.class_id=keypoints[i].class_id;
+		feature.class_id=featureNorm;
 		descriptors.row(i).copyTo(feature.descriptor);
 		if(adaptThreshold) {
 			if(i < targetKeypoints) featureArray.feature.push_back(feature);
@@ -188,6 +198,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	sprintf(numStr,"Image_%09d",msg->header.seq);
 	featureArray.id =  numStr;
 	featureArray.distance = msg->header.seq;
+	printf("Features: %i\n",(int)featureArray.feature.size());
 	feat_pub_.publish(featureArray);
 
 	/*and if there are any consumers, publish image with features*/

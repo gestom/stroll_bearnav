@@ -57,7 +57,7 @@ geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
 
 /* Image features parameters */
-Ptr<SURF> detector = SURF::create(100);
+Ptr<DescriptorMatcher> matcher;
 vector<KeyPoint> mapKeypoints, currentKeypoints,keypointsGood,keypointsBest;
 Mat mapDescriptors, currentDescriptors;
 Mat img_goodKeypoints_1,currentImage,mapImage;
@@ -71,6 +71,8 @@ float differenceRot=0;
 float minimalAdaptiveSpeed = 1.0;
 float maximalAdaptiveSpeed = 1.0;
 bool imgShow;
+NormTypes featureNorm = NORM_INF;
+int descriptorType = CV_32FC1;
 
 /* Feature message */
 stroll_bearnav::FeatureArray featureArray;
@@ -134,7 +136,8 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	mapFeatures = *msg;
 	ROS_INFO("Received a new reference map");
 	mapKeypoints.clear();
-	mapDescriptors=Mat();
+	mapDescriptors.release();
+	mapDescriptors = Mat();
 	for(int i=0; i<msg->feature.size();i++){
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
@@ -145,7 +148,7 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypoint.class_id=msg->feature[i].class_id;
 		mapKeypoints.push_back(keypoint);
 		int size=msg->feature[i].descriptor.size();
-		Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
+		Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
 		mapDescriptors.push_back(mat);
 	}
 }
@@ -228,7 +231,21 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		currentKeypoints.clear();
 		keypointsBest.clear();
 		keypointsGood.clear();
-		currentDescriptors=Mat();
+		currentDescriptors.release();
+		currentDescriptors = Mat();
+
+		/*determine the norm for feature matching*/
+		if (msg->feature.size() > 0){
+			ROS_INFO("Norm is %i",msg->feature[0].class_id);
+			if (msg->feature[0].class_id != -1 && featureNorm != msg->feature[0].class_id)
+			{
+				matcher.release();
+				featureNorm = (NormTypes) msg->feature[0].class_id; 
+				if (featureNorm == NORM_HAMMING ||featureNorm == NORM_HAMMING2) descriptorType = CV_8U; else descriptorType = CV_32FC1;
+				matcher = BFMatcher::create(featureNorm);
+				ROS_INFO("Matcher switched to %i",featureNorm);
+			}
+		}
 
 		/*reconstitute features from the incoming message*/
 		for(int i=0; i<msg->feature.size();i++)
@@ -241,12 +258,24 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			keypoint.octave=msg->feature[i].octave;
 			keypoint.class_id=msg->feature[i].class_id;
 			currentKeypoints.push_back(keypoint);
-
 			int size=msg->feature[i].descriptor.size();
-			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
+			Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
 			currentDescriptors.push_back(mat);
 		}
 
+		/*eventually, recalculate map descriptors*/
+		if (mapDescriptors.type() != descriptorType)
+		{
+			ROS_INFO("Recalculating map");
+			mapDescriptors.release();
+			mapDescriptors = Mat();
+			for(int i=0; i<mapFeatures.feature.size();i++){
+				int size=mapFeatures.feature[i].descriptor.size();
+				Mat mat(1,size,descriptorType,(void*)mapFeatures.feature[i].descriptor.data());
+				mapDescriptors.push_back(mat);
+			}
+		}
+ 
 		std::vector< DMatch > good_matches;
 
 		int numBins = 21;
@@ -259,11 +288,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		if (mapKeypoints.size() >0 && currentKeypoints.size() >0){
 
 			/*feature matching*/
-			Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_L2);
 			vector< vector<DMatch> > matches;
-
 			try{
-				matcher->knnMatch( mapDescriptors, currentDescriptors, matches, 2);
+				 matcher->knnMatch( mapDescriptors, currentDescriptors, matches, 2);
 			}catch (Exception& e){
 				matches.clear();
 				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
@@ -346,8 +373,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			feedback.matches = good_matches.size();
 			/*difference between features */
 			differenceRot=sum/count; 
-			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  endl;
-
+			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << endl;
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
 		velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
@@ -463,13 +489,11 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			cmd_pub_.publish(twist);
 		}
 		/*used for testing and demos*/
-//		printf("BAA: %.3f\n",differenceRot);
 		if (path.size()==0)
 		{
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
 			twist.angular.y = twist.angular.x = 0.0;
-			twist.angular.z = differenceRot*pixelTurnGain;
-//			printf("AAA: %.3f\n",differenceRot);
+			twist.angular.z =differenceRot*pixelTurnGain;
 			cmd_pub_.publish(twist);
 		}
 	}
