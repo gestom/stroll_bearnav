@@ -13,14 +13,6 @@
   <param name="autosize" value="true" />
 </node>
 
-<!-- mapping node -->
-<node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
-  <remap from="image" to="/stereo/left/image_raw"/>
-  <param name="folder" value="$(arg folder)" />
-  <param name="angularSpeed" value="1.0" />
-</node>
-
-
 <node pkg="stroll_bearnav" type="gui_setup.sh" name="Configure_gui"/>
 
 </launch>

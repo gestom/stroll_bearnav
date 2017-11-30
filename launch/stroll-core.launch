@@ -2,18 +2,9 @@
 
 <!-- Default folder with maps-->
 
-<arg name="folder" default="$(env HOME)"/>
+<arg name="folder" default="$(env HOME)/stroll"/>
 
-  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
-    <param name="video_device" value="/dev/video0" />
-    <param name="image_width" value="640" />
-    <param name="image_height" value="480" />
-    <param name="pixel_format" value="yuyv" />
-    <param name="camera_frame_id" value="usb_cam" />
-    <param name="io_method" value="mmap"/>
-  </node>
-
- <!-- Distance Measurement Node -->
+<!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>
 
 <!-- feature extraction -->
@@ -31,13 +22,6 @@
 <!-- map loader node -->
 <node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor">
 <param name="folder" value="$(arg folder)" />
-</node>
-
-<!-- mapping node -->
-<node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
-  <remap from="image" to="/stereo/left/image_raw"/>
-  <param name="folder" value="$(arg folder)" />
-  <param name="angularSpeed" value="1.0" />
 </node>
 
 <!-- navigator node -->
