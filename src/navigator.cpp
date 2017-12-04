@@ -277,6 +277,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
  
 		std::vector< DMatch > good_matches;
+		std::vector< DMatch > conflicted_matches;
+		std::vector< DMatch > conflicting_matches;
 
 		int numBins = 21;
 		int histogram[numBins];
@@ -300,7 +302,12 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			good_matches.reserve(matches.size());  
 			for (size_t i = 0; i < matches.size(); i++)
 			{ 
-				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance) good_matches.push_back(matches[i][0]);
+				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance){
+						 good_matches.push_back(matches[i][0]); 
+				}else{
+						 conflicted.push_back(matches[i][0]); 
+						 conflicting_matches.push_back(matches[i][1]); 
+				}
 			}
 
 			/*building histogram*/	
@@ -357,7 +364,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			printf("\n");
 			float sum=0;
 			keypointsBest.clear();	
-			/* take only good correspondences */
+			/* use good correspondences to determine heading */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
 					sum+=differences[i];
@@ -366,6 +373,14 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					keypointsBest.push_back(keypointsGood[i]);
 				}
 			}
+
+			for(int i=0;i<num;i++){
+				if (fabs(differences[i]-rotation) < granularity*1.5){
+					//best_matches.push_back(good_matches[i]);
+					keypointsBest.push_back(keypointsGood[i]);
+				}
+			}
+
 			/* publish statistics */
 			feedback.correct = best_matches.size();
 			feedback.outliers = good_matches.size() - best_matches.size();

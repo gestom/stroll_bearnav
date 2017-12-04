@@ -384,7 +384,8 @@ void resultCallback(const stroll_bearnav::navigatorActionResult::ConstPtr& msg)
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
     ros::init(argc, argv, "supervisor");
     ros::NodeHandle nh_;
 
@@ -585,9 +586,6 @@ int main(int argc, char** argv) {
         for (int l = 0; l < 10; ++l) bins[l] = 0;
         max_ = -1;
         max_ind = -1;
-
     }
-
     return 0;
 }
-

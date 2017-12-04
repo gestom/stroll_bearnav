@@ -107,6 +107,7 @@ void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
 		state = SAVING;
 	}
 }
+
 /*distance currently travelled */
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 {   
