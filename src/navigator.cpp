@@ -373,7 +373,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			feedback.matches = good_matches.size();
 			/*difference between features */
 			differenceRot=sum/count; 
-			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << endl;
+			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 		}
 		velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
@@ -404,6 +404,10 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		
 		info.mapMatchIndex = mapIndex;
 		info.mapMatchEval = mapEval;
+		info.correct = feedback.correct;
+		info.matches = feedback.matches;
+		info.distance = feedback.distance;
+		info.diffRot = differenceRot;
 		info_pub_.publish(info);
 
 		/*Show good image features (Green) */
