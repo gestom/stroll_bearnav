@@ -87,7 +87,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 	vector<MatchInfo> mi;
 	if (generateDatasets){
 		fprintf(mapFile,"%i %i\n",0,0);
-		fprintf(viewFile,"%i %i\n",(int)msg->displacement,0);
+		fprintf(viewFile,"%i %i\n",(int)msg->diffRot,0);
 	}else{
 		int offsetMap = 0;
 		int offsetView = 0;
@@ -96,7 +96,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 		fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
 		displacementGT = offsetView - offsetMap;
 	}
-	fprintf(stdout,"DISPLACEMENT: %.3f %.3f\n",displacementGT,msg->displacement);
+	fprintf(stdout,"DISPLACEMENT: %.3f %.3f\n",displacementGT,msg->diffRot);
 	if(size>0)
 	{
 		for(int i = 0; i<size;i++)
