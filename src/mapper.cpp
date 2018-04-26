@@ -52,11 +52,14 @@ Mat descriptor;
 vector<KeyPoint> keypoints;
 vector<float> path;
 KeyPoint keypoint;
+int rating;
+vector<int> ratings;
 
 vector<vector<KeyPoint> > keypointsMap;
 vector<Mat> descriptorMap;
 vector<float> distanceMap;
 vector<Mat> imagesMap;
+vector<vector<int>> ratingsMap;
 
 /* Feature messages */
 stroll_bearnav::FeatureArray featureArray;
@@ -139,6 +142,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	keypointsMap.clear();
 	descriptorMap.clear();
 	distanceMap.clear();
+	ratingsMap.clear();
 
 	/* reset distance using service*/
 	srv.request.distance = distanceTravelled = distanceTotalEvent = 0;
@@ -159,6 +163,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 			keypointsMap.push_back(keypoints);
 			descriptorMap.push_back(descriptors);
 			distanceMap.push_back(distanceTravelled);
+			ratingsMap.push_back(ratings);
 
 			/*and flush it to the disk*/
 			for (int i = 0;i<distanceMap.size();i++){
@@ -168,6 +173,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 				write(fs, "Image", imagesMap[i]);
 				write(fs, "Keypoints", keypointsMap[i]);
 				write(fs, "Descriptors",descriptorMap[i]);
+				write(fs, "Ratings",ratingsMap[i]);
 				fs.release();
 			}
 			result.fileName=name;
@@ -229,6 +235,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int size=msg->feature[i].descriptor.size();
 			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
 			descriptors.push_back(mat);
+			rating=msg->feature[i].rating;
+			ratings.push_back(rating);
 		}
 
 		/*store in memory rather than on disk*/
@@ -236,6 +244,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypointsMap.push_back(keypoints);
 		descriptorMap.push_back(descriptors);
 		distanceMap.push_back(distanceTotalEvent);
+		ratingsMap.push_back(ratings);
 
 		/* publish feedback */
 		sprintf(name,"%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
