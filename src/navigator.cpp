@@ -290,12 +290,12 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/*feature matching*/
 			vector< vector<DMatch> > matches;
 			try{
-				 matcher->knnMatch( mapDescriptors, currentDescriptors, matches, 2);
+				 matcher->knnMatch( mapDescriptors, currentDescriptors, matches, 5);
 			}catch (Exception& e){
 				matches.clear();
 				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
 			}
-
+			printf("MATCHES: %i %i %i\n",mapKeypoints.size(),currentKeypoints.size(),matches.size());
 			/*perform ratio matching*/ 
 			good_matches.reserve(matches.size());  
 			for (size_t i = 0; i < matches.size(); i++)
@@ -318,6 +318,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 				int idx2=good_matches[i].trainIdx;
 				int idx1=good_matches[i].queryIdx;
+				printf("MATCH: %i %i %i\n",i,idx2,idx1);
 				matched_points1.push_back(mapKeypoints[idx1].pt);
 				matched_points2.push_back(currentKeypoints[idx2].pt);
 				keypointsGood.push_back(currentKeypoints[idx2]);

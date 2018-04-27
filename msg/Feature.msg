@@ -6,4 +6,4 @@ float32 response
 int32 octave
 int32 class_id
 float32[] descriptor
-int32 rating
+float32 rating

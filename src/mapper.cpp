@@ -14,6 +14,7 @@
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Joy.h>
 #include <stroll_bearnav/SetDistance.h>
+#include <stroll_bearnav/NavigationInfo.h>
 
 using namespace std;
 using namespace cv;
@@ -31,6 +32,7 @@ ros::Subscriber speed_sub_;
 ros::Subscriber featureSub_;
 ros::Subscriber distEventSub_;
 ros::Subscriber distSub_;
+ros::Subscriber infoSub_; 
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
 
@@ -52,14 +54,14 @@ Mat descriptor;
 vector<KeyPoint> keypoints;
 vector<float> path;
 KeyPoint keypoint;
-int rating;
-vector<int> ratings;
+float rating;
+vector<float> ratings;
 
 vector<vector<KeyPoint> > keypointsMap;
 vector<Mat> descriptorMap;
 vector<float> distanceMap;
 vector<Mat> imagesMap;
-vector<vector<int>> ratingsMap;
+vector<vector<float> > ratingsMap;
 
 /* Feature messages */
 stroll_bearnav::FeatureArray featureArray;
@@ -255,6 +257,51 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	}
 }
 
+void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
+{
+	if(state == SAVING){
+		keypoints.clear();
+		descriptors.release();
+		ratings.clear();
+		for(int i=0; i<msg->map.feature.size();i++) ratings.push_back(rating);
+		sort(ratings.begin(),ratings.end());
+
+		//rating
+		for(int i=0; i<msg->map.feature.size();i++){
+			stroll_bearnav::Feature feature = msg->map.feature[i];
+			keypoint.pt.x		=	feature.x;
+			keypoint.pt.y		=	feature.y;
+			keypoint.size		=	feature.size;
+			keypoint.angle		=	feature.angle;
+			keypoint.response	=	feature.response;
+			keypoint.octave		=	feature.octave;
+			keypoint.class_id	=	feature.class_id;
+			keypoints.push_back(keypoint);
+
+			int size= feature.descriptor.size();
+			Mat mat(1,size,CV_32FC1,(void*)feature.descriptor.data());
+			descriptors.push_back(mat);
+
+			rating=feature.rating;
+			ratings.push_back(rating);
+		}
+
+
+		/*store in memory rather than on disk*/
+		imagesMap.push_back(img);
+		keypointsMap.push_back(keypoints);
+		descriptorMap.push_back(descriptors);
+		distanceMap.push_back(distanceTotalEvent);
+		ratingsMap.push_back(ratings);
+
+		/* publish feedback */
+		sprintf(name,"%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
+		ROS_INFO("%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
+		state = MAPPING;
+		feedback.fileName=name;
+		server->publishFeedback(feedback);
+	}
+}
 
 int main(int argc, char** argv)
 { 
@@ -278,6 +325,7 @@ int main(int argc, char** argv)
 	vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10, joyCallback);
+	infoSub_ = nh.subscribe("/navigationInfo", 1000, infoMapMatch);
 
 	image_sub_ = it_.subscribe( "/image", 1,imageCallback);
 	featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
