@@ -290,7 +290,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/*feature matching*/
 			vector< vector<DMatch> > matches;
 			try{
-				 matcher->knnMatch( mapDescriptors, currentDescriptors, matches, 5);
+				 matcher->knnMatch( mapDescriptors, currentDescriptors, matches, 2);
 			}catch (Exception& e){
 				matches.clear();
 				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
@@ -302,6 +302,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			{ 
 				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance) good_matches.push_back(matches[i][0]);
 			}
+			//TODO rating view features	
+			//maximise minimal distance 
 
 			/*building histogram*/	
 			int num=good_matches.size();
@@ -402,7 +404,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			mapEval[good_matches[i].queryIdx] = -1;
 		}	
 		for (int i = 0;i<best_matches.size();i++) mapEval[best_matches[i].queryIdx] = 1;
-		
+		//TODO rating map features	
 		info.mapMatchIndex = mapIndex;
 		info.mapMatchEval = mapEval;
 		info.correct = feedback.correct;
