@@ -8,3 +8,5 @@ int32 correct                   #number of correct matches
 int32 matches                   #number of good matches
 float32 distance                #traveled distance
 float32 diffRot                 #difference between features
+int32 mapChanges                #number of traversals
+bool updated                    #map contains rating

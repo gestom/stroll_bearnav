@@ -100,6 +100,12 @@ float flipperPosition=0;
 bool userStop = false;
 EMappingState state = IDLE;
 
+/* plastic map parameters*/
+int mapChanges=0;
+int lastMapChanges=-1;
+bool isPlastic=true;
+bool isUpdated=false;
+
 
 void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg);
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg);
@@ -151,7 +157,9 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	userStop = false;
 	baseName = goal->fileName;
 	path.clear();
-	state = SAVING;
+    state = SAVING;
+    //TODO if plastic, listen to navigator and then terminate mapping
+
 	if (!client.call(srv)) ROS_ERROR("Failed to call service SetDistance provided by odometry_monitor node!");
 	while(state == MAPPING || state == SAVING){
 
@@ -220,87 +228,98 @@ void flipperCallback(const std_msgs::Float32::ConstPtr& msg)
 /* save features and image recieved from camera as a local map*/
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
-	if(state == SAVING){
-		keypoints.clear();
-		descriptors.release();
+    if(!isPlastic) {
+        if (state == SAVING) {
+            keypoints.clear();
+            descriptors.release();
 
-		for(int i=0; i<msg->feature.size();i++){
+            for (int i = 0; i < msg->feature.size(); i++) {
 
-			keypoint.pt.x=msg->feature[i].x;
-			keypoint.pt.y=msg->feature[i].y;
-			keypoint.size=msg->feature[i].size;
-			keypoint.angle=msg->feature[i].angle;
-			keypoint.response=msg->feature[i].response;
-			keypoint.octave=msg->feature[i].octave;
-			keypoint.class_id=msg->feature[i].class_id;
-			keypoints.push_back(keypoint);
-			int size=msg->feature[i].descriptor.size();
-			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
-			descriptors.push_back(mat);
-			rating=msg->feature[i].rating;
-			ratings.push_back(rating);
-		}
+                keypoint.pt.x = msg->feature[i].x;
+                keypoint.pt.y = msg->feature[i].y;
+                keypoint.size = msg->feature[i].size;
+                keypoint.angle = msg->feature[i].angle;
+                keypoint.response = msg->feature[i].response;
+                keypoint.octave = msg->feature[i].octave;
+                keypoint.class_id = msg->feature[i].class_id;
+                keypoints.push_back(keypoint);
+                int size = msg->feature[i].descriptor.size();
+                Mat mat(1, size, CV_32FC1, (void *) msg->feature[i].descriptor.data());
+                descriptors.push_back(mat);
+                //rating=msg->feature[i].rating;
+                //ratings.push_back(rating);
+            }
 
-		/*store in memory rather than on disk*/
-		imagesMap.push_back(img);
-		keypointsMap.push_back(keypoints);
-		descriptorMap.push_back(descriptors);
-		distanceMap.push_back(distanceTotalEvent);
-		ratingsMap.push_back(ratings);
+            /*store in memory rather than on disk*/
+            imagesMap.push_back(img);
+            keypointsMap.push_back(keypoints);
+            descriptorMap.push_back(descriptors);
+            distanceMap.push_back(distanceTotalEvent);
+            //ratingsMap.push_back(ratings);
 
-		/* publish feedback */
-		sprintf(name,"%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
-		ROS_INFO("%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
-		state = MAPPING;
-		feedback.fileName=name;
-		server->publishFeedback(feedback);
-	}
+            /* publish feedback */
+            sprintf(name, "%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
+            ROS_INFO("%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
+            state = MAPPING;
+            feedback.fileName = name;
+            server->publishFeedback(feedback);
+        }
+    }
 }
 
 void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 {
-	if(state == SAVING){
-		keypoints.clear();
-		descriptors.release();
-		ratings.clear();
-		for(int i=0; i<msg->map.feature.size();i++) ratings.push_back(rating);
-		sort(ratings.begin(),ratings.end());
+    isUpdated = msg->updated;
 
-		//rating
-		for(int i=0; i<msg->map.feature.size();i++){
-			stroll_bearnav::Feature feature = msg->map.feature[i];
-			keypoint.pt.x		=	feature.x;
-			keypoint.pt.y		=	feature.y;
-			keypoint.size		=	feature.size;
-			keypoint.angle		=	feature.angle;
-			keypoint.response	=	feature.response;
-			keypoint.octave		=	feature.octave;
-			keypoint.class_id	=	feature.class_id;
-			keypoints.push_back(keypoint);
+    if(isPlastic && isUpdated) {
+        /*plastic map saves only map with rating*/
+            state = SAVING;
 
-			int size= feature.descriptor.size();
-			Mat mat(1,size,CV_32FC1,(void*)feature.descriptor.data());
-			descriptors.push_back(mat);
+            lastMapChanges = mapChanges;
+            mapChanges = msg->mapChanges;
 
-			rating=feature.rating;
-			ratings.push_back(rating);
-		}
+            if (state == SAVING) {
+                keypoints.clear();
+                descriptors.release();
+                ratings.clear();
+
+                //rating
+                for (int i = 0; i < msg->map.feature.size(); i++) {
+                    stroll_bearnav::Feature feature = msg->map.feature[i];
+                    keypoint.pt.x = feature.x;
+                    keypoint.pt.y = feature.y;
+                    keypoint.size = feature.size;
+                    keypoint.angle = feature.angle;
+                    keypoint.response = feature.response;
+                    keypoint.octave = feature.octave;
+                    keypoint.class_id = feature.class_id;
+                    keypoints.push_back(keypoint);
+
+                    int size = feature.descriptor.size();
+                    Mat mat(1, size, CV_32FC1, (void *) feature.descriptor.data());
+                    descriptors.push_back(mat);
+
+                    rating = feature.rating;
+                    ratings.push_back(rating);
+                }
+                //cout << "mapper: first " << msg->map.feature[0].rating << " x " << msg->map.feature[0].x << " last " << msg->map.feature[msg->map.feature.size()-1].rating  << " x " << msg->map.feature[msg->map.feature.size()-1].x  << endl;
 
 
-		/*store in memory rather than on disk*/
-		imagesMap.push_back(img);
-		keypointsMap.push_back(keypoints);
-		descriptorMap.push_back(descriptors);
-		distanceMap.push_back(distanceTotalEvent);
-		ratingsMap.push_back(ratings);
+                /*store in memory rather than on disk*/
+                imagesMap.push_back(img);
+                keypointsMap.push_back(keypoints);
+                descriptorMap.push_back(descriptors);
+                distanceMap.push_back(distanceTotalEvent);
+                ratingsMap.push_back(ratings);
 
-		/* publish feedback */
-		sprintf(name,"%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
-		ROS_INFO("%i keypoints stored at distance %.3f",(int)keypoints.size(),distanceTotalEvent);
-		state = MAPPING;
-		feedback.fileName=name;
-		server->publishFeedback(feedback);
-	}
+                /* publish feedback */
+                sprintf(name, "%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
+                ROS_INFO("%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
+                state = MAPPING;
+                feedback.fileName = name;
+                server->publishFeedback(feedback);
+            }
+    }
 }
 
 int main(int argc, char** argv)

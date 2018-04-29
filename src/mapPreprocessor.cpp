@@ -40,6 +40,7 @@ stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 
 /* map variables */
+vector<float> ratings;
 Mat img,img2;
 vector<KeyPoint> keypoints_1,keypoints_2;
 string currentMapName;
@@ -63,6 +64,7 @@ vector<Mat> descriptorMap;
 vector<float> distanceMap;
 vector<string> namesMap;
 vector<Mat> imagesMap;
+vector<vector<float> > ratingsMap;
 
 
 typedef enum
@@ -111,6 +113,7 @@ int loadMaps()
 	descriptorMap.clear();
 	distanceMap.clear();
 	namesMap.clear();
+	ratingsMap.clear();
 	char fileName[1000];
 
 	numFeatures=0;
@@ -124,11 +127,15 @@ int loadMaps()
 			fs["Keypoints"]>>keypoints_1;
 			fs["Descriptors"]>>descriptors_1;
 			fs["Image"]>>img;
+			ratings.clear();
+            fs["Ratings"]>>ratings;
+            for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
 			fs.release();
 			keypointsMap.push_back(keypoints_1);
 			descriptorMap.push_back(descriptors_1);
 			distanceMap.push_back(mapDistances[i]);
 			namesMap.push_back(fileName);
+			ratingsMap.push_back(ratings);
 			if (image_pub_.getNumSubscribers()>0) imagesMap.push_back(img);
 			numFeatures+=keypoints_1.size();
 			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
@@ -157,6 +164,7 @@ void loadMap(int index)
 	descriptors_1 = descriptorMap[index];
 	currentMapName = namesMap[index];
 	currentDistance = distanceMap[index];
+	ratings = ratingsMap[index];
 	numFeatures=keypoints_1.size();
 	char fileName[1000];
 	sprintf(fileName,"%i features loaded from %ith map at %.3f",numFeatures,index,distanceMap[index]);
@@ -309,6 +317,7 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 					feature.octave=keypoints_1[i].octave;
 					feature.class_id=keypoints_1[i].class_id;
 					feature.descriptor=descriptors_1.row(i);
+					feature.rating=ratings[i];
 					featureArray.feature.push_back(feature);
 				}
 			}
