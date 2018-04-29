@@ -322,7 +322,7 @@ int main(int argc, char** argv)
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
-	vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
+	vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmda", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10, joyCallback);
 	infoSub_ = nh.subscribe("/navigationInfo", 1000, infoMapMatch);
