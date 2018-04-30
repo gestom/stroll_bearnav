@@ -112,10 +112,10 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg);
 
 /* Total distance travelled recieved from the event */ 
 void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
-{   
-	if(state == MAPPING){
-		distanceTotalEvent=msg->data;
-		state = SAVING;
+{
+    if(state == MAPPING){
+        distanceTotalEvent=msg->data;
+        if(!isPlastic) state = SAVING;
 	}
 }
 /*distance currently travelled */
@@ -286,7 +286,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
                 //rating
                 for (int i = 0; i < msg->map.feature.size(); i++) {
                     stroll_bearnav::Feature feature = msg->map.feature[i];
-                    keypoint.pt.x = feature.x;
+                    keypoint.pt.x = feature.x-msg->diffRot;
                     keypoint.pt.y = feature.y;
                     keypoint.size = feature.size;
                     keypoint.angle = feature.angle;
@@ -309,7 +309,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
                 imagesMap.push_back(img);
                 keypointsMap.push_back(keypoints);
                 descriptorMap.push_back(descriptors);
-                distanceMap.push_back(distanceTotalEvent);
+                distanceMap.push_back(msg->map.distance);
                 ratingsMap.push_back(ratings);
 
                 /* publish feedback */
