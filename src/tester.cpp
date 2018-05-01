@@ -43,7 +43,7 @@ struct MatchInfo{
 FILE *mapFile, *viewFile;
 string mapFolder,viewFolder;
 bool volatile exitting = false;
-bool generateDatasets = false;
+bool generateDatasets = true;
 bool volatile is_working = 0;
 ros::CallbackQueue* my_queue;
 ros::Publisher dist_pub_;
@@ -300,10 +300,11 @@ int main(int argc, char **argv)
 
 	stroll_bearnav::loadMapGoal mapGoal;
 	stroll_bearnav::navigatorGoal navGoal;
-	mapGoal.prefix = "B";
+	mapGoal.prefix = "P8";
 	navGoal.traversals = 1;
 
 	mp_view.sendGoal(mapGoal,&doneMapCb,&activeCb,&feedbackMapCb);
+	mapGoal.prefix = "P7";
 	mp_map.sendGoal(mapGoal,&doneViewCb,&activeCb,&feedbackViewCb);
 
 	while (mapsResponded < 2) sleep(1);

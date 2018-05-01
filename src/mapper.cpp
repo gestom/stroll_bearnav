@@ -286,7 +286,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
                 //rating
                 for (int i = 0; i < msg->map.feature.size(); i++) {
                     stroll_bearnav::Feature feature = msg->map.feature[i];
-                    keypoint.pt.x = feature.x-msg->diffRot;
+                    keypoint.pt.x = feature.x;
                     keypoint.pt.y = feature.y;
                     keypoint.size = feature.size;
                     keypoint.angle = feature.angle;

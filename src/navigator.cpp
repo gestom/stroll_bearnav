@@ -453,15 +453,16 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
                 mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
             }
             // add the least similar features from view to map
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 50; i++) {
                 info.view.feature[i].rating = 0;
+		info.view.feature[i].x = info.view.feature[i].x - differenceRot;
                 mapFeatures.feature.push_back(info.view.feature[i]);
                 //info.view.feature.erase(info.view.feature.begin(), info.view.feature.begin() + 10);
             }
             // remove the worst rating from map
             sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
             //cout << "map: first " << mapFeatures.feature[0].rating << " x " << mapFeatures.feature[0].x << " last " << mapFeatures.feature[mapFeatures.feature.size()-1].rating  << " x " << mapFeatures.feature[mapFeatures.feature.size()-1].x  << endl;
-            mapFeatures.feature.erase(mapFeatures.feature.end() - 10, mapFeatures.feature.end());
+            mapFeatures.feature.erase(mapFeatures.feature.end() - 50, mapFeatures.feature.end());
             isRating=false;
             mapChanges++;
             info.updated=true;
