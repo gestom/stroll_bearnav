@@ -102,7 +102,7 @@ int loadMaps()
 	/* send feedback to action server */
 	feedback.fileName =  "";
 	feedback.numberOfMaps = numMaps;
-	server->publishFeedback(feedback);
+	//server->publishFeedback(feedback);
 
 	std::sort(mapDistances, mapDistances + numMaps, std::less<float>());
 	mapDistances[numMaps] = mapDistances[numMaps-1];
@@ -121,15 +121,16 @@ int loadMaps()
 		sprintf(fileName,"%s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
 		ROS_INFO("Preloading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
 		FileStorage fs(fileName, FileStorage::READ);
-		if(fs.isOpened()){
+		if(fs.isOpened())
+		{
 			img.release();
 			descriptors_1.release();
-			fs["Keypoints"]>>keypoints_1;
+			fs["Keypoints"]  >> keypoints_1;
 			fs["Descriptors"]>>descriptors_1;
 			fs["Image"]>>img;
 			ratings.clear();
-            fs["Ratings"]>>ratings;
-            for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
+			fs["Ratings"]>>ratings;
+			for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
 			fs.release();
 			keypointsMap.push_back(keypoints_1);
 			descriptorMap.push_back(descriptors_1);
@@ -140,8 +141,9 @@ int loadMaps()
 			numFeatures+=keypoints_1.size();
 			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
 			feedback.fileName = fileName;
+			feedback.distance = mapDistances[i];
 			feedback.numFeatures=numFeatures;
-			feedback.mapIndex=numMaps;
+			feedback.mapIndex=i;
 			server->publishFeedback(feedback);
 		}
 
@@ -150,6 +152,7 @@ int loadMaps()
 	/* feedback returns name of loaded map, number of features in it and index */
 	sprintf(fileName,"%i features loaded from %i maps",numFeatures,numMaps);
 	feedback.fileName = fileName;
+	feedback.distance = mapDistances[numMaps-1];
 	feedback.numFeatures=numFeatures;
 	feedback.mapIndex=numMaps;
 	server->publishFeedback(feedback);
@@ -169,6 +172,7 @@ void loadMap(int index)
 	char fileName[1000];
 	sprintf(fileName,"%i features loaded from %ith map at %.3f",numFeatures,index,distanceMap[index]);
 	feedback.fileName=fileName;
+	feedback.distance = currentDistance;
 	feedback.numFeatures=keypoints_1.size();
 	feedback.mapIndex=index;
 	/* feedback returns name of loaded map, number of features in it and index */
@@ -256,7 +260,6 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 		}
 
 		//and publish it
-		ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 		if (mindex > -1 && mindex != lastLoadedMap){
 			ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 			loadMap(mindex);

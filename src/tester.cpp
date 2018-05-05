@@ -20,7 +20,9 @@
 #include <stroll_bearnav/navigatorAction.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
-
+#include <dynamic_reconfigure/IntParameter.h>
+#include <dynamic_reconfigure/Reconfigure.h>
+#include <dynamic_reconfigure/Config.h>
 #include <std_msgs/Int32.h>
 
 using namespace cv;
@@ -40,7 +42,22 @@ struct MatchInfo{
   string t;
 };
 
-FILE *mapFile, *viewFile;
+int numPrimaryMaps 	= 0;
+int primaryMapIndex 	= 0;
+int numSecondaryMaps 	= 0;
+int secondaryMapIndex 	= 0;
+int clientsResponded 	= 0;
+
+float statSumCorrect = 0;
+float statSumMatches = 0;
+float statSumOutliers = 0;
+float statNumMaps = 0;
+
+stroll_bearnav::loadMapGoal mapGoal;
+stroll_bearnav::loadMapGoal viewGoal;
+stroll_bearnav::navigatorGoal navGoal;
+
+FILE *mapFile, *viewFile,*logFile;
 string mapFolder,viewFolder;
 bool volatile exitting = false;
 bool generateDatasets = true;
@@ -51,6 +68,8 @@ std_msgs::Float32 dist_;
 float totalDist = 0;
 image_transport::Subscriber mapImageSub;
 image_transport::Subscriber viewImageSub;
+vector<float> distanceMap;
+
 
 void mySigHandler(int sig)
 {
@@ -78,14 +97,12 @@ void shutdownCallback(XmlRpc::XmlRpcValue& params, XmlRpc::XmlRpcValue& result)
 
 void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 {
-	if(exitting){
-		return;
-	}
+	printf("Distance PICO: %f\n",msg->map.distance);
 	is_working = 1;
 	int size = msg->mapMatchIndex.size();
 	float displacementGT = 0;
 	vector<MatchInfo> mi;
-	if (generateDatasets){
+	/*if (generateDatasets){
 		fprintf(mapFile,"%i %i\n",0,0);
 		fprintf(viewFile,"%i %i\n",(int)msg->diffRot,0);
 	}else{
@@ -95,7 +112,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 		fscanf(mapFile,"%i %i\n",&offsetMap,&dummy);
 		fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
 		displacementGT = offsetView - offsetMap;
-	}
+	}*/
 	fprintf(stdout,"DISPLACEMENT: %.3f %.3f\n",displacementGT,msg->diffRot);
 	if(size>0)
 	{
@@ -189,45 +206,64 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 		}
 	}
 	is_working = 0;
-	totalDist += 0.2;
-	dist_.data=totalDist;
-	dist_pub_.publish(dist_);
-}
 
-int numPrimaryMaps 	= 0;
-int primaryMapIndex 	= 0;
-int numSecondaryMaps 	= 0;
-int secondaryMapIndex 	= 0;
-int mapsResponded 	= 0;
+	/*maps processed*/
+	if (primaryMapIndex < numPrimaryMaps-1){
+		totalDist = distanceMap[primaryMapIndex+1];
+		dist_.data=totalDist;
+		dist_pub_.publish(dist_);
+	}else{
+		 exitting = 1;
+	}
+}
 
 /*Map loader feedback for debugging*/
 void feedbackMapCb(const stroll_bearnav::loadMapFeedbackConstPtr& feedback)
 {
+	distanceMap.push_back(feedback->distance);
 	numPrimaryMaps = feedback->numberOfMaps;
 	primaryMapIndex = feedback->mapIndex;
-	//	ROS_INFO("Primary map: %s",feedback->fileName.c_str());
+	ROS_INFO("Primary map: %s %i %f",feedback->fileName.c_str(),primaryMapIndex,feedback->distance);
 }
 
 void feedbackViewCb(const stroll_bearnav::loadMapFeedbackConstPtr& feedback)
 {
 	numSecondaryMaps = feedback->numberOfMaps;
 	secondaryMapIndex = feedback->mapIndex;
-	//	ROS_INFO("Secondary map: %s",feedback->fileName.c_str());
+	ROS_INFO("Secondary map: %s",feedback->fileName.c_str());
 }
 
 void doneMapCb(const actionlib::SimpleClientGoalState& state,const stroll_bearnav::loadMapResultConstPtr& result)
 { 
 	ROS_INFO("Primary map client reports %s: Map covers %.3f meters and contains %i features in %i submaps.", state.toString().c_str(),result->distance,result->numFeatures,result->numMaps);
+	clientsResponded++;
 }
 
 void doneViewCb(const actionlib::SimpleClientGoalState& state,const stroll_bearnav::loadMapResultConstPtr& result)
 {
 	ROS_INFO("Secondary map client reports %s: Map covers %.3f meters and contains %i features in %i submaps.", state.toString().c_str(),result->distance,result->numFeatures,result->numMaps);
+	clientsResponded++;
 }
 
 void activeCb()
 {
-	mapsResponded++;
+	clientsResponded++;
+}
+
+void doneNavCb(const actionlib::SimpleClientGoalState& state,const stroll_bearnav::navigatorResultConstPtr& result)
+{ 
+	ROS_INFO("Navigator client reports %s.",state.toString().c_str());
+	clientsResponded++;
+}
+
+void feedbackNavCb(const stroll_bearnav::navigatorFeedbackConstPtr& feedback)
+{
+	ROS_INFO("Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str());
+	fprintf(logFile,"Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s\n",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str());
+	statSumCorrect += feedback->correct;
+	statSumMatches += feedback->matches;
+	statSumOutliers += feedback->outliers;
+	statNumMaps++;
 }
 
 void mapImageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -250,6 +286,25 @@ void viewImageCallback(const sensor_msgs::ImageConstPtr& msg)
 	imwrite(fileName,cv_ptr->image);
 }
 
+int configureFeatures(int detector,int descriptor)
+{
+	dynamic_reconfigure::ReconfigureRequest srv_req;
+	dynamic_reconfigure::ReconfigureResponse srv_resp;
+	dynamic_reconfigure::IntParameter param;
+	dynamic_reconfigure::Config conf;
+
+	param.name = "detector";
+	param.value = detector;
+	conf.ints.push_back(param);
+	param.name = "descriptor";
+	param.value = descriptor;
+	conf.ints.push_back(param);
+	srv_req.config = conf;
+
+	if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp) == false) ROS_WARN("Feature extraction module not configured.");
+}
+
+
 int main(int argc, char **argv)
 {
 	if(argc<2){
@@ -268,15 +323,16 @@ int main(int argc, char **argv)
 	ros::param::get("~folder_view", viewFolder);
 	ros::param::get("~folder_map", mapFolder);
 
-	char filename[1000];
+	/*char filename[1000];
 	char mode[] = "r";
 	if (generateDatasets) mode[0] = 'w';
 	sprintf(filename,"%s/displacements.txt",mapFolder.c_str());
 	mapFile = fopen(filename,mode);
 	sprintf(filename,"%s/displacements.txt",viewFolder.c_str());
-	viewFile = fopen(filename,mode);
+	viewFile = fopen(filename,mode);*/
+	logFile = fopen("Results.txt","w");
 
-
+	configureFeatures(3,2);
 	image_transport::ImageTransport it(n);
 
 	ros::Subscriber sub = n.subscribe("/navigationInfo", 1000, infoMapMatch);
@@ -286,6 +342,7 @@ int main(int argc, char **argv)
 		viewImageSub = it.subscribe( "/image_view", 1,viewImageCallback);
 		mapImageSub = it.subscribe( "/map_image", 1,mapImageCallback);
 	}
+
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_view("map_preprocessor_view", true);
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_map("map_preprocessor_map", true);
 	actionlib::SimpleActionClient<stroll_bearnav::navigatorAction> nav("navigator", true);
@@ -296,48 +353,74 @@ int main(int argc, char **argv)
 	nav.waitForServer(); 
 	ROS_INFO("Navigator server responding");
 
+
 	bool finished_before_timeout = true;
 
-	stroll_bearnav::loadMapGoal mapGoal;
-	stroll_bearnav::navigatorGoal navGoal;
-	mapGoal.prefix = "P8";
-	navGoal.traversals = 1;
-
-	mp_view.sendGoal(mapGoal,&doneMapCb,&activeCb,&feedbackMapCb);
-	mapGoal.prefix = "P7";
-	mp_map.sendGoal(mapGoal,&doneViewCb,&activeCb,&feedbackViewCb);
-
-	while (mapsResponded < 2) sleep(1);
-
-	while (primaryMapIndex != numPrimaryMaps)
+	const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
+	//const char *mapNames[]  = {"P0","P0","P0","P0","P0","P0","P0","P0","P0","P0", "P0", "P0", "P0", "P0", "P0", "P0", "P0",};
+	const char *mapNames[] = {"P0","P1","P2","P3","P4","P5","P6","P7","P8","P9", "P10","P11","P12","P13","P14","P15","P16"};
+	int numGlobalMaps = 17;
+	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
-		sleep(1);
-		ROS_INFO("Waiting for primary map load %i of %i.",primaryMapIndex,numPrimaryMaps);
-	}
-	while (secondaryMapIndex != numSecondaryMaps)
-	{
-		sleep(1);
-		ROS_INFO("Waiting for secondary map load %i of %i.",secondaryMapIndex,numSecondaryMaps);
-	}
+		/*set map and view info */
+		clientsResponded = 0;
+		navGoal.traversals = 1;
 
-	ROS_INFO("Goals send");
-	nav.sendGoal(navGoal);
+		viewGoal.prefix = viewNames[globalMapIndex];
+		mapGoal.prefix = mapNames[globalMapIndex];
+		mp_view.sendGoal(viewGoal,&doneMapCb,&activeCb,&feedbackMapCb);
+		mp_map.sendGoal(mapGoal,&doneViewCb,&activeCb,&feedbackViewCb);
+	
+		/*wait for maps to load*/
+		while (clientsResponded < 2) sleep(1);
 
-	is_working = 0;
-	totalDist = 0.0;
-	dist_.data=totalDist;
-	dist_pub_.publish(dist_);
-
-
-	while(ros::ok && !exitting)
-	{
-		if(exitting && !is_working){
-			return 0;
+		while (primaryMapIndex != numPrimaryMaps)
+		{
+			sleep(1);
+			ROS_INFO("Waiting for primary map load %i of %i.",primaryMapIndex,numPrimaryMaps);
 		}
-		ros::spinOnce();
-		usleep(100000);
+		while (secondaryMapIndex != numSecondaryMaps)
+		{
+			sleep(1);
+			ROS_INFO("Waiting for secondary map load %i of %i.",secondaryMapIndex,numSecondaryMaps);
+		}
+
+		/*initiate navigation*/
+		ROS_INFO("Goals send");
+		nav.sendGoal(navGoal,&doneNavCb,&activeCb,&feedbackNavCb);
+		while (clientsResponded < 3) sleep(1);
+
+		/*send first odometry info*/
+		is_working = 0;
+		totalDist = 0.0;
+		dist_.data=totalDist;
+		dist_pub_.publish(dist_);
+
+		/*perform navigation*/
+		while(ros::ok && !exitting)
+		{
+			if(exitting && !is_working){
+				return 0;
+			}
+			ros::spinOnce();
+			usleep(10000);
+		}
+
+		/*terminate navigation, unload maps*/
+		exitting = 0;
+		clientsResponded = 0;
+		nav.cancelGoal();
+		mp_view.cancelGoal();
+		mp_map.cancelGoal();
+		while (clientsResponded < 2) sleep(1);
+	
+		/*Flush statistics*/
+		ROS_INFO("Map test %s %s summary: %.3f %.3f %.3f",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
+		fprintf(logFile,"Map test %s %s summary: %.3f %.3f %.3f\n",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
+		statSumCorrect = statSumMatches = statSumOutliers = statNumMaps = 0;
 	}
-	fclose(mapFile);
-	fclose(viewFile);
+	/*fclose(mapFile);
+	fclose(viewFile);*/
+	fclose(logFile);
 	return 0;
 }

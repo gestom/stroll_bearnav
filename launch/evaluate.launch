@@ -6,7 +6,7 @@
 <arg name="folder_view" default="$(env HOME)/lucka"/>
 
 <!-- feature extraction -->
-  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extractiona">
+  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
 	  <remap from="image" to="/image_view"/>
   </node>
 
@@ -18,13 +18,13 @@
 </node-->
 
 <!-- map loader1 node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map" output="screen">
 <param name="folder" value="$(arg folder_map)" />
 <remap from="map_preprocessor" to="map_preprocessor_map"/>
 </node>
 
 <!-- map loader2 node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_view">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_view" output="screen">
 <param name="folder" value="$(arg folder_view)" />
 <remap from="localMap" to="featuresa" />
 <remap from="pathProfile" to="pathProfileDummy" />
@@ -39,7 +39,7 @@
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="tester" name="tester" output="screen"  >
+<node pkg="stroll_bearnav" type="tester" name="tester" output="screen" >
   <param name="folder_map" value="$(arg folder_map)" />
   <param name="folder_view" value="$(arg folder_view)" />
 </node>

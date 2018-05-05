@@ -125,7 +125,7 @@ void pathCallback(const stroll_bearnav::PathProfile::ConstPtr& msg)
 		a.flipper = msg->flipper[i];
 		path.push_back(a);
 	}
-	for (int i = 0;i<path.size();i++) printf("%.3f %.3f %.3f %.3f\n",path[i].distance,path[i].forward,path[i].angular,path[i].flipper);
+	//for (int i = 0;i<path.size();i++) printf("%.3f %.3f %.3f %.3f\n",path[i].distance,path[i].forward,path[i].angular,path[i].flipper);
 }
 
 /* dynamic reconfigure of showing images, velocity gain and matching ratio constant */
@@ -306,7 +306,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		std::vector< DMatch > best_matches;
 		std::vector< DMatch > bad_matches;
 		stroll_bearnav::NavigationInfo info;
-        info.updated=false;
+		info.updated=false;
 		info.view = *msg;
 		if (mapKeypoints.size() >0 && currentKeypoints.size() >0){
 
@@ -319,7 +319,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				matches.clear();
 				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
 			}
-			printf("MATCHES: %i %i %i\n",mapKeypoints.size(),currentKeypoints.size(),matches.size());
+			//printf("MATCHES: %i %i %i\n",mapKeypoints.size(),currentKeypoints.size(),matches.size());
 			/*perform ratio matching*/ 
 			good_matches.reserve(matches.size());  
 			for (size_t i = 0; i < matches.size(); i++)
@@ -359,7 +359,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 				int idx2=good_matches[i].trainIdx;
 				int idx1=good_matches[i].queryIdx;
-				printf("MATCH: %i %i %i\n",i,idx2,idx1);
+				//printf("MATCH: %i %i %i\n",i,idx2,idx1);
 				matched_points1.push_back(mapKeypoints[idx1].pt);
 				matched_points2.push_back(currentKeypoints[idx2].pt);
 				keypointsGood.push_back(currentKeypoints[idx2]);
@@ -453,7 +453,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
                 mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
             }
             // add the least similar features from view to map
-            for (int i = 0; i < 50; i++) {
+            for (int i = 0; i < 10; i++) {
                 info.view.feature[i].rating = 0;
 		info.view.feature[i].x = info.view.feature[i].x - differenceRot;
                 mapFeatures.feature.push_back(info.view.feature[i]);
@@ -462,7 +462,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
             // remove the worst rating from map
             sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
             //cout << "map: first " << mapFeatures.feature[0].rating << " x " << mapFeatures.feature[0].x << " last " << mapFeatures.feature[mapFeatures.feature.size()-1].rating  << " x " << mapFeatures.feature[mapFeatures.feature.size()-1].x  << endl;
-            mapFeatures.feature.erase(mapFeatures.feature.end() - 50, mapFeatures.feature.end());
+            mapFeatures.feature.erase(mapFeatures.feature.end() - 10, mapFeatures.feature.end());
             isRating=false;
             mapChanges++;
             info.updated=true;
