@@ -22,6 +22,7 @@ using namespace cv;
 typedef enum
 {
 	IDLE,
+	PREPARING,
 	MAPPING,
 	SAVING,
 	TERMINATING
@@ -158,7 +159,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 			return;
 		}
 		imgQueue.push_back(cv_ptr->image);
-
+		if (state == PREPARING && imgQueue.size() > 10) state = SAVING;
 		char tmpID[100];
 		sprintf(tmpID,"Image_%09d",msg->header.seq);
 		idQueue.push_back(tmpID);
@@ -179,11 +180,11 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	userStop = false;
 	baseName = goal->fileName;
 	path.clear();
-	state = SAVING;
+	state = PREPARING;
 	//TODO if plastic, listen to navigator and then terminate mapping
 
 	if (!client.call(srv)) ROS_ERROR("Failed to call service SetDistance provided by odometry_monitor node!");
-	while(state == MAPPING || state == SAVING){
+	while(state == MAPPING || state == SAVING || state == PREPARING){
 
 		/*on preempt request end mapping and save current map */
 		if(server->isPreemptRequested() || userStop)
