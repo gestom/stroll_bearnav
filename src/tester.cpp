@@ -102,111 +102,8 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 	int size = msg->mapMatchIndex.size();
 	float displacementGT = 0;
 	vector<MatchInfo> mi;
-	/*if (generateDatasets){
-		fprintf(mapFile,"%i %i\n",0,0);
-		fprintf(viewFile,"%i %i\n",(int)msg->diffRot,0);
-	}else{
-		int offsetMap = 0;
-		int offsetView = 0;
-		int dummy = 0;
-		fscanf(mapFile,"%i %i\n",&offsetMap,&dummy);
-		fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
-		displacementGT = offsetView - offsetMap;
-	}*/
-	fprintf(stdout,"DISPLACEMENT: %.3f %.3f\n",displacementGT,msg->diffRot);
-	if(size>0)
-	{
-		for(int i = 0; i<size;i++)
-		{
-			MatchInfo new_mi;
-
-			sprintf(new_mi.id,"%d",i);
-			strcat(new_mi.id, "_");
-			strcat(new_mi.id,msg->map.id.c_str());
-			strcat(new_mi.id, "\0");
-
-			new_mi.eval = msg->mapMatchEval[i];
-			new_mi.x = msg->map.feature[i].x;
-			new_mi.y = msg->map.feature[i].y;
-			new_mi.size = msg->map.feature[i].size;
-			new_mi.angle = msg->map.feature[i].angle;
-			new_mi.response = msg->map.feature[i].response;
-			new_mi.octave = msg->map.feature[i].octave;
-			// new_mi.time = msg->view.header.stamp.sec;
-			new_mi.time = time(NULL);
-			mi.push_back(new_mi);
-		}
-
-		ofstream file_content(".statistics.txt");
-		//ostringstream file_content;
-		string line;
-		ifstream f (fname);
-
-		if (f.is_open() && file_content.is_open())
-		{
-			while ( getline (f,line) )
-			{
-				vector<string> strings;
-				string line2;
-				line2.assign(line);
-				istringstream l(line2);
-				string s;
-				int i = 0;
-				int j = 0;
-				ostringstream end_line;
-				end_line<<endl;
-				while (getline(l, s, ' ') && i == 0)
-				{
-
-					for(j = 0;j<mi.size();j++)
-					{
-						if(s.compare(mi[j].id) == 0){
-							end_line.str("");
-							end_line.clear();
-							end_line << " " << mi[j].time << " " <<  mi[j].eval << endl;
-							mi.erase(mi.begin() +j );
-							break;
-						}
-					}
-					file_content << line;
-					file_content << end_line.str();
-					i++;
-				}
-			}
-			f.close();
-		}
-
-		if(mi.size()>0)
-		{
-			for(int i = 0; i<mi.size(); i++)
-			{
-				file_content << mi[i].id << " ";
-				file_content << mi[i].x << " ";
-				file_content << mi[i].y << " ";
-				file_content << mi[i].size << " ";
-				file_content << mi[i].angle << " ";
-				file_content << mi[i].response << " ";
-				file_content << mi[i].octave << " ";
-				file_content << mi[i].time << " ";
-				file_content << mi[i].eval << endl;
-			}
-		}
-		mi.clear();
-		file_content.close();
-		if( remove( fname ))
-		{
-			perror( "Error deleting file" );
-		}
-
-		char oldname[] =".statistics.txt";
-
-		if ( rename( oldname , fname ) )
-		{
-			perror( "Error renaming file" );
-		}
-	}
+	
 	is_working = 0;
-
 	/*maps processed*/
 	if (primaryMapIndex < numPrimaryMaps-1){
 		totalDist = distanceMap[primaryMapIndex+1];
@@ -258,8 +155,17 @@ void doneNavCb(const actionlib::SimpleClientGoalState& state,const stroll_bearna
 
 void feedbackNavCb(const stroll_bearnav::navigatorFeedbackConstPtr& feedback)
 {
-	ROS_INFO("Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str());
-	fprintf(logFile,"Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s\n",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str());
+	int offsetMap = 0;
+	int offsetView = 0;
+	int dummy = 0;
+	int mapA = 0;
+	int mapB = 0;
+	//fscanf(mapFile, "%i %i\n",&offsetMap,&dummy);
+	//fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
+	float displacementGT = offsetView - offsetMap;
+
+	ROS_INFO("Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s. Displacement %.3f GT %.3f",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),feedback->diffRot,displacementGT);
+	fprintf(logFile,"Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s. Displacement %.3f GT %.3f\n",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),feedback->diffRot,displacementGT);
 	statSumCorrect += feedback->correct;
 	statSumMatches += feedback->matches;
 	statSumOutliers += feedback->outliers;
@@ -370,7 +276,16 @@ int main(int argc, char **argv)
 		mapGoal.prefix = mapNames[globalMapIndex];
 		mp_view.sendGoal(viewGoal,&doneMapCb,&activeCb,&feedbackMapCb);
 		mp_map.sendGoal(mapGoal,&doneViewCb,&activeCb,&feedbackViewCb);
-	
+
+
+		//char filename[1000];
+		//sprintf(filename,"%s/%s_GT.txt",mapFolder.c_str(),mapNames[globalMapIndex]);
+		//printf("%s/%s_GT.txt\n",mapFolder.c_str(),mapNames[globalMapIndex]);
+		//mapFile = fopen(filename,"r");
+		//sprintf(filename,"%s/%s_GT.txt",viewFolder.c_str(),viewNames[globalMapIndex]);
+		//printf("%s/%s_GT.txt\n",viewFolder.c_str(),viewNames[globalMapIndex]);
+		//viewFile = fopen(filename,"r");
+
 		/*wait for maps to load*/
 		while (clientsResponded < 2) sleep(1);
 
@@ -418,9 +333,9 @@ int main(int argc, char **argv)
 		ROS_INFO("Map test %s %s summary: %.3f %.3f %.3f",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
 		fprintf(logFile,"Map test %s %s summary: %.3f %.3f %.3f\n",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
 		statSumCorrect = statSumMatches = statSumOutliers = statNumMaps = 0;
+		//fclose(mapFile);
+		//fclose(viewFile);
 	}
-	/*fclose(mapFile);
-	fclose(viewFile);*/
 	fclose(logFile);
 	return 0;
 }
