@@ -53,8 +53,8 @@ stroll_bearnav::FeatureArray mapFeatures;
 
 bool showAllMatches=true;
 bool showGoodMatches=true;
-int numFeatureAdd = 50;
-int numFeatureRemove = 50;
+int numFeatureAdd = 100;
+int numFeatureRemove = -1;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;

@@ -200,6 +200,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 	featureArray.distance = msg->header.seq;
 	printf("Features: %i\n",(int)featureArray.feature.size());
+	//usleep(200000);
 	feat_pub_.publish(featureArray);
 
 	/*and if there are any consumers, publish image with features*/
