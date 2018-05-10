@@ -283,7 +283,7 @@ int main(int argc, char **argv)
 	const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
 	//const char *mapNames[]  = {"X0","X0","X0","X0","X0","X0","X0","X0","X0","X0", "X0", "X0", "X0", "X0", "X0", "X0", "X0",};
 	const char *mapNames[] = {"X0","X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","X11","X12","X13","X14","X15","X16"};
-	int numGlobalMaps = 5;
+	int numGlobalMaps = 9;
 	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
