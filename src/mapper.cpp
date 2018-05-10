@@ -108,7 +108,7 @@ EMappingState state = IDLE;
 /* plastic map parameters*/
 int mapChanges=0;
 int lastMapChanges=-1;
-bool isPlastic=false;
+bool isPlastic=true;
 bool isUpdated=false;
 
 
@@ -121,6 +121,7 @@ void imageSelect(const char *id)
 	if (idQueue.size() > 0){
 		int imageIndex = idQueue.size()-1;
 		for (int i = 0;i<idQueue.size();i++){
+			ROS_INFO("IDS: %s %s",id,idQueue[i].c_str());
 			if (strcmp(id,idQueue[i].c_str())==0) imageIndex = i;
 		}
 		imgQueue[imageIndex].copyTo(img);
@@ -181,6 +182,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	baseName = goal->fileName;
 	path.clear();
 	state = PREPARING;
+	if (isPlastic) state = SAVING;
 	//TODO if plastic, listen to navigator and then terminate mapping
 
 	if (!client.call(srv)) ROS_ERROR("Failed to call service SetDistance provided by odometry_monitor node!");
@@ -314,6 +316,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 			keypoints.clear();
 			descriptors.release();
 			ratings.clear();
+			img.release();
 
 			//rating
 			for (int i = 0; i < msg->map.feature.size(); i++) {

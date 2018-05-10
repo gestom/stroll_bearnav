@@ -29,6 +29,7 @@ const int height = 100;
 int difference = 0;
 FILE *output = NULL;		
 
+int imageWidth = 500;
 int seasons = 2;
 int numLocations= 0;
 int autoBestMatch= 0;
@@ -142,6 +143,7 @@ int loadMaps(char* folder,char* prefix,vector<Mat> *images)
 		{
 			img.release();
 			fs["Image"]>>img;
+			imageWidth = img.cols;
 			images->push_back(img);
 		}
 
@@ -165,9 +167,9 @@ int main(int argc, char** argv)
 	int numPictures = 0;
 	int locations[seasons];
 	int key = 0;
-	//locations[0] = 18737; 
-	//locations[1] = 18590;
 	for (int i = 0;i<seasons;i++) locations[i] = 0;
+	//locations[0] = 61;
+	//locations[1] = 61;
 	int locationScan = 0;
 	do{
 		//delete detector;
@@ -262,7 +264,7 @@ int main(int argc, char** argv)
 						inliers_matches.push_back(matches[i]);
 					}
 				}
-				estimated = (sumDev/histMax);
+				if (histMax > 0) estimated = (sumDev/histMax); else estimated = 0;
 			}else{
 				difference = 1000;
 				estimated = 0;
@@ -331,8 +333,8 @@ int main(int argc, char** argv)
 						locations[1]++;
 					}
 				}
-				if (key == 83) offsetX++;
-				if (key == 81) offsetX--;
+				if (key == 83)  offsetX=(offsetX+1)%imageWidth;
+				if (key == 81) offsetX=(offsetX-1)%imageWidth;
 				if (key == 82) locations[1]++;
 				if (key == 84) locations[1]--;
 				if (key == '1')
@@ -355,14 +357,19 @@ int main(int argc, char** argv)
 					autoBestMatch = 0;
 				}
 				if (key == 32) displayStyle=(displayStyle+1)%3;
-			}while (key !=27 && key != 13 && key != 82  && key != 84 && key != '1' && key != '2' && key != '3' && locationScan == 0);
+			}while (key !=27 && key != 13 && key != 82  && key != 84 && key != '1' && key != '2' && key != '3' && locationScan == 0 && key != 8);
 			totalTests++;
-			if (key == 13 || key == 'a')
+			if (key == 13 || key == 'a'||key == 8)
 			{
+		
 				printf("Saved %03i vs %03i -  %i %i \n",locations[0],locations[1],offsetX,offsetY);
 				char retez[1000];
 				sprintf(retez,"%s/%s_annotation.txt",argv[1],argv[3]);
-				output = fopen(retez,"a");	
+				output = fopen(retez,"a");
+				if (key == 8){
+					offsetX += 10000;
+					offsetY += 10000;
+				}
 				fprintf(output,"%03i %03i %i %i \n",locations[0],locations[1],offsetX,offsetY);
 				fclose(output);
 				locations[0]+=1;//50;
@@ -371,6 +378,6 @@ int main(int argc, char** argv)
 				//locations[1]++;
 			}
 		}
-	}while (key != 27);
+	}while (key != 27 && locations[0] < numMaps);
 	return 0;
 }

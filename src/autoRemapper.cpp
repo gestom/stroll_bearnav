@@ -17,6 +17,7 @@
 #include <opencv2/opencv.hpp>
 #include <actionlib/client/simple_action_client.h>
 #include <stroll_bearnav/loadMapAction.h>
+#include <stroll_bearnav/mapperAction.h>
 #include <stroll_bearnav/navigatorAction.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
@@ -55,6 +56,7 @@ float statNumMaps = 0;
 
 stroll_bearnav::loadMapGoal mapGoal;
 stroll_bearnav::loadMapGoal viewGoal;
+stroll_bearnav::mapperGoal mapperGoal;
 stroll_bearnav::navigatorGoal navGoal;
 
 FILE *mapFile, *viewFile,*logFile;
@@ -64,6 +66,7 @@ bool generateDatasets = true;
 bool volatile is_working = 0;
 ros::CallbackQueue* my_queue;
 ros::Publisher dist_pub_;
+ros::Publisher distEvent_pub_;
 std_msgs::Float32 dist_;
 float totalDist = 0;
 image_transport::Subscriber mapImageSub;
@@ -97,7 +100,6 @@ void shutdownCallback(XmlRpc::XmlRpcValue& params, XmlRpc::XmlRpcValue& result)
 
 void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 {
-	printf("Distance PICO: %f\n",msg->map.distance);
 	is_working = 1;
 	int size = msg->mapMatchIndex.size();
 	float displacementGT = 0;
@@ -109,6 +111,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 		totalDist = distanceMap[primaryMapIndex+1];
 		dist_.data=totalDist;
 		dist_pub_.publish(dist_);
+		distEvent_pub_.publish(dist_);
 	}else{
 		 exitting = 1;
 	}
@@ -147,6 +150,17 @@ void activeCb()
 	clientsResponded++;
 }
 
+void doneMapperCb(const actionlib::SimpleClientGoalState& state,const stroll_bearnav::mapperResultConstPtr& result)
+{ 
+	ROS_INFO("Navigator client reports %s.",state.toString().c_str());
+	clientsResponded++;
+}
+
+void feedbackMapperCb(const stroll_bearnav::mapperFeedbackConstPtr& feedback)
+{
+	ROS_INFO("MAPPER report: %s",feedback->fileName.c_str());
+}
+
 void doneNavCb(const actionlib::SimpleClientGoalState& state,const stroll_bearnav::navigatorResultConstPtr& result)
 { 
 	ROS_INFO("Navigator client reports %s.",state.toString().c_str());
@@ -160,8 +174,8 @@ void feedbackNavCb(const stroll_bearnav::navigatorFeedbackConstPtr& feedback)
 	int dummy = 0;
 	int mapA = 0;
 	int mapB = 0;
-	fscanf(mapFile, "%i %i\n",&offsetMap,&dummy);
-	fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
+	//fscanf(mapFile, "%i %i\n",&offsetMap,&dummy);
+	//fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
 	float displacementGT = offsetView - offsetMap;
 
 	ROS_INFO("Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s. Displacement %.3f GT %.3f",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),feedback->diffRot,displacementGT);
@@ -177,9 +191,9 @@ void mapImageCallback(const sensor_msgs::ImageConstPtr& msg)
 	static int mapImageNum = 0;
 	cv_bridge::CvImagePtr cv_ptr;
 	cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-	char fileName[1000];
-	sprintf(fileName,"%s/%09i.bmp",mapFolder.c_str(),mapImageNum++);	
-	imwrite(fileName,cv_ptr->image);
+	//char fileName[1000];
+	//sprintf(fileName,"%s/%09i.bmp",mapFolder.c_str(),mapImageNum++);	
+	//imwrite(fileName,cv_ptr->image);
 }
 
 void viewImageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -187,9 +201,9 @@ void viewImageCallback(const sensor_msgs::ImageConstPtr& msg)
 	static int viewImageNum = 0;
 	cv_bridge::CvImagePtr cv_ptr;
 	cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-	char fileName[1000];
-	sprintf(fileName,"%s/%09i.bmp",viewFolder.c_str(),viewImageNum++);
-	imwrite(fileName,cv_ptr->image);
+	//char fileName[1000];
+	//sprintf(fileName,"%s/%09i.bmp",viewFolder.c_str(),viewImageNum++);
+	//imwrite(fileName,cv_ptr->image);
 }
 
 int configureFeatures(int detector,int descriptor)
@@ -207,11 +221,7 @@ int configureFeatures(int detector,int descriptor)
 	conf.ints.push_back(param);
 	srv_req.config = conf;
 
-	if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp) == false){
-		 ROS_WARN("Feature extraction module not configured.");
-		 return -1;
-	}
-	return 0;
+	if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp) == false) ROS_WARN("Feature extraction module not configured.");
 }
 
 
@@ -242,9 +252,10 @@ int main(int argc, char **argv)
 	viewFile = fopen(filename,mode);*/
 	logFile = fopen("Results.txt","w");
 
-	if (configureFeatures(3,2) < 0) return 0;
+	configureFeatures(3,2);
 	image_transport::ImageTransport it(n);
 
+	distEvent_pub_=n.advertise<std_msgs::Float32>("/distance_events",1);
 	ros::Subscriber sub = n.subscribe("/navigationInfo", 1000, infoMapMatch);
 	dist_pub_=n.advertise<std_msgs::Float32>("/distance",1);
 
@@ -255,11 +266,14 @@ int main(int argc, char **argv)
 
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_view("map_preprocessor_view", true);
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_map("map_preprocessor_map", true);
+	actionlib::SimpleActionClient<stroll_bearnav::mapperAction> mapper("mapper", true);
 	actionlib::SimpleActionClient<stroll_bearnav::navigatorAction> nav("navigator", true);
 	mp_map.waitForServer(); 
 	ROS_INFO("Primary map server responding");
 	mp_view.waitForServer(); 
 	ROS_INFO("Secondary map server responding");
+	mapper.waitForServer(); 
+	ROS_INFO("Mapping server responding");
 	nav.waitForServer(); 
 	ROS_INFO("Navigator server responding");
 
@@ -267,9 +281,9 @@ int main(int argc, char **argv)
 	bool finished_before_timeout = true;
 
 	const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
-	const char *mapNames[]  = {"X0","X0","X0","X0","X0","X0","X0","X0","X0","X0", "X0", "X0", "X0", "X0", "X0", "X0", "X0",};
-	//const char *mapNames[] = {"X0","X1","X2","X3","X4","X5","X6","X7","X8","X9", "X10","X11","X12","X13","X14","X15","X16"};
-	int numGlobalMaps = 6;
+	//const char *mapNames[]  = {"X0","X0","X0","X0","X0","X0","X0","X0","X0","X0", "X0", "X0", "X0", "X0", "X0", "X0", "X0",};
+	const char *mapNames[] = {"X0","X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","X11","X12","X13","X14","X15","X16"};
+	int numGlobalMaps = 5;
 	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
@@ -278,20 +292,13 @@ int main(int argc, char **argv)
 
 		viewGoal.prefix = viewNames[globalMapIndex];
 		mapGoal.prefix = mapNames[globalMapIndex];
-		mp_view.sendGoal(viewGoal,&doneViewCb,&activeCb,&feedbackViewCb);
+		mapperGoal.fileName = mapNames[globalMapIndex+1];
 		mp_map.sendGoal(mapGoal,&doneMapCb,&activeCb,&feedbackMapCb);
-
-
-		char filename[1000];
-		sprintf(filename,"%s/%s_GT.txt",mapFolder.c_str(),mapNames[0]);
-		printf("%s/%s_GT.txt\n",mapFolder.c_str(),mapNames[globalMapIndex]);
-		mapFile = fopen(filename,"r");
-		sprintf(filename,"%s/%s_GT.txt",viewFolder.c_str(),viewNames[globalMapIndex]);
-		printf("%s/%s_GT.txt\n",viewFolder.c_str(),viewNames[globalMapIndex]);
-		viewFile = fopen(filename,"r");
+		mp_view.sendGoal(viewGoal,&doneViewCb,&activeCb,&feedbackViewCb);
+		mapper.sendGoal(mapperGoal,&doneMapperCb,&activeCb,&feedbackMapperCb);
 
 		/*wait for maps to load*/
-		while (clientsResponded < 2) sleep(1);
+		while (clientsResponded < 3) sleep(1);
 
 		while (primaryMapIndex != numPrimaryMaps)
 		{
@@ -314,6 +321,7 @@ int main(int argc, char **argv)
 		totalDist = 0.0;
 		dist_.data=totalDist;
 		dist_pub_.publish(dist_);
+		distEvent_pub_.publish(dist_);
 
 		/*perform navigation*/
 		while(ros::ok && !exitting)
@@ -329,18 +337,16 @@ int main(int argc, char **argv)
 		exitting = 0;
 		clientsResponded = 0;
 		nav.cancelGoal();
+		mapper.cancelGoal();
 		mp_view.cancelGoal();
 		mp_map.cancelGoal();
-		while (clientsResponded < 2) sleep(1);
+		while (clientsResponded < 4) sleep(1);
 	
 		/*Flush statistics*/
 		ROS_INFO("Map test %s %s summary: %.3f %.3f %.3f",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
 		fprintf(logFile,"Map test %s %s summary: %.3f %.3f %.3f\n",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
 		statSumCorrect = statSumMatches = statSumOutliers = statNumMaps = 0;
-		fclose(mapFile);
-		fclose(viewFile);
 	}
 	fclose(logFile);
-	usleep(100000);
 	return 0;
 }
