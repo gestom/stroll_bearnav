@@ -53,7 +53,7 @@ stroll_bearnav::FeatureArray mapFeatures;
 
 bool showAllMatches=true;
 bool showGoodMatches=true;
-int numFeatureAdd = 100;
+int numFeatureAdd = 200;
 int numFeatureRemove = -1;
 
 geometry_msgs::Twist twist;
@@ -456,7 +456,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			}
 			// add the least similar features from view to map
 			//mapFeatures.feature.clear();
-			for (int i = 0; i < numFeatureAdd; i++) {
+			for (int i = 0; i < numFeatureAdd && i<info.view.feature.size(); i++) {
 				info.view.feature[i].rating = 0;
 				info.view.feature[i].x = info.view.feature[i].x - differenceRot;
 				mapFeatures.feature.push_back(info.view.feature[i]);
