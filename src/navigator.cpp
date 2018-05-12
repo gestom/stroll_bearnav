@@ -199,7 +199,6 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 				traversals--;
 			}
 		}
-		usleep(200000);
 	}
 	twist.linear.x = twist.linear.y = twist.linear.z = twist.angular.z = twist.angular.y = twist.angular.x = 0.0;	
 	cmd_pub_.publish(twist);
@@ -458,7 +457,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			//mapFeatures.feature.clear();
 			for (int i = 0; i < numFeatureAdd; i++) {
 				info.view.feature[i].rating = 0;
-				info.view.feature[i].x = info.view.feature[i].x - differenceRot;
+				info.view.feature[i].x = info.view.feature[i].x + differenceRot;
 				mapFeatures.feature.push_back(info.view.feature[i]);
 				//info.view.feature.erase(info.view.feature.begin(), info.view.feature.begin() + 10);
 			}
