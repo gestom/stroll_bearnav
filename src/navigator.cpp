@@ -138,6 +138,7 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	velocityGain=config.velocityGain;
 	ratioMatchConstant=config.matchingRatio;
 	maxVerticalDifference = config.maxVerticalDifference;
+	maxVerticalDifference = 10000;
 	minGoodFeatures = config.minGoodFeatures;
 	pixelTurnGain = config.pixelTurnGain;
 	minimalAdaptiveSpeed = config.adaptiveSpeedMin;
