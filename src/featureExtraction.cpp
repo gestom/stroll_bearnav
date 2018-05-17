@@ -136,7 +136,6 @@ bool compare_response(KeyPoint first, KeyPoint second)
 /* Extract features from image recieved from camera */
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-
 	cv_bridge::CvImagePtr cv_ptr;
 	try
 	{

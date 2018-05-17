@@ -266,20 +266,19 @@ int main(int argc, char **argv)
 
 	bool finished_before_timeout = true;
 
-	const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
+	//const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
+	//const char *mapNames[]  = {"X0","X0","X0","X0","X0","X0","X0","X0","X0","X0", "X0", "X0", "X0", "X0", "X0", "X0", "X0",};
+	//const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
+	const char *viewNames[] = {"P1","P5","P9","P5","P1","P5","P9","P5","P1","P5","P9","P5","P1","P5","P9","P5","P1"};
 	//const char *mapNames[]  = {"X0","X0","X0","X0","X0","X0","X0","X0","X0","X0", "X0", "X0", "X0", "X0", "X0", "X0", "X0",};
 	const char *mapNames[] = {"X0","X1","X2","X3","X4","X5","X6","X7","X8","X9", "X10","X11","X12","X13","X14","X15","X16"};
-	int numGlobalMaps = 9;
+	int numGlobalMaps = 16;
 	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
 		clientsResponded = 0;
 		navGoal.traversals = 1;
 
-		viewGoal.prefix = viewNames[globalMapIndex];
-		mapGoal.prefix = mapNames[globalMapIndex];
-		mp_view.sendGoal(viewGoal,&doneViewCb,&activeCb,&feedbackViewCb);
-		mp_map.sendGoal(mapGoal,&doneMapCb,&activeCb,&feedbackMapCb);
 
 
 		char filename[1000];
@@ -289,6 +288,11 @@ int main(int argc, char **argv)
 		sprintf(filename,"%s/%s_GT.txt",viewFolder.c_str(),viewNames[globalMapIndex]);
 		printf("%s/%s_GT.txt\n",viewFolder.c_str(),viewNames[globalMapIndex]);
 		viewFile = fopen(filename,"r");
+
+		viewGoal.prefix = viewNames[globalMapIndex];
+		mapGoal.prefix = mapNames[globalMapIndex];
+		mp_view.sendGoal(viewGoal,&doneViewCb,&activeCb,&feedbackViewCb);
+		mp_map.sendGoal(mapGoal,&doneMapCb,&activeCb,&feedbackMapCb);
 
 		/*wait for maps to load*/
 		while (clientsResponded < 2) sleep(1);

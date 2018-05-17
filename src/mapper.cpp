@@ -118,9 +118,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg);
 /* select an appropriate image according to feature array ID*/ 
 void imageSelect(const char *id)
 {
-//	ROS_INFO("IDS: %s vs %s",id,idQueue[0].c_str());
-//	imgQueue[0].copyTo(img);
-//	return;
 	if (idQueue.size() > 0){
 		int imageIndex = idQueue.size()-1;
 		for (int i = 0;i<idQueue.size();i++){
