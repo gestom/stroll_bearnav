@@ -259,7 +259,7 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 				stcs[i] = 0;
 			}
 			string line;
-			ifstream f("/home/eliska/stroll/statistics/statistics.txt");
+			ifstream f("/home/gestom/projects/cameleon/src/stroll_bearnav/src/stats.txt");
 			int max = 0;
 			if (f.is_open())
 			{
@@ -299,7 +299,7 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 
 			for(int i=0;i<keypoints_1.size();i++)
 			{
-				if(stcs[i]>=(max/2))
+				if(stcs[i]>=0)//(max/2)
 				{
 					feature.x=keypoints_1[i].pt.x;
 					feature.y=keypoints_1[i].pt.y;

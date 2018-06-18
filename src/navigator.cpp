@@ -28,6 +28,13 @@ using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
+typedef enum
+{
+	MATCHED_CORRECT = 1,
+	MATCHED_INCORRECT = -1,
+	CONFLICTED_OK = 1000,
+	CONFLICTED_BAD = -1000 
+}EFeatureMatchEvaluation;
 
 ros::Publisher cmd_pub_;
 ros::Publisher info_pub_;
@@ -305,7 +312,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance){
 						 good_matches.push_back(matches[i][0]); 
 				}else{
-						 conflicted.push_back(matches[i][0]); 
+						 conflicted_matches.push_back(matches[i][0]); 
 						 conflicting_matches.push_back(matches[i][1]); 
 				}
 			}
@@ -322,7 +329,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int differences[num];
 
 			for (int i=0;i<num;i++){
-
 				int idx2=good_matches[i].trainIdx;
 				int idx1=good_matches[i].queryIdx;
 				matched_points1.push_back(mapKeypoints[idx1].pt);
@@ -337,9 +343,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					differences[i] = -1000000;
 				}else{
 					differences[i] = difference;
-					if (index <= 0) index = 0;
-					if (index >= numBins) index = numBins-1;
-					histogram[index]++;
+					//if (index <= 0) index = 0;
+					//if (index >= numBins) index = numBins-1;
+					if (index >= 0 && index < numBins) histogram[index]++;
 				}
 				count=0; 
 			}
@@ -374,6 +380,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				}
 			}
 
+			/*these are the good points used for navigation*/
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
 					//best_matches.push_back(good_matches[i]);
@@ -410,12 +417,17 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		vector<int> mapEval(mapFeatures.feature.size());
 		std::fill(mapIndex.begin(),mapIndex.end(),-1); 
 		std::fill(mapEval.begin(),mapEval.end(),0); 
+
+		/*mark all matches as incorrect*/
 		for (int i = 0;i<good_matches.size();i++)
 		{
 			mapIndex[good_matches[i].queryIdx] = good_matches[i].trainIdx;
-			mapEval[good_matches[i].queryIdx] = -1;
-		}	
-		for (int i = 0;i<best_matches.size();i++) mapEval[best_matches[i].queryIdx] = 1;
+			mapEval[good_matches[i].queryIdx] = MATCHED_INCORRECT;
+		}
+		/*mark best matches as correct*/
+//		for (int i = 0;i<conflicted_matches.size();i++) mapEval[conflicted_matches[i].queryIdx] =  1;
+//		for (int i = 0;i<conflicting_matches.size();i++) mapEval[conflicting_matches[i].queryIdx] =  -1;
+		for (int i = 0;i<best_matches.size();i++) mapEval[best_matches[i].queryIdx] =  MATCHED_CORRECT;
 		
 		info.mapMatchIndex = mapIndex;
 		info.mapMatchEval = mapEval;
