@@ -1,0 +1,17 @@
+<launch>
+
+<!-- Default folder with maps-->
+
+<arg name="folder" default="$(env HOME)"/>
+
+<!-- feature extraction -->
+  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
+	  <remap from="image" to="map_image"/>
+  </node>
+
+<!-- map loader node -->
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor"  >
+<param name="folder" value="$(arg folder)" />
+</node>
+
+</launch>

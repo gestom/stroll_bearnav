@@ -2,7 +2,7 @@
 
 <!-- Default folder with maps-->
 
-<arg name="folder" default="$(env HOME)/lucka2"/>
+<arg name="folder" default="$(env HOME)/lucka"/>
 
 <!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>

@@ -136,7 +136,6 @@ bool compare_response(KeyPoint first, KeyPoint second)
 /* Extract features from image recieved from camera */
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-
 	cv_bridge::CvImagePtr cv_ptr;
 	try
 	{
@@ -197,6 +196,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	char numStr[100];
 	sprintf(numStr,"Image_%09d",msg->header.seq);
 	featureArray.id =  numStr;
+
 	featureArray.distance = msg->header.seq;
 	printf("Features: %i\n",(int)featureArray.feature.size());
 	feat_pub_.publish(featureArray);
@@ -206,6 +206,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	{
 		/* Show all detected features in image (Red)*/
 		drawKeypoints( img, keypoints, cv_ptr->image, Scalar(0,0,255), DrawMatchesFlags::DEFAULT );
+
 		/* publish image with features */
 		image_pub_.publish(cv_ptr->toImageMsg());
 		ROS_INFO("Features extracted %ld %ld",featureArray.feature.size(),keypoints.size());
