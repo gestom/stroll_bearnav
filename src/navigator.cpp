@@ -470,7 +470,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
 			}
 
-			numFeatureAdd = numFeatureRemove = best_matches.size();
+			numFeatureAdd = numFeatureRemove = best_matches.size()/2;
 
 			// remove the worst rating from map
 			sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
@@ -481,8 +481,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				mapFeatures.feature.erase(mapFeatures.feature.end() - bad_matches.size(), mapFeatures.feature.end());
 			}
 
-			mapFeatures.feature.clear();
-			numFeatureAdd = 500;
+			//mapFeatures.feature.clear();
+			//numFeatureAdd = 500;
 			// add the least similar features from view to map
 			for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
 				info.view.feature[i].rating = 0;
