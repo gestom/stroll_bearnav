@@ -108,7 +108,7 @@ EMappingState state = IDLE;
 /* plastic map parameters*/
 int mapChanges=0;
 int lastMapChanges=-1;
-bool isPlastic=true;
+bool isPlastic=false;
 bool isUpdated=false;
 
 
@@ -378,7 +378,7 @@ int main(int argc, char** argv)
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
-	vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmda", 1);
+	if (isPlastic == false) vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10, joyCallback);
 	infoSub_ = nh.subscribe("/navigationInfo", 1000, infoMapMatch);
@@ -408,7 +408,7 @@ int main(int argc, char** argv)
 			twist.angular.z =  angularSpeed;;
 			flipperSpeed = fmin(fmax(flipperSpeed,-maxFlipperSpeed),maxFlipperSpeed);
 			twist.angular.y =  flipperSpeed;
-			vel_pub_.publish(twist);
+			if (isPlastic == false) vel_pub_.publish(twist);
 
 			/* saving path profile */
 			if (lastForwardSpeed != forwardSpeed || lastAngularSpeed != angularSpeed || lastFlipperSpeed != flipperSpeed)
@@ -425,7 +425,7 @@ int main(int argc, char** argv)
 		}
 		if (state == TERMINATING){
 			twist.linear.x = twist.angular.z = twist.angular.y = 0;
-			vel_pub_.publish(twist);
+			if (isPlastic == false) vel_pub_.publish(twist);
 			state = IDLE;
 		}
 		ros::spinOnce();
