@@ -144,6 +144,7 @@ int loadMaps()
 			feedback.distance = mapDistances[i];
 			feedback.numFeatures=numFeatures;
 			feedback.mapIndex=i;
+			feedback.mapLoaded=false;
 			server->publishFeedback(feedback);
 		}
 
@@ -155,6 +156,7 @@ int loadMaps()
 	feedback.distance = mapDistances[numMaps-1];
 	feedback.numFeatures=numFeatures;
 	feedback.mapIndex=numMaps;
+	feedback.mapLoaded=true;
 	server->publishFeedback(feedback);
 	return numMaps;
 }
@@ -175,6 +177,7 @@ void loadMap(int index)
 	feedback.distance = currentDistance;
 	feedback.numFeatures=keypoints_1.size();
 	feedback.mapIndex=index;
+	feedback.mapLoaded=true;
 	/* feedback returns name of loaded map, number of features in it and index */
 	server->publishFeedback(feedback);
 }

@@ -12,3 +12,4 @@ float32 distance
 int32 numFeatures
 int32 numberOfMaps
 int32 mapIndex
+bool mapLoaded
