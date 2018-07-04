@@ -120,6 +120,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 /*Map loader feedback for debugging*/
 void feedbackMapCb(const stroll_bearnav::loadMapFeedbackConstPtr& feedback)
 {
+ROS_INFO("Maps:");
 	distanceMap.push_back(feedback->distance);
 	numPrimaryMaps = feedback->numberOfMaps;
 	primaryMapIndex = feedback->mapIndex;
@@ -270,8 +271,6 @@ int main(int argc, char **argv)
 	actionlib::SimpleActionClient<stroll_bearnav::navigatorAction> nav("navigator", true);
 	mp_map.waitForServer(); 
 	ROS_INFO("Primary map server responding");
-	mp_view.waitForServer(); 
-	ROS_INFO("Secondary map server responding");
 	mapper.waitForServer(); 
 	ROS_INFO("Mapping server responding");
 	nav.waitForServer(); 
@@ -281,38 +280,36 @@ int main(int argc, char **argv)
 	bool finished_before_timeout = true;
 
 	//const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
-	const char *viewNames[] = {"P1","P5","P9","P5","P1","P5","P9","P5","P1","P5","P9","P5","P1","P5","P9","P5","P1"};
-	const char *mapNames[] = {"X0","X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","X11","X12","X13","X14","X15","X16"};
+	//const char *viewNames[] = {"P1","P5","P9","P5","P1","P5","P9","P5","P1","P5","P9","P5","P1","P5","P9","P5","P1"};
+	//const char *mapNames[] = {"X0","X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","X11","X12","X13","X14","X15","X16"};
+	const char *mapNames[] = {"testKralupy", "new2"};	
 
 	//const char *viewNames[] = {"X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","X11","X12","X13","X14","X15","X16","X17"};
 	//const char *mapNames[] = {"A0","Y1","Y2","Y3","Y4","Y5","Y6","Y7","Y8","Y9","Y10","Y11","Y12","Y13","Y14","Y15","Y16"};
-	int numGlobalMaps = 16;
+	int numGlobalMaps = 1;
+	ROS_INFO("Maps: %i",numGlobalMaps);
 	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
 		clientsResponded = 0;
 		navGoal.traversals = 1;
 
-		viewGoal.prefix = viewNames[globalMapIndex];
+		//viewGoal.prefix = viewNames[globalMapIndex];
 		mapGoal.prefix = mapNames[globalMapIndex];
 		mapperGoal.fileName = mapNames[globalMapIndex+1];
 		mp_map.sendGoal(mapGoal,&doneMapCb,&activeCb,&feedbackMapCb);
-		mp_view.sendGoal(viewGoal,&doneViewCb,&activeCb,&feedbackViewCb);
+		//mp_view.sendGoal(viewGoal,&doneViewCb,&activeCb,&feedbackViewCb);
 		mapper.sendGoal(mapperGoal,&doneMapperCb,&activeCb,&feedbackMapperCb);
 
 		/*wait for maps to load*/
-		while (clientsResponded < 3) sleep(1);
+		while (clientsResponded < 2) sleep(1);
 
 		while (primaryMapIndex != numPrimaryMaps)
 		{
 			sleep(1);
 			ROS_INFO("Waiting for primary map load %i of %i.",primaryMapIndex,numPrimaryMaps);
 		}
-		while (secondaryMapIndex != numSecondaryMaps)
-		{
-			sleep(1);
-			ROS_INFO("Waiting for secondary map load %i of %i.",secondaryMapIndex,numSecondaryMaps);
-		}
+		
 
 		/*initiate navigation*/
 		ROS_INFO("Goals send");

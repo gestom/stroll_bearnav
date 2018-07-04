@@ -2,8 +2,11 @@
 
 <!-- Default folders with maps-->
 
-<arg name="folder_map" default="$(env HOME)/lucka"/>
+<arg name="folder_map" default="$(env HOME)"/>
 <arg name="folder_view" default="$(env HOME)/lucka"/>
+
+<!-- Distance Measurement Node -->
+<node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>
 
 <!-- feature extraction -->
   <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
@@ -30,7 +33,7 @@
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="auto_remapper" name="auto_remapper">
+<node pkg="stroll_bearnav" type="auto_remapper" name="auto_remapper" output="screen">
   <param name="folder_map" value="$(arg folder_map)" />
   <param name="folder_view" value="$(arg folder_view)" />
 </node>

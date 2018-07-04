@@ -108,7 +108,7 @@ EMappingState state = IDLE;
 /* plastic map parameters*/
 int mapChanges=0;
 int lastMapChanges=-1;
-bool isPlastic=false;
+bool isPlastic=true;
 bool isUpdated=false;
 
 
@@ -384,7 +384,7 @@ int main(int argc, char** argv)
 	infoSub_ = nh.subscribe("/navigationInfo", 1000, infoMapMatch);
 
 	image_sub_ = it_.subscribe( "/image", 1,imageCallback);					//THIS IS A PROBLEM WHEN GENERATING GROUND TRUTH
-	featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
+	if(!isPlastic) featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
 	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance_events",1,distanceEventCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",1);
