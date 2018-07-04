@@ -18,7 +18,8 @@
 <!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
   <param name="folder" value="$(arg folder)" />
-  <param name="angularSpeed" value="1.0" />
+  <remap from="image" to="/stereo/left/image_raw"/>
+  <param name="angularSpeed" value="0.2" />
 </node>
 
 </launch>

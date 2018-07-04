@@ -40,6 +40,7 @@ stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 
 /* map variables */
+vector<float> ratings;
 Mat img,img2;
 vector<KeyPoint> keypoints_1,keypoints_2;
 string currentMapName;
@@ -63,6 +64,7 @@ vector<Mat> descriptorMap;
 vector<float> distanceMap;
 vector<string> namesMap;
 vector<Mat> imagesMap;
+vector<vector<float> > ratingsMap;
 
 
 typedef enum
@@ -100,7 +102,7 @@ int loadMaps()
 	/* send feedback to action server */
 	feedback.fileName =  "";
 	feedback.numberOfMaps = numMaps;
-	server->publishFeedback(feedback);
+	//server->publishFeedback(feedback);
 
 	std::sort(mapDistances, mapDistances + numMaps, std::less<float>());
 	mapDistances[numMaps] = mapDistances[numMaps-1];
@@ -111,6 +113,7 @@ int loadMaps()
 	descriptorMap.clear();
 	distanceMap.clear();
 	namesMap.clear();
+	ratingsMap.clear();
 	char fileName[1000];
 
 	numFeatures=0;
@@ -118,23 +121,29 @@ int loadMaps()
 		sprintf(fileName,"%s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
 		ROS_INFO("Preloading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
 		FileStorage fs(fileName, FileStorage::READ);
-		if(fs.isOpened()){
+		if(fs.isOpened())
+		{
 			img.release();
 			descriptors_1.release();
-			fs["Keypoints"]>>keypoints_1;
+			fs["Keypoints"]  >> keypoints_1;
 			fs["Descriptors"]>>descriptors_1;
 			fs["Image"]>>img;
+			ratings.clear();
+			fs["Ratings"]>>ratings;
+			for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
 			fs.release();
 			keypointsMap.push_back(keypoints_1);
 			descriptorMap.push_back(descriptors_1);
 			distanceMap.push_back(mapDistances[i]);
 			namesMap.push_back(fileName);
+			ratingsMap.push_back(ratings);
 			if (image_pub_.getNumSubscribers()>0) imagesMap.push_back(img);
 			numFeatures+=keypoints_1.size();
 			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
 			feedback.fileName = fileName;
+			feedback.distance = mapDistances[i];
 			feedback.numFeatures=numFeatures;
-			feedback.mapIndex=numMaps;
+			feedback.mapIndex=i;
 			server->publishFeedback(feedback);
 		}
 
@@ -143,6 +152,7 @@ int loadMaps()
 	/* feedback returns name of loaded map, number of features in it and index */
 	sprintf(fileName,"%i features loaded from %i maps",numFeatures,numMaps);
 	feedback.fileName = fileName;
+	feedback.distance = mapDistances[numMaps-1];
 	feedback.numFeatures=numFeatures;
 	feedback.mapIndex=numMaps;
 	server->publishFeedback(feedback);
@@ -157,10 +167,12 @@ void loadMap(int index)
 	descriptors_1 = descriptorMap[index];
 	currentMapName = namesMap[index];
 	currentDistance = distanceMap[index];
+	ratings = ratingsMap[index];
 	numFeatures=keypoints_1.size();
 	char fileName[1000];
 	sprintf(fileName,"%i features loaded from %ith map at %.3f",numFeatures,index,distanceMap[index]);
 	feedback.fileName=fileName;
+	feedback.distance = currentDistance;
 	feedback.numFeatures=keypoints_1.size();
 	feedback.mapIndex=index;
 	/* feedback returns name of loaded map, number of features in it and index */
@@ -248,7 +260,6 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 		}
 
 		//and publish it
-		ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 		if (mindex > -1 && mindex != lastLoadedMap){
 			ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 			loadMap(mindex);
@@ -309,6 +320,7 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 					feature.octave=keypoints_1[i].octave;
 					feature.class_id=keypoints_1[i].class_id;
 					feature.descriptor=descriptors_1.row(i);
+					feature.rating=ratings[i];
 					featureArray.feature.push_back(feature);
 				}
 			}
