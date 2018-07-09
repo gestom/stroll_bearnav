@@ -178,8 +178,8 @@ void mapImageCallback(const sensor_msgs::ImageConstPtr& msg)
 	cv_bridge::CvImagePtr cv_ptr;
 	cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 	char fileName[1000];
-	sprintf(fileName,"%s/%09i.bmp",mapFolder.c_str(),mapImageNum++);	
-	imwrite(fileName,cv_ptr->image);
+	//sprintf(fileName,"%s/%09i.bmp",mapFolder.c_str(),mapImageNum++);	
+	//imwrite(fileName,cv_ptr->image);
 }
 
 void viewImageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -233,13 +233,6 @@ int main(int argc, char **argv)
 	ros::param::get("~folder_view", viewFolder);
 	ros::param::get("~folder_map", mapFolder);
 
-	/*char filename[1000];
-	char mode[] = "r";
-	if (generateDatasets) mode[0] = 'w';
-	sprintf(filename,"%s/displacements.txt",mapFolder.c_str());
-	mapFile = fopen(filename,mode);
-	sprintf(filename,"%s/displacements.txt",viewFolder.c_str());
-	viewFile = fopen(filename,mode);*/
 	logFile = fopen("Results.txt","w");
 
 	if (configureFeatures(3,2) < 0) return 0;
@@ -268,12 +261,12 @@ int main(int argc, char **argv)
 
 	//const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
 	//const char *mapNames[]  = {"X0","X0","X0","X0","X0","X0","X0","X0","X0","X0", "X0", "X0", "X0", "X0", "X0", "X0", "X0",};
-	//const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
-	const char *viewNames[] = {"P1","P5","P9","P5","P1","P5","P9","P5","P1","P5","P9","P5","P1","P5","P9","P5","P1"};
-	//const char *mapNames[]  = {"X0","X0","X0","X0","X0","X0","X0","X0","X0","X0", "X0", "X0", "X0", "X0", "X0", "X0", "X0",};
-	const char *mapNames[] = {"X0","X1","X2","X3","X4","X5","X6","X7","X8","X9", "X10","X11","X12","X13","X14","X15","X16"};
-	int numGlobalMaps = 16;
-	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
+	const char *viewNames[] = {"A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11","A12","A13","A14","A15","A16","A17"};
+	//const char *viewNames[] = {"A1","A5","A9","A5","A1","A5","A9","A5","A1","A5","A9","A5","A1","A5","A9","A5","A1"};
+	const char *mapNames[]  = {"A0","A0","A0","A0","A0","A0","A0","A0","A0","A0", "A0", "A0", "A0", "A0", "A0", "A0", "A0",};
+	//const char *mapNames[] = {"A0","A1","A2","A3","A4","A5","A6","A7","A8","A9", "A10","A11","A12","A13","A14","A15","A16"};
+	int numGlobalMaps = 9;
+	for (int globalMapIndex = 8;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
 		clientsResponded = 0;

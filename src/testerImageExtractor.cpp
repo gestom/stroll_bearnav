@@ -344,12 +344,10 @@ int main(int argc, char** argv)
 						locations[1]++;
 					}
 				}
-				if (key == 83)  offsetX = (offsetX +1)%imageWidth;
-				if (key == 81)  offsetX = (offsetX -1)%imageWidth;
-				if (key == 82)  offsetX = (offsetX+10)%imageWidth;
-				if (key == 84)  offsetX = (offsetX-10)%imageWidth;
-				if (offsetX > +imageWidth/2) offsetX = offsetX-imageWidth;
-				if (offsetX < -imageWidth/2) offsetX = offsetX+imageWidth;
+				if (key == 83)  offsetX=(offsetX+1)%imageWidth;
+				if (key == 81) offsetX=(offsetX-1)%imageWidth;
+				if (key == 82) locations[1]++;
+				if (key == 84) locations[1]--;
 				if (key == '1')
 				{
 					locations[0]++;
@@ -370,7 +368,7 @@ int main(int argc, char** argv)
 					autoBestMatch = 0;
 				}
 				if (key == 32) displayStyle=(displayStyle+1)%3;
-			}while (key !=27 && key != 13 && key != '1' && key != '2' && key != '3' && locationScan == 0 && key != 8);
+			}while (key !=27 && key != 13 && key != 82  && key != 84 && key != '1' && key != '2' && key != '3' && locationScan == 0 && key != 8);
 			totalTests++;
 			if (key == 13 || key == 'a'||key == 8)
 			{
