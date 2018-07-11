@@ -2,8 +2,8 @@
 
 <!-- Default folders with maps-->
 
-<arg name="folder_map" default="$(env HOME)"/>
-<arg name="folder_view" default="$(env HOME)/lucka"/>
+<arg name="folder_map" default="$(env HOME)/hosti"/>
+<arg name="folder_view" default="$(env HOME)/hosti"/>
 
 <!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>
@@ -29,7 +29,6 @@
 <!-- navigator node -->
 <node pkg="stroll_bearnav" type="navigator_node" name="navigator" output="screen">
   <param name="folder" value="$(arg folder_map)" />
-  <remap from="image_with_features" to="image_view"/>
 </node>
 
 <!-- navigator node -->
@@ -50,7 +49,6 @@
 
 <!-- image view to check video stream-->
 <node pkg="image_view" type="image_saver" name="image_saver">
-  <param name="~image_transport" value="compressed" />
   <remap from="image" to="/navigationMatches"/>
   <param name="autosize" value="true" />
 </node>
