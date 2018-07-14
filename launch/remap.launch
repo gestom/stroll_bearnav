@@ -2,7 +2,7 @@
 
 <!-- Default folders with maps-->
 
-<arg name="folder_map" default="$(env HOME)"/>
+<arg name="folder_map" default="$(env HOME)/lucka"/>
 <arg name="folder_view" default="$(env HOME)/lucka"/>
 
 <!-- Distance Measurement Node -->
@@ -15,7 +15,7 @@
 
 <!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
-  <remap from="image" to="/image_view"/>
+  <remap from="image" to="/stereo/left/image_raw"/>
   <param name="folder" value="$(arg folder_map)" />
   <param name="angularSpeed" value="1.1" />
 </node>
@@ -29,7 +29,7 @@
 <!-- navigator node -->
 <node pkg="stroll_bearnav" type="navigator_node" name="navigator" output="screen">
   <param name="folder" value="$(arg folder_map)" />
-  <remap from="image_with_features" to="image_view"/>
+  <!--remap from="image_with_features" to="image_view"/-->
 </node>
 
 <!-- navigator node -->
@@ -43,7 +43,7 @@
 
 <!-- image view to check video stream-->
 <node pkg="image_view" type="image_view" name="image_viewer">
-  <param name="~image_transport" value="compressed" />
+  <!--param name="~image_transport" value="compressed" /-->
   <remap from="image" to="/navigationMatches"/>
   <param name="autosize" value="true" />
 </node>
