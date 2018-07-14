@@ -97,7 +97,6 @@ void shutdownCallback(XmlRpc::XmlRpcValue& params, XmlRpc::XmlRpcValue& result)
 
 void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 {
-	printf("Distance PICO: %f\n",msg->map.distance);
 	is_working = 1;
 	int size = msg->mapMatchIndex.size();
 	float displacementGT = 0;
@@ -162,7 +161,7 @@ void feedbackNavCb(const stroll_bearnav::navigatorFeedbackConstPtr& feedback)
 	int mapB = 0;
 	fscanf(mapFile, "%i %i\n",&offsetMap,&dummy);
 	fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
-	float displacementGT = offsetView - offsetMap;
+	float displacementGT = (offsetView - offsetMap);
 
 	ROS_INFO("Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s. Displacement %.3f GT %.3f",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),feedback->diffRot,displacementGT);
 	fprintf(logFile,"Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s. Displacement %.3f GT %.3f\n",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),feedback->diffRot,displacementGT);
@@ -175,21 +174,27 @@ void feedbackNavCb(const stroll_bearnav::navigatorFeedbackConstPtr& feedback)
 void mapImageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 	static int mapImageNum = 0;
-	cv_bridge::CvImagePtr cv_ptr;
-	cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-	char fileName[1000];
-	//sprintf(fileName,"%s/%09i.bmp",mapFolder.c_str(),mapImageNum++);	
-	//imwrite(fileName,cv_ptr->image);
+	if (saveMapImages){
+		cv_bridge::CvImagePtr cv_ptr;
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+		char fileName[1000];
+		sprintf(fileName,"%s/%09i.bmp",mapFolder.c_str(),mapImageNum);
+		imwrite(fileName,cv_ptr->image);
+	}
+	mapImageNum++;
 }
 
 void viewImageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 	static int viewImageNum = 0;
-	cv_bridge::CvImagePtr cv_ptr;
-	cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-	char fileName[1000];
-	sprintf(fileName,"%s/%09i.bmp",viewFolder.c_str(),viewImageNum++);
-	imwrite(fileName,cv_ptr->image);
+	if (saveViewImages){
+		cv_bridge::CvImagePtr cv_ptr;
+		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+		char fileName[1000];
+		sprintf(fileName,"%s/%09i.bmp",viewFolder.c_str(),viewImageNum);
+		imwrite(fileName,cv_ptr->image);
+	}
+	viewImageNum++;
 }
 
 int configureFeatures(int detector,int descriptor)
@@ -263,10 +268,10 @@ int main(int argc, char **argv)
 	//const char *mapNames[]  = {"X0","X0","X0","X0","X0","X0","X0","X0","X0","X0", "X0", "X0", "X0", "X0", "X0", "X0", "X0",};
 	const char *viewNames[] = {"A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11","A12","A13","A14","A15","A16","A17"};
 	//const char *viewNames[] = {"A1","A5","A9","A5","A1","A5","A9","A5","A1","A5","A9","A5","A1","A5","A9","A5","A1"};
-	const char *mapNames[]  = {"A0","A0","A0","A0","A0","A0","A0","A0","A0","A0", "A0", "A0", "A0", "A0", "A0", "A0", "A0",};
-	//const char *mapNames[] = {"A0","A1","A2","A3","A4","A5","A6","A7","A8","A9", "A10","A11","A12","A13","A14","A15","A16"};
+	//const char *mapNames[]  = {"A0","A0","A0","A0","A0","A0","A0","A0","A0","A0", "A0", "A0", "A0", "A0", "A0", "A0", "A0",};
+	const char *mapNames[] = {"A0","A1","A2","A3","A4","A5","A6","A7","A8","A9", "A10","A11","A12","A13","A14","A15","A16"};
 	int numGlobalMaps = 9;
-	for (int globalMapIndex = 8;globalMapIndex<numGlobalMaps;globalMapIndex++)
+	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
 		clientsResponded = 0;
@@ -301,10 +306,12 @@ int main(int argc, char **argv)
 			ROS_INFO("Waiting for secondary map load %i of %i.",secondaryMapIndex,numSecondaryMaps);
 		}
 
+
 		/*initiate navigation*/
 		ROS_INFO("Goals send");
 		nav.sendGoal(navGoal,&doneNavCb,&activeCb,&feedbackNavCb);
 		while (clientsResponded < 3) sleep(1);
+
 
 		/*send first odometry info*/
 		is_working = 0;

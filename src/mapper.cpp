@@ -108,7 +108,7 @@ EMappingState state = IDLE;
 /* plastic map parameters*/
 int mapChanges=0;
 int lastMapChanges=-1;
-bool isPlastic=true;
+bool isPlastic=false;
 bool isUpdated=false;
 
 
@@ -258,6 +258,7 @@ void flipperCallback(const std_msgs::Float32::ConstPtr& msg)
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
     if(!isPlastic) {
+	ROS_INFO("Features received\n");
         if (state == SAVING) {
             keypoints.clear();
             descriptors.release();
@@ -373,8 +374,8 @@ int main(int argc, char** argv)
 	nh.param("pauseButton", pauseButton, 0);
 
 	/* robot speed limits */
-	nh.param("angularSpeed", maxAngularSpeed, 0.2);
-	nh.param("forwardSpeed", maxForwardSpeed, 0.3);
+	nh.param("angularSpeed", maxAngularSpeed, 0.5);
+	nh.param("forwardSpeed", maxForwardSpeed, 1.5);
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
