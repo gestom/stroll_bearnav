@@ -76,7 +76,7 @@ int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 	cv::Mat img;
 	if (maxLine < 1.0) img = image(cv::Rect(0,0,image.cols,(int)(image.rows*maxLine))); else img = image;
 	if (usedDetector==DET_AGAST) agastDetector->detect(img,keypoints, Mat () );
-	if (usedDetector==DET_SURF) surf->detect(img,keypoints, Mat () );
+	if (usedDetector==DET_SURF) upSurf->detect(img,keypoints, Mat () );
 	if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
 }
 
@@ -100,6 +100,7 @@ int setThreshold(int thres)
 {
 	if (usedDetector==DET_AGAST) agastDetector->setThreshold(thres);
 	if (usedDetector==DET_SURF) surf->setHessianThreshold(thres);
+	if (usedDetector==DET_UPSURF) upSurf->setHessianThreshold(thres);
 }
 
 /* dynamic reconfigure of surf threshold and showing images */
@@ -198,7 +199,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	featureArray.id =  numStr;
 
 	featureArray.distance = msg->header.seq;
-	printf("Features: %i\n",(int)featureArray.feature.size());
+	ROS_INFO("Provided features: %i",(int)featureArray.feature.size());
 	feat_pub_.publish(featureArray);
 
 	/*and if there are any consumers, publish image with features*/
@@ -219,7 +220,8 @@ void adaptive_threshold(vector<KeyPoint>& keypoints)
 	// supposes keypoints are sorted according to response (applies to surf)
 	if(keypoints.size() > target_over) {
 		detectionThreshold =  ((keypoints[target_over].response + keypoints[target_over + 1].response) / 2);
-		ROS_INFO("Keypoints %ld over  %i, missing %4ld, set threshold %.3f between responses %.3f %.3f",keypoints.size(),target_over, target_over - keypoints.size(),detectionThreshold,keypoints[target_over].response,keypoints[target_over + 1].response);
+		float crisp = ((keypoints[targetKeypoints].response + keypoints[targetKeypoints + 1].response) / 2);
+		ROS_INFO("Keypoints %ld over  %i, missing %4ld, set threshold %.3f between responses %.3f %.3f. Crisp threshold %.3f",keypoints.size(),target_over, target_over - keypoints.size(),detectionThreshold,keypoints[target_over].response,keypoints[target_over + 1].response,crisp);
 	} else {
 			/* compute average difference between responses of n last keypoints */
 			if( keypoints.size() > 7) {
