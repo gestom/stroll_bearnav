@@ -31,7 +31,7 @@ During the navigation phase, the robot traverses the learned path by itself usin
 
 [![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_0.jpg)](https://youtu.be/1ATh0FF48Ao)
 
-[![TAROS](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/vop.jpg)](https://www.youtu.be/44A4YcfsqVI)
+[![TAROS](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/vop.jpg)](https://youtu.be/44A4YcfsqVI)
 
 When moving, the robot retrieves image features from a relevant map (green crosses), extracts image features from its on-board camera (blue crosses), matches them  (green/blue lines) and calculates a histogram of their horizontal distances (green). The histogram maximum is then used to steer the robot close to the learned path.
 
