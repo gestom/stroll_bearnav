@@ -159,7 +159,7 @@ add_executable(rosbag_node src/rosbag.cpp)
 add_executable(feature_holder_node src/featureHolder.cpp)
 add_executable(map_match_info_listener src/mapMatchInfoListener.cpp)
 add_executable(tester src/tester.cpp)
-add_executable(auto_remapper src/autoRemapper.cpp)
+add_executable(auto_remapper src/remapper.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above

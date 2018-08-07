@@ -2,8 +2,8 @@
 
 <!-- Default folders with maps-->
 
-<arg name="folder_map" default="$(env HOME)/lucka/"/>
-<arg name="folder_view" default="$(env HOME)/lucka"/>
+<arg name="folder_map" default="$(env HOME)/mesas_2018_exposure/2"/>
+<arg name="folder_view" default="$(env HOME)/mesas_2018_exposure/2"/>
 
 <!-- feature extraction -->
   <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
@@ -33,13 +33,13 @@
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="navigator_node" name="navigator" output="screen" >
+<node pkg="stroll_bearnav" type="navigator_node" name="navigator"  >
   <param name="folder" value="$(arg folder_map)" />
   <remap from="image_with_features" to="image_view"/>
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="tester" name="tester" output="screen" >
+<node pkg="stroll_bearnav" type="tester" name="tester"  required="true"  output="screen" >
   <param name="folder_map" value="$(arg folder_map)" />
   <param name="folder_view" value="$(arg folder_view)" />
 </node>

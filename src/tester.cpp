@@ -27,7 +27,6 @@
 
 using namespace cv;
 using namespace std;
-char* fname;
 
 struct MatchInfo{
   char id[300];
@@ -59,8 +58,9 @@ stroll_bearnav::navigatorGoal navGoal;
 
 FILE *mapFile, *viewFile,*logFile;
 string mapFolder,viewFolder;
+vector<string> mapNames;
+vector<string> viewNames;
 bool volatile exitting = false;
-bool generateDatasets = true;
 bool volatile is_working = 0;
 ros::CallbackQueue* my_queue;
 ros::Publisher dist_pub_;
@@ -70,6 +70,8 @@ image_transport::Subscriber mapImageSub;
 image_transport::Subscriber viewImageSub;
 vector<float> distanceMap;
 
+bool saveMapImages = false;
+bool saveViewImages = false;
 
 void mySigHandler(int sig)
 {
@@ -222,12 +224,6 @@ int configureFeatures(int detector,int descriptor)
 
 int main(int argc, char **argv)
 {
-	if(argc<2){
-		perror("You must enter file Name");
-		fname = "bla";
-	}else{
-		fname = argv[1];
-	}
 	signal(SIGINT, mySigHandler);
 	ros::init(argc, argv, "listener", ros::init_options::NoSigintHandler);
 
@@ -237,6 +233,8 @@ int main(int argc, char **argv)
 	ros::NodeHandle n;
 	ros::param::get("~folder_view", viewFolder);
 	ros::param::get("~folder_map", mapFolder);
+	ros::param::get("~names_view", viewNames);
+	ros::param::get("~names_map", mapNames);
 
 	logFile = fopen("Results.txt","w");
 
@@ -245,11 +243,6 @@ int main(int argc, char **argv)
 
 	ros::Subscriber sub = n.subscribe("/navigationInfo", 1000, infoMapMatch);
 	dist_pub_=n.advertise<std_msgs::Float32>("/distance",1);
-
-	if (generateDatasets){
-		viewImageSub = it.subscribe( "/image_view", 1,viewImageCallback);
-		mapImageSub = it.subscribe( "/map_image", 1,mapImageCallback);
-	}
 
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_view("map_preprocessor_view", true);
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_map("map_preprocessor_map", true);
@@ -264,27 +257,19 @@ int main(int argc, char **argv)
 
 	bool finished_before_timeout = true;
 
-	//const char *viewNames[] = {"P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17"};
-	//const char *mapNames[]  = {"X0","X0","X0","X0","X0","X0","X0","X0","X0","X0", "X0", "X0", "X0", "X0", "X0", "X0", "X0",};
-	const char *viewNames[] = {"A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11","A12","A13","A14","A15","A16","A17"};
-	//const char *viewNames[] = {"A1","A5","A9","A5","A1","A5","A9","A5","A1","A5","A9","A5","A1","A5","A9","A5","A1"};
-	//const char *mapNames[]  = {"A0","A0","A0","A0","A0","A0","A0","A0","A0","A0", "A0", "A0", "A0", "A0", "A0", "A0", "A0",};
-	const char *mapNames[] = {"A0","A1","A2","A3","A4","A5","A6","A7","A8","A9", "A10","A11","A12","A13","A14","A15","A16"};
-	int numGlobalMaps = 9;
+	int numGlobalMaps = min(mapNames.size(),viewNames.size());
 	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
 		clientsResponded = 0;
 		navGoal.traversals = 1;
 
-
-
 		char filename[1000];
-		sprintf(filename,"%s/%s_GT.txt",mapFolder.c_str(),mapNames[0]);
-		printf("%s/%s_GT.txt\n",mapFolder.c_str(),mapNames[globalMapIndex]);
+		sprintf(filename,"%s/%s_GT.txt",mapFolder.c_str(),mapNames[0].c_str());
+		printf("%s/%s_GT.txt\n",mapFolder.c_str(),mapNames[globalMapIndex].c_str());
 		mapFile = fopen(filename,"r");
-		sprintf(filename,"%s/%s_GT.txt",viewFolder.c_str(),viewNames[globalMapIndex]);
-		printf("%s/%s_GT.txt\n",viewFolder.c_str(),viewNames[globalMapIndex]);
+		sprintf(filename,"%s/%s_GT.txt",viewFolder.c_str(),viewNames[globalMapIndex].c_str());
+		printf("%s/%s_GT.txt\n",viewFolder.c_str(),viewNames[globalMapIndex].c_str());
 		viewFile = fopen(filename,"r");
 
 		viewGoal.prefix = viewNames[globalMapIndex];
