@@ -1,4 +1,4 @@
-confidence=0.15
+confidence=0.2
 ######################## exposure tests (Section 4.2)
 #prepare maps for exposure tests
 if [ 0 == 1 ];then
@@ -109,17 +109,17 @@ cp ~/.ros/Results.txt results/Map_static_2.txt
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': True,'remapRotGain': 1.0}"&
 rosparam set names_map  [M0,B1,B2,B3,B4,B5,B6,B7,B8,B9,B10,B11,B12]
 rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
-#roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-#cp ~/.ros/Results.txt results/Map_plastic_2.txt
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+cp ~/.ros/Results.txt results/Map_plastic_2.txt
 
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': False,'remapRotGain': 1.0}"&
 rosparam set names_map  [M0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12]
 rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
-#roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-#cp ~/.ros/Results.txt results/Map_adaptive_2.txt
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+cp ~/.ros/Results.txt results/Map_adaptive_2.txt
 fi
 
-if [ 1 == 0 ];then
+if [ 0 == 1 ];then
 #starting to build a summary map 
 rosparam set names_map  [A0,B0]
 rosparam set names_view [A0]
