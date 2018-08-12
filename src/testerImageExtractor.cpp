@@ -46,7 +46,9 @@ string currentMapName;
 Mat currentImage,img;
 int numberOfUsedMaps=0;
 int lastLoadedMap=0;
-float mapDistances[10000];
+//float mapDistances[10000];
+vector<float> referenceDistances;
+vector<float> viewDistances;
 int numProcessedMaps = 0;
 int numMaps = 1;
 int numFeatures;
@@ -106,38 +108,78 @@ void distinctiveMatch(const Mat& descriptors1, const Mat& descriptors2, vector<D
 	delete descriptorMatcher;
 }
 
-int loadMaps(char* folder,char* prefix,vector<Mat> *images)
+
+bool fixNumbers(char* folder,char* prefix, vector<float> &tmpDist){
+
+    numMaps = 0;
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir (folder)) != NULL) {
+        /* print all the files and directories within directory */
+        while ((ent = readdir (dir)) != NULL)
+        {
+            char filter[strlen(prefix)+10];
+            sprintf(filter,"%s_",prefix);
+            if (strstr(ent->d_name,"yaml") != NULL){
+                if (strncmp(ent->d_name,filter,strlen(filter)) == 0) {
+                    //mapDistances[numMaps++] = atof(&ent->d_name[strlen(filter)]);
+                    /* save distances of map files */
+                    tmpDist.push_back(atof(&ent->d_name[strlen(filter)]));
+                    numMaps++;
+                }
+            }
+        }
+        closedir (dir);
+    } else {
+        /* could not open directory */
+        fprintf(stderr,"Could not open folder %s with maps.\n",folder);
+    }
+
+    //printf("Number of maps in dir: %i\n",numMaps);
+
+    std::sort(tmpDist.begin(), tmpDist.end(), std::less<float>());
+    //mapDistances[numMaps] = mapDistances[numMaps-1];
+
+    /* erase distances which are not the same for both sets */
+    if( referenceDistances.size() != 0 ){
+        for (int i = 0; i < referenceDistances.size();) {
+            //printf("comparing A: %.3f B: %.3f\n",referenceDistances[i],viewDistances[i]);
+            if( referenceDistances[i] != viewDistances[i] ){
+                if( referenceDistances[i] > viewDistances[i] ){
+                    //printf("deleting B: %.3f\n",viewDistances[i]);
+                    viewDistances.erase(viewDistances.begin()+i);
+                } else {
+                    //printf("deleting A: %.3f\n",referenceDistances[i]);
+                    referenceDistances.erase(referenceDistances.begin() + i);
+                }
+            } else{
+                i++;
+            }
+        }
+        if( referenceDistances.size() > viewDistances.size()){
+            //printf("after deleting A: %.3f\n",referenceDistances[referenceDistances.size()-1]);
+            referenceDistances.erase(referenceDistances.end()-1);
+        } else if (referenceDistances.size() < viewDistances.size()){
+            //printf("after deleting B: %.3f\n",viewDistances[viewDistances.size()-1]);
+            viewDistances.erase(viewDistances.end()-1);
+        }
+    }
+
+    //printf("A: %i, B: %i\n",referenceDistances.size(),viewDistances.size());
+
+    return referenceDistances.size()==viewDistances.size();
+}
+
+int loadMaps(char* folder,char* prefix,vector<Mat> *images, vector<float> &tmpDist)
 {
-	numMaps = 0;
-	DIR *dir;
-	struct dirent *ent;
-	if ((dir = opendir (folder)) != NULL) {
-		/* print all the files and directories within directory */
-		while ((ent = readdir (dir)) != NULL)
-		{
-			char filter[strlen(prefix)+10];
-			sprintf(filter,"%s_",prefix);
-			if (strstr(ent->d_name,"yaml") != NULL){
-				if (strncmp(ent->d_name,filter,strlen(filter)) == 0)  mapDistances[numMaps++] = atof(&ent->d_name[strlen(filter)]);
-			}
-		}
-		closedir (dir);
-	} else {
-		/* could not open directory */
-		fprintf(stderr,"Could not open folder %s with maps.\n",folder);
-	}
-
-	std::sort(mapDistances, mapDistances + numMaps, std::less<float>());
-	mapDistances[numMaps] = mapDistances[numMaps-1];
-
 	/*preload all maps*/
 	imagesMap.clear();
 	char fileName[1000];
 
 	numFeatures=0;
-	for (int i = 0;i<numMaps;i++){
-		sprintf(fileName,"%s/%s_%.3f.yaml",folder,prefix,mapDistances[i]);
-		printf("Loading %s/%s_%.3f.yaml\n",folder,prefix,mapDistances[i]);
+    for (int i = 0;i<tmpDist.size();i++){
+        sprintf(fileName,"%s/%s_%.3f.yaml",folder,prefix,tmpDist[i]);
+        printf("Loading %s/%s_%.3f.yaml\n",folder,prefix,tmpDist[i]);
 		FileStorage fs(fileName, FileStorage::READ);
 		if(fs.isOpened())
 		{
@@ -149,7 +191,7 @@ int loadMaps(char* folder,char* prefix,vector<Mat> *images)
 
 	}
 	printf("A:%i\n",images->size());
-	return numMaps;
+    return tmpDist.size();
 }
 
 int main(int argc, char** argv)
@@ -157,8 +199,14 @@ int main(int argc, char** argv)
 	vector<Mat> viewImages;
 	vector<Mat> referenceImages;
 
-	loadMaps(argv[1],argv[2],&referenceImages);
-	loadMaps(argv[1],argv[3],&viewImages);
+
+    fixNumbers(argv[1],argv[3],viewDistances);
+    fixNumbers(argv[1],argv[2],referenceDistances);
+
+    loadMaps(argv[1],argv[2],&referenceImages, referenceDistances);
+    loadMaps(argv[1],argv[3],&viewImages,viewDistances);
+
+    //printf("wd %i rd %i \n",viewDistances.size(),referenceDistances.size());
 	printf("A:%i\n",referenceImages.size());
 	srand (time(NULL));
 
@@ -171,6 +219,7 @@ int main(int argc, char** argv)
 	//locations[0] = 61;
 	//locations[1] = 61;
 	int locationScan = 0;
+    int i = 0;
 	do{
 		//delete detector;
 		//delete descriptor;
@@ -368,12 +417,13 @@ int main(int argc, char** argv)
 					autoBestMatch = 0;
 				}
 				if (key == 32) displayStyle=(displayStyle+1)%3;
-			}while (key !=27 && key != 13 && key != 82  && key != 84 && key != '1' && key != '2' && key != '3' && locationScan == 0 && key != 8);
+			}while (key !=27 && key != 13 && key != 82  && key != 84 && key != '1' && key != '2' && key != '3' && locationScan == 0 && key != 8 && key != 9);
 			totalTests++;
 			if (key == 13 || key == 'a'||key == 8)
 			{
 		
-				printf("Saved %03i vs %03i -  %i %i \n",locations[0],locations[1],offsetX,offsetY);
+				//printf("Saved %03i vs %03i -  %i %i \n",locations[0],locations[1],offsetX,offsetY);
+                printf("Saved %0.3f vs %0.3f -  %i %i \n",referenceDistances[i],viewDistances[i],offsetX,offsetY);
 				char retez[1000];
 				sprintf(retez,"%s/%s_annotation.txt",argv[1],argv[3]);
 				output = fopen(retez,"a");
@@ -381,14 +431,21 @@ int main(int argc, char** argv)
 					offsetX += 10000;
 					offsetY += 10000;
 				}
-				fprintf(output,"%03i %03i %i %i \n",locations[0],locations[1],offsetX,offsetY);
+				//fprintf(output,"%03i %03i %i %i \n",locations[0],locations[1],offsetX,offsetY);
+                fprintf(output,"%0.3f %0.3f %i %i \n",referenceDistances[i],viewDistances[i],offsetX,offsetY);
 				fclose(output);
 				locations[0]+=1;//50;
 				locations[1]+=1;// 25;
 				//locations[0]++;
 				//locations[1]++;
 			}
+            if (key == 9){
+                printf("Skipped %0.3f vs %0.3f",referenceDistances[i],viewDistances[i]);
+                locations[0]+=1;//50;
+                locations[1]+=1;// 25;
+            }
 		}
-	}while (key != 27 && locations[0] < numMaps);
+        i++;
+    }while (key != 27 && locations[0] < viewDistances.size()); 
 	return 0;
 }
