@@ -61,7 +61,6 @@ string mapFolder,viewFolder;
 vector<string> mapNames;
 vector<string> viewNames;
 bool volatile exitting = false;
-bool volatile is_working = 0;
 ros::CallbackQueue* my_queue;
 ros::Publisher dist_pub_;
 std_msgs::Float32 dist_;
@@ -71,7 +70,7 @@ image_transport::Subscriber viewImageSub;
 vector<float> distanceMap;
 
 bool saveMapImages = false;
-bool saveViewImages = false;
+bool saveViewImages = true;
 
 void mySigHandler(int sig)
 {
@@ -99,12 +98,6 @@ void shutdownCallback(XmlRpc::XmlRpcValue& params, XmlRpc::XmlRpcValue& result)
 
 void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 {
-	is_working = 1;
-	int size = msg->mapMatchIndex.size();
-	float displacementGT = 0;
-	vector<MatchInfo> mi;
-	
-	is_working = 0;
 	/*maps processed*/
 	if (primaryMapIndex < numPrimaryMaps-1){
 		totalDist = distanceMap[primaryMapIndex+1];
@@ -233,12 +226,12 @@ int main(int argc, char **argv)
 	ros::NodeHandle n;
 	ros::param::get("~folder_view", viewFolder);
 	ros::param::get("~folder_map", mapFolder);
-	ros::param::get("~names_view", viewNames);
-	ros::param::get("~names_map", mapNames);
+	ros::param::get("names_view", viewNames);
+	ros::param::get("names_map", mapNames);
 
 	logFile = fopen("Results.txt","w");
 
-	if (configureFeatures(3,2) < 0) return 0;
+	while (configureFeatures(2,2) < 0) sleep(1);
 	image_transport::ImageTransport it(n);
 
 	ros::Subscriber sub = n.subscribe("/navigationInfo", 1000, infoMapMatch);
@@ -274,32 +267,44 @@ int main(int argc, char **argv)
 
 		viewGoal.prefix = viewNames[globalMapIndex];
 		mapGoal.prefix = mapNames[globalMapIndex];
+		ROS_INFO("Clients %i\n",clientsResponded);
 		mp_view.sendGoal(viewGoal,&doneViewCb,&activeCb,&feedbackViewCb);
-		mp_map.sendGoal(mapGoal,&doneMapCb,&activeCb,&feedbackMapCb);
-
+		
 		/*wait for maps to load*/
-		while (clientsResponded < 2) sleep(1);
-
+		while (clientsResponded < 1){
+			ROS_INFO("Waiting for map clients %i\n",clientsResponded);
+			sleep(1);
+			ros::spinOnce();
+		}
+		mp_map.sendGoal(mapGoal,&doneMapCb,&activeCb,&feedbackMapCb);
+		while (clientsResponded < 2){
+			ROS_INFO("Waiting for map clients %i\n",clientsResponded);
+			sleep(1);
+			ros::spinOnce();
+		}
 		while (primaryMapIndex != numPrimaryMaps)
 		{
 			sleep(1);
+			ros::spinOnce();
 			ROS_INFO("Waiting for primary map load %i of %i.",primaryMapIndex,numPrimaryMaps);
 		}
+		ROS_INFO("Primary map loaded %i of %i.",primaryMapIndex,numPrimaryMaps);
 		while (secondaryMapIndex != numSecondaryMaps)
 		{
 			sleep(1);
+			ros::spinOnce();
 			ROS_INFO("Waiting for secondary map load %i of %i.",secondaryMapIndex,numSecondaryMaps);
 		}
+		ROS_INFO("Secondary map loaded %i of %i.",primaryMapIndex,numPrimaryMaps);
 
 
 		/*initiate navigation*/
-		ROS_INFO("Goals send");
+		ROS_INFO("Goals send: Responses so far %i",clientsResponded);
 		nav.sendGoal(navGoal,&doneNavCb,&activeCb,&feedbackNavCb);
 		while (clientsResponded < 3) sleep(1);
 
 
 		/*send first odometry info*/
-		is_working = 0;
 		totalDist = 0.0;
 		dist_.data=totalDist;
 		dist_pub_.publish(dist_);
@@ -307,9 +312,6 @@ int main(int argc, char **argv)
 		/*perform navigation*/
 		while(ros::ok && !exitting)
 		{
-			if(exitting && !is_working){
-				return 0;
-			}
 			ros::spinOnce();
 			usleep(10000);
 		}

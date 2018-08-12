@@ -7,7 +7,7 @@
 <!-- image view to check video stream-->
 <node pkg="image_view" type="image_view" name="Image_viewer">
   <param name="~image_transport" value="compressed" />
-  <remap from="image" to="/rgb/image_raw"/>
+  <remap from="image" to="/image_with_features"/>
   <param name="autosize" value="false" />
 </node>
 

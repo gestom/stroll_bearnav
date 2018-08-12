@@ -2,38 +2,44 @@
 
 <!-- Default folders with maps-->
 
-<arg name="folder_map" default="$(env HOME)/hostibejk"/>
-<arg name="folder_view" default="$(env HOME)/hostibejk"/>
-
-<!-- Distance Measurement Node -->
-<node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>
+<arg name="folder_map" default="$(env HOME)/mesas_2018_exposure/super"/>
+<arg name="folder_view" default="$(env HOME)/mesas_2018_exposure/super"/>
 
 <!-- feature extraction -->
   <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
-	  <remap from="image" to="/stereo/left/image_raw"/>
+	  <remap from="image" to="/image_view"/>
   </node>
 
 <!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
-  <remap from="image" to="/stereo/left/image_raw"/>
+  <remap from="image" to="/image_view"/>
   <param name="folder" value="$(arg folder_map)" />
   <param name="angularSpeed" value="1.1" />
 </node>
 
 <!-- map loader1 node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map" output="screen">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map">
 <param name="folder" value="$(arg folder_map)" />
 <remap from="map_preprocessor" to="map_preprocessor_map"/>
 </node>
 
-<!-- navigator node -->
-<node pkg="stroll_bearnav" type="navigator_node" name="navigator" output="screen">
-  <param name="folder" value="$(arg folder_map)" />
-  <!--remap from="image_with_features" to="image_view"/-->
+<!-- map loader2 node -->
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_view">
+<param name="folder" value="$(arg folder_view)" />
+<remap from="localMap" to="featuresTrash" />
+<remap from="pathProfile" to="pathProfileDummy" />
+<remap from="map_image" to="image_view"/>
+<remap from="map_preprocessor" to="map_preprocessor_view"/>
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="auto_remapper" name="auto_remapper" output="screen">
+<node pkg="stroll_bearnav" type="navigator_node" name="navigator">
+  <param name="folder" value="$(arg folder_map)" />
+  <remap from="image_with_features" to="image_view"/>
+</node>
+
+<!-- navigator node -->
+<node pkg="stroll_bearnav" type="auto_remapper" name="auto_remapper" output="screen" required="true">
   <param name="folder_map" value="$(arg folder_map)" />
   <param name="folder_view" value="$(arg folder_view)" />
 </node>
@@ -43,13 +49,14 @@
 
 <!-- image view to check video stream-->
 <node pkg="image_view" type="image_view" name="image_viewer">
-  <!--param name="~image_transport" value="compressed" /-->
+  <param name="~image_transport" value="compressed" />
   <remap from="image" to="/navigationMatches"/>
   <param name="autosize" value="true" />
 </node>
 
 <!-- image view to check video stream-->
 <node pkg="image_view" type="image_saver" name="image_saver">
+  <param name="~image_transport" value="compressed" />
   <remap from="image" to="/navigationMatches"/>
   <param name="autosize" value="true" />
 </node>

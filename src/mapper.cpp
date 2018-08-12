@@ -65,6 +65,7 @@ vector<float> ratings;
 vector<vector<KeyPoint> > keypointsMap;
 vector<Mat> descriptorMap;
 vector<float> distanceMap;
+vector<double> timesMap;
 vector<Mat> imagesMap;
 vector<vector<float> > ratingsMap;
 
@@ -121,13 +122,15 @@ void imageSelect(const char *id)
 	if (idQueue.size() > 0){
 		int imageIndex = idQueue.size()-1;
 		for (int i = 0;i<idQueue.size();i++){
-			ROS_INFO("IDS: %s %s",id,idQueue[i].c_str());
+			ROS_INFO("MAPPER IDS: %s %s",id,idQueue[i].c_str());
 			if (strcmp(id,idQueue[i].c_str())==0) imageIndex = i;
 		}
 		imgQueue[imageIndex].copyTo(img);
 		imgQueue.clear();
 		idQueue.clear();
 		strcpy(lastID,id);
+	}else{
+		ROS_WARN("IMAGE QUEUE EMPTY");
 	}
 }
 
@@ -137,6 +140,7 @@ void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
 	if(state == MAPPING){
 		distanceTotalEvent=msg->data;
 		if(!isPlastic) state = SAVING;
+		ROS_INFO("Event %f",distanceTotalEvent);
 	}
 }
 
@@ -175,6 +179,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	keypointsMap.clear();
 	descriptorMap.clear();
 	distanceMap.clear();
+	timesMap.clear();
 	ratingsMap.clear();
 
 	/* reset distance using service*/
@@ -184,7 +189,6 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	path.clear();
 	state = PREPARING;
 	if (isPlastic) state = SAVING;
-	//TODO if plastic, listen to navigator and then terminate mapping
 
 	if (!client.call(srv)) ROS_ERROR("Failed to call service SetDistance provided by odometry_monitor node!");
 	while(state == MAPPING || state == SAVING || state == PREPARING){
@@ -202,6 +206,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 			keypointsMap.push_back(keypoints);
 			descriptorMap.push_back(descriptors);
 			distanceMap.push_back(distanceTravelled);
+			timesMap.push_back(ros::Time::now().toSec());
 			ratingsMap.push_back(ratings);
 
 			/*and flush it to the disk*/
@@ -213,6 +218,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 				write(fs, "Keypoints", keypointsMap[i]);
 				write(fs, "Descriptors",descriptorMap[i]);
 				write(fs, "Ratings",ratingsMap[i]);
+				write(fs, "Time",timesMap[i]);
 				fs.release();
 			}
 			result.fileName=name;
@@ -257,48 +263,49 @@ void flipperCallback(const std_msgs::Float32::ConstPtr& msg)
 /* save features and image recieved from camera as a local map*/
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
-    if(!isPlastic) {
-	ROS_INFO("Features received\n");
-        if (state == SAVING) {
-            keypoints.clear();
-            descriptors.release();
-	    ratings.clear();
-	    img.release();
+	if(!isPlastic) {
+		ROS_INFO("Features received\n");
+		if (state == SAVING) {
+			keypoints.clear();
+			descriptors.release();
+			ratings.clear();
+			img.release();
 
-            for (int i = 0; i < msg->feature.size(); i++) {
+			for (int i = 0; i < msg->feature.size(); i++) {
 
-                keypoint.pt.x = msg->feature[i].x;
-                keypoint.pt.y = msg->feature[i].y;
-                keypoint.size = msg->feature[i].size;
-                keypoint.angle = msg->feature[i].angle;
-                keypoint.response = msg->feature[i].response;
-                keypoint.octave = msg->feature[i].octave;
-                keypoint.class_id = msg->feature[i].class_id;
-                keypoints.push_back(keypoint);
-                int size = msg->feature[i].descriptor.size();
-                Mat mat(1, size, CV_32FC1, (void *) msg->feature[i].descriptor.data());
-                descriptors.push_back(mat);
-                rating=msg->feature[i].rating;
-                ratings.push_back(rating);
-            }
+				keypoint.pt.x = msg->feature[i].x;
+				keypoint.pt.y = msg->feature[i].y;
+				keypoint.size = msg->feature[i].size;
+				keypoint.angle = msg->feature[i].angle;
+				keypoint.response = msg->feature[i].response;
+				keypoint.octave = msg->feature[i].octave;
+				keypoint.class_id = msg->feature[i].class_id;
+				keypoints.push_back(keypoint);
+				int size = msg->feature[i].descriptor.size();
+				Mat mat(1, size, CV_32FC1, (void *) msg->feature[i].descriptor.data());
+				descriptors.push_back(mat);
+				rating=msg->feature[i].rating;
+				ratings.push_back(rating);
+			}
+			
+			/*store in memory rather than on disk*/
+			imageSelect(msg->id.c_str());
+			imagesMap.push_back(img);
 
-            /*store in memory rather than on disk*/
-	    imageSelect(msg->id.c_str());
-            imagesMap.push_back(img);
-	  
-            keypointsMap.push_back(keypoints);
-            descriptorMap.push_back(descriptors);
-            distanceMap.push_back(distanceTotalEvent);
-            ratingsMap.push_back(ratings);
-		
-            /* publish feedback */
-            sprintf(name, "%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
-            ROS_INFO("%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
-            state = MAPPING;
-            feedback.fileName = name;
-            server->publishFeedback(feedback);
-        }
-    }
+			keypointsMap.push_back(keypoints);
+			descriptorMap.push_back(descriptors);
+			distanceMap.push_back(distanceTotalEvent);
+			timesMap.push_back(ros::Time::now().toSec());
+			ratingsMap.push_back(ratings);
+
+			/* publish feedback */
+			sprintf(name, "%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
+			ROS_INFO("%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
+			state = MAPPING;
+			feedback.fileName = name;
+			server->publishFeedback(feedback);
+		}
+	}
 }
 
 
@@ -310,7 +317,6 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 	if(isPlastic && isUpdated) {
 		/*plastic map saves only map with rating*/
 		state = SAVING;
-
 		lastMapChanges = mapChanges;
 		mapChanges = msg->mapChanges;
 
@@ -348,6 +354,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 			keypointsMap.push_back(keypoints);
 			descriptorMap.push_back(descriptors);
 			distanceMap.push_back(msg->map.distance);
+			timesMap.push_back(ros::Time::now().toSec());
 			ratingsMap.push_back(ratings);
 
 			/* publish feedback */
@@ -378,17 +385,20 @@ int main(int argc, char** argv)
 	nh.param("forwardSpeed", maxForwardSpeed, 1.5);
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
-
-	if (isPlastic == false) vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
-	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
-	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10, joyCallback);
+	
+	int queueLength = 1;
+	if (isPlastic == false){
+		 vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
+		 queueLength = 1;
+	}
+	flipperSub = nh.subscribe("/flipperPosition", queueLength, flipperCallback);
+	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10*queueLength, joyCallback);
 	infoSub_ = nh.subscribe("/navigationInfo", 1000, infoMapMatch);
-
-	image_sub_ = it_.subscribe( "/image", 1,imageCallback);					//THIS IS A PROBLEM WHEN GENERATING GROUND TRUTH
-	if(!isPlastic) featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
-	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance_events",1,distanceEventCallback);
-	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",1);
+	image_sub_ = it_.subscribe( "/image", queueLength,imageCallback);	
+	if(!isPlastic) featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",queueLength,featureCallback);
+	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance_events",queueLength,distanceEventCallback);
+	distSub_=nh.subscribe<std_msgs::Float32>("/distance",queueLength,distanceCallback);
+	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",queueLength);
 	ROS_INFO( "Map folder is: %s", folder.c_str());
 
 	/* Initiate action server */

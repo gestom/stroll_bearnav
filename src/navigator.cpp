@@ -115,6 +115,7 @@ int maxVerticalDifference = 0;
 /* Map features ratings parameters */
 bool isRating = false;
 int mapChanges=0;
+float remapRotGain = 1.0;
 
 /* Total distance travelled recieved from the event */
 void distanceEventCallback(const std_msgs::Float32::ConstPtr& msg)
@@ -152,6 +153,7 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	pixelTurnGain = config.pixelTurnGain;
 	minimalAdaptiveSpeed = config.adaptiveSpeedMin;
 	maximalAdaptiveSpeed = config.adaptiveSpeedMax;
+	remapRotGain = config.remapRotGain;
 }
 
 /* reference map received */
@@ -469,32 +471,34 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 		if(isRating) 
 		{
-			for (int i = 0; i < bad_matches.size(); i++) {
-				mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
-			}
+			if (count>=minGoodFeatures){
+				for (int i = 0; i < bad_matches.size(); i++) {
+					mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
+				}
 
-			numFeatureAdd = numFeatureRemove = best_matches.size()*remapRatio;
+				numFeatureAdd = numFeatureRemove = best_matches.size()*remapRatio;
+				if (numFeatureAdd < 10) numFeatureAdd = 10;
 
-			// remove the worst rating from map
-			sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
-			if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
-			if (numFeatureRemove > -1){
-				mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
-			}else{
-				mapFeatures.feature.erase(mapFeatures.feature.end() - bad_matches.size(), mapFeatures.feature.end());
+				// remove the worst rating from map
+				sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
+				if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
+				if (numFeatureRemove > -1){
+					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
+				}else{
+					mapFeatures.feature.erase(mapFeatures.feature.end() - bad_matches.size(), mapFeatures.feature.end());
+				}
+				if (plasticMap){
+					numFeatureAdd = info.view.feature.size(); 
+					mapFeatures.feature.clear();
+				}
+				// add the least similar features from view to map
+				for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
+					info.view.feature[i].rating = 0;
+					info.view.feature[i].x = info.view.feature[i].x + differenceRot*remapRotGain;
+					mapFeatures.feature.push_back(info.view.feature[i]);
+					//info.view.feature.erase(info.view.feature.begin(), info.view.feature.begin() + 10);
+				}
 			}
-			if (plasticMap){
-				mapFeatures.feature.clear();
-				numFeatureAdd = 500;
-			}
-			// add the least similar features from view to map
-			for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
-				info.view.feature[i].rating = 0;
-				info.view.feature[i].x = info.view.feature[i].x + differenceRot;
-				mapFeatures.feature.push_back(info.view.feature[i]);
-				//info.view.feature.erase(info.view.feature.begin(), info.view.feature.begin() + 10);
-			}
-
 			isRating=false;
 			mapChanges++;
 			info.updated=true;

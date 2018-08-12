@@ -1,0 +1,14 @@
+<launch>
+
+<!-- Default folders with maps-->
+
+<arg name="folder_map" default="$(env HOME)/mesas_2018_exposure/4"/>
+<arg name="folder_view" default="$(env HOME)/mesas_2018_exposure/4"/>
+
+<!-- navigator node -->
+<node pkg="stroll_bearnav" type="tester" name="tester" output="screen" >
+  <param name="folder_map" value="$(arg folder_map)" />
+  <param name="folder_view" value="$(arg folder_view)" />
+</node>
+
+</launch>
