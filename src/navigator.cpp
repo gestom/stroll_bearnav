@@ -60,10 +60,11 @@ stroll_bearnav::FeatureArray mapFeatures;
 
 bool showAllMatches=true;
 bool showGoodMatches=true;
-int numFeatureAdd = 50;
-int numFeatureRemove = 50;
+int minFeatureRemap = 10;
+int maxFeatureRemap = 50;
 float remapRatio = 0.5;
 bool plasticMap = true;
+bool summaryMap = false;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
@@ -148,7 +149,10 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	ratioMatchConstant=config.matchingRatio;
 	maxVerticalDifference = config.maxVerticalDifference;
 	plasticMap = config.plasticMap;	
+	summaryMap = config.summaryMap;	
 	remapRatio = config.remapRatio;	
+	minFeatureRemap = config.minFeatureRemap;
+	maxFeatureRemap = config.maxFeatureRemap;
 	minGoodFeatures = config.minGoodFeatures;
 	pixelTurnGain = config.pixelTurnGain;
 	minimalAdaptiveSpeed = config.adaptiveSpeedMin;
@@ -357,7 +361,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				}
 			}
 			sort(info.view.feature.begin(),info.view.feature.end(),compare_rating);
-            //cout << "view: first " << info.view.feature[0].rating << " x " << info.view.feature[0].x << " last " << info.view.feature[info.view.feature.size()-1].rating  << " x " << info.view.feature[info.view.feature.size()-1].x  << endl;
+			//cout << "view: first " << info.view.feature[0].rating << " x " << info.view.feature[0].x << " last " << info.view.feature[info.view.feature.size()-1].rating  << " x " << info.view.feature[info.view.feature.size()-1].x  << endl;
 
 
 			/*building histogram*/	
@@ -475,28 +479,31 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				for (int i = 0; i < bad_matches.size(); i++) {
 					mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
 				}
-
-				numFeatureAdd = numFeatureRemove = best_matches.size()*remapRatio;
-				if (numFeatureAdd < 10) numFeatureAdd = 10;
+				int numFeatureRemove = fmin(fmax(best_matches.size()*remapRatio,minFeatureRemap),maxFeatureRemap);
+				int numFeatureAdd = numFeatureRemove; 
 
 				// remove the worst rating from map
-				sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
-				if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
-				if (numFeatureRemove > -1){
-					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
-				}else{
-					mapFeatures.feature.erase(mapFeatures.feature.end() - bad_matches.size(), mapFeatures.feature.end());
-				}
+		
+				//rebuild map completely
 				if (plasticMap){
 					numFeatureAdd = info.view.feature.size(); 
 					mapFeatures.feature.clear();
+				}else{
+					sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
+					if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
+					//if summary map, remove only features with negative ranking
+					if (summaryMap == false){
+						while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating >= 0 && numFeatureRemove > 0) numFeatureRemove--;
+					}
+
+					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
 				}
+			
 				// add the least similar features from view to map
 				for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
 					info.view.feature[i].rating = 0;
 					info.view.feature[i].x = info.view.feature[i].x + differenceRot*remapRotGain;
 					mapFeatures.feature.push_back(info.view.feature[i]);
-					//info.view.feature.erase(info.view.feature.begin(), info.view.feature.begin() + 10);
 				}
 			}
 			isRating=false;

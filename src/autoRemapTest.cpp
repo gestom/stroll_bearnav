@@ -63,6 +63,7 @@ string mapFolder,viewFolder;
 vector<string> mapNames;
 vector<string> viewNames;
 bool volatile exitting = false;
+bool groundTruth = true;
 ros::CallbackQueue* my_queue;
 ros::Publisher dist_pub_;
 ros::Publisher distEvent_pub_;
@@ -173,8 +174,10 @@ void feedbackNavCb(const stroll_bearnav::navigatorFeedbackConstPtr& feedback)
 	int dummy = 0;
 	int mapA = 0;
 	int mapB = 0;
-	fscanf(mapFile, "%i %i\n",&offsetMap,&dummy);
-	fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
+	if (groundTruth){
+		fscanf(mapFile, "%i %i\n",&offsetMap,&dummy);
+		fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
+	}
 	float displacementGT = offsetView - offsetMap;
 
 	ROS_INFO("Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s. Displacement %.3f GT %.3f",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),feedback->diffRot,displacementGT);
@@ -250,13 +253,15 @@ int main(int argc, char **argv)
 	{
 		/*ground truth loading*/
 		char filename[1000];
+		mapFile = NULL;
+		viewFile = NULL;
 		sprintf(filename,"%s/%s_GT.txt",mapFolder.c_str(),mapNames[0].c_str());
 		printf("%s/%s_GT.txt\n",mapFolder.c_str(),mapNames[0].c_str());
 		mapFile = fopen(filename,"r");
 		sprintf(filename,"%s/%s_GT.txt",viewFolder.c_str(),viewNames[globalMapIndex].c_str());
 		printf("%s/%s_GT.txt\n",viewFolder.c_str(),viewNames[globalMapIndex].c_str());
 		viewFile = fopen(filename,"r");
-
+		if (mapFile == NULL || viewFile == NULL) groundTruth = false; else groundTruth = true;
 
 		/*set map and view info */
 		clientsResponded = 0;
@@ -317,8 +322,8 @@ int main(int argc, char **argv)
 		ROS_INFO("Map test %s %s summary: %.3f %.3f %.3f",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
 		fprintf(logFile,"Map test %s %s summary: %.3f %.3f %.3f\n",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
 		statSumCorrect = statSumMatches = statSumOutliers = statNumMaps = 0;
-		fclose(mapFile);
-		fclose(viewFile);
+		if (mapFile != NULL) fclose(mapFile);
+		if (viewFile != NULL) fclose(viewFile);
 	}
 	fclose(logFile);
 	return 0;

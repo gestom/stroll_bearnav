@@ -5,7 +5,7 @@ if [ 0 == 1 ];then
 rosparam set names_map  [A0,B0]
 rosparam set names_view [A0]
 rosrun dynamic_reconfigure dynparam set /feature_extraction "{'adaptThreshold': True, 'maxLine': 0.5}"&
-rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': True,'remapRotGain': 0.0}"&
+rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False,'plasticMap': True,'remapRotGain': 0.0}"&
 
 f="/home/gestom/mesas_2018_exposure/standard_converg"
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
@@ -90,18 +90,18 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_plastic.txt 
 fi
 
-if [ 0 == 1 ];
+if [ 1 == 1 ];
 then
 rosparam set names_map  [P0,M0]
 rosparam set names_view [P0]
-rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': True,'remapRotGain': 0.0}"&
+rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False,'plasticMap': True,'remapRotGain': 0.0}"&
 f="/home/gestom/mesas_2018_exposure/maps"
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp $f/P0_GT.txt $f/M0_GT.txt
 
 #test the map update schemes 
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': False,'remapRotGain': 1.0}"&
-rosparam set names_map  [P0,P0,P0,P0,P0,P0,P0,P0,P0,P0,P0,P0]
+rosparam set names_map  [M0,M0,M0,M0,M0,M0,M0,M0,M0,M0,M0,M0]
 rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
 roslaunch stroll_bearnav evaluate.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_static_2.txt
@@ -109,14 +109,30 @@ cp ~/.ros/Results.txt results/Map_static_2.txt
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': True,'remapRotGain': 1.0}"&
 rosparam set names_map  [M0,B1,B2,B3,B4,B5,B6,B7,B8,B9,B10,B11,B12]
 rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
-roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_plastic_2.txt
+#roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+#cp ~/.ros/Results.txt results/Map_plastic_2.txt
 
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': False,'remapRotGain': 1.0}"&
-rosparam set /auto_remapper/names_map  [M0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12]
-rosparam set /auto_remapper/names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
+rosparam set names_map  [M0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12]
+rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
+#roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+#cp ~/.ros/Results.txt results/Map_adaptive_2.txt
+fi
+
+if [ 1 == 0 ];then
+#starting to build a summary map 
+rosparam set names_map  [A0,B0]
+rosparam set names_view [A0]
+f="/home/gestom/mesas_2018_exposure/super"
+rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': True,'remapRotGain': 0.0}"&
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_adaptive_2.txt
+cp $f/A0_GT.txt $f/B0_GT.txt
+
+rosparam set names_map [$(for i in $(seq 0 88);do echo -ne B$i,;done|sed s/,$//)]
+rosparam set names_view [$(for i in $(seq 1 87);do echo -ne A$i,;done|sed s/,$//)]
+rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': True, 'plasticMap': False,'remapRotGain': 0.0}"&
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+
 fi
 
 #for i in Standard Exposure_full Exposure_fixed Features_full Features_fixed Map_static Map_plastic;do grep reports results/$i.txt|tail -n $((7*94))|awk '{a=$21-$23;print sqrt(a*a)}'| tee results/$i.err|sort -nr > results/$i.srt;done
