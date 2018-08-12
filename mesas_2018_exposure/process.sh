@@ -1,7 +1,7 @@
 confidence=0.15
 ######################## exposure tests (Section 4.2)
 #prepare maps for exposure tests
-if [ 0 == 1 ];then
+if [ 1 == 1 ];then
 rosparam set names_map  [A0,B0]
 rosparam set names_view [A0]
 rosrun dynamic_reconfigure dynparam set /feature_extraction "{'adaptThreshold': True, 'maxLine': 0.5}"&
@@ -42,7 +42,7 @@ cp ~/.ros/Results.txt results/Exposure_fixed.txt
 fi
 
 ############ Feature adaptation tests (Section 4.3)
-if [ 0 == 1 ];then
+if [ 1 == 1 ];then
 
 # adaptive - full image
 rosparam set names_map  [A0,D0]
@@ -75,8 +75,8 @@ cp ~/.ros/Results.txt results/Features_fixed.txt
 fi
 
 ############ Map adaptation test (Section 4.4)
-if [ 0 == 1 ];then
-#adaptive map tests 
+if [ 1 == 1 ];then
+#adaptive map tests on the day dataset 
 f="/home/gestom/mesas_2018_exposure/standard_converg"
 rosparam set names_map  [B0,B0,B0,B0,B0,B0,B0,B0,B0]
 rosparam set names_view [A1,A2,A3,A4,A5,A6,A7,A8,A9]
@@ -90,6 +90,7 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_plastic.txt 
 fi
 
+#adaptive map tests on the day/night dataset 
 if [ 1 == 1 ];
 then
 rosparam set names_map  [P0,M0]
@@ -109,14 +110,14 @@ cp ~/.ros/Results.txt results/Map_static_2.txt
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': True,'remapRotGain': 1.0}"&
 rosparam set names_map  [M0,B1,B2,B3,B4,B5,B6,B7,B8,B9,B10,B11,B12]
 rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
-#roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-#cp ~/.ros/Results.txt results/Map_plastic_2.txt
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+cp ~/.ros/Results.txt results/Map_plastic_2.txt
 
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': False,'remapRotGain': 1.0}"&
 rosparam set names_map  [M0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12]
 rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
-#roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-#cp ~/.ros/Results.txt results/Map_adaptive_2.txt
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+cp ~/.ros/Results.txt results/Map_adaptive_2.txt
 fi
 
 if [ 1 == 0 ];then
