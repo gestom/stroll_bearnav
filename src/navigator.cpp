@@ -492,7 +492,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
 					if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
 					//if summary map, remove only features with negative ranking
-					if (summaryMap == false){
+					if (summaryMap){
 						while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating >= 0 && numFeatureRemove > 0) numFeatureRemove--;
 					}
 
