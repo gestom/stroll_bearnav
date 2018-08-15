@@ -1,7 +1,7 @@
 confidence=0.2
 ######################## exposure tests (Section 4.2)
 #prepare maps for exposure tests
-if [ 1 == 1 ];then
+if [ 0 == 1 ];then
 rosparam set names_map  [A0,B0]
 rosparam set names_view [A0]
 rosrun dynamic_reconfigure dynparam set /feature_extraction "{'adaptThreshold': True, 'maxLine': 0.5}"&
@@ -42,7 +42,7 @@ cp ~/.ros/Results.txt results/Exposure_fixed.txt
 fi
 
 ############ Feature adaptation tests (Section 4.3)
-if [ 1 == 1 ];then
+if [ 0 == 1 ];then
 
 # adaptive - full image
 rosparam set names_map  [A0,D0]
@@ -75,7 +75,7 @@ cp ~/.ros/Results.txt results/Features_fixed.txt
 fi
 
 ############ Map adaptation test (Section 4.4)
-if [ 1 == 1 ];then
+if [ 0 == 1 ];then
 #adaptive map tests on the day dataset 
 f="/home/gestom/mesas_2018_exposure/standard_converg"
 rosparam set names_map  [B0,B0,B0,B0,B0,B0,B0,B0,B0]
@@ -91,7 +91,7 @@ cp ~/.ros/Results.txt results/Map_plastic.txt
 fi
 
 #adaptive map tests on the day/night dataset 
-if [ 1 == 1 ];
+if [ 0 == 1 ];
 then
 rosparam set names_map  [P0,M0]
 rosparam set names_view [P0]
