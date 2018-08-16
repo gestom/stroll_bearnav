@@ -163,7 +163,7 @@ cd $path
 echo "in `pwd`"
 
 #for i in Standard Exposure_full Exposure_fixed Features_full Features_fixed Map_static Map_plastic;do grep reports results/$i.txt|tail -n $((7*94))|awk '{a=$21-$23;print sqrt(a*a)}'| tee results/$i.err|sort -nr > results/$i.srt;done
-for i in Standard Exposure_full Exposure_fixed;do grep reports results/$i.txt|tail -n $((7*94))|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done #tail is to eliminate the effect of the map start
+for i in Standard Exposure_full Exposure_fixed;do grep reports results/$i.txt|tail -n $((7*94))|awk '{a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done #tail is to eliminate the effect of the map start
 echo 
 echo EXPOSURE TESTS: Section 4.2
 echo -ne "	Error of Standard VS Fixed exposure: "
@@ -175,7 +175,7 @@ paste results/Exposure_full.err results/Exposure_fixed.err |./mesas_2018_exposur
 echo 
 gnuplot mesas_2018_exposure/exposure.gnu >results/exposure.fig 
 
-for i in Standard Features_full Features_fixed;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
+for i in Standard Features_full Features_fixed;do grep reports results/$i.txt|awk '{a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo 
 echo FEATURE DETECTOR ADAPTATION TESTS: Section 4.3
 echo -ne "	Error of Standard VS Fixed hessian: "
@@ -187,7 +187,7 @@ paste results/Features_full.err results/Features_fixed.err |./mesas_2018_exposur
 echo 
 gnuplot mesas_2018_exposure/features.gnu >results/features.fig 
 
-for i in Standard Map_plastic Map_static;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
+for i in Standard Map_plastic Map_static;do grep reports results/$i.txt|awk '{a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
 echo -ne "	Error of Adaptive VS Static: "
 paste results/Standard.err results/Map_static.err          |./mesas_2018_exposure/t-test $confidence
@@ -198,8 +198,7 @@ paste results/Map_plastic.err results/Map_static.err |./mesas_2018_exposure/t-te
 echo 
 gnuplot mesas_2018_exposure/map.gnu >results/map.fig 
 
-
-for i in Map_adaptive_2 Map_plastic_2 Map_static_2;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
+for i in Map_adaptive_2 Map_plastic_2 Map_static_2;do grep reports results/$i.txt|awk '{a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
 echo -ne "	Error of Adaptive VS Static: "
 paste results/Map_adaptive_2.err results/Map_static_2.err          |./mesas_2018_exposure/t-test $confidence
@@ -210,11 +209,10 @@ paste results/Map_plastic_2.err results/Map_static_2.err |./mesas_2018_exposure/
 echo 
 gnuplot mesas_2018_exposure/map2.gnu >results/map2.fig 
 
-for i in Map_adaptive_LT Fremen_2_Monte_Carlo_500_result ;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
+for i in Map_adaptive_LT Fremen_1_Monte_Carlo_500_result Fremen_0_Monte_Carlo_500_result Fremen_2_Monte_Carlo_500_result ;do grep reports results/$i.txt|awk '{a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
-echo -ne "	Error of Adaptive VS Static: "
-paste results/Map_adaptive_LT.err results/Fremen_2_Monte_Carlo_500_result.err          |./mesas_2018_exposure/t-test $confidence
-#gnuplot mesas_2018_exposure/map3.gnu >results/map3.fig 
-
-
-
+echo -ne "	Error of FreMEn_0 VS FreMEn_1: "
+paste results/Fremen_0_Monte_Carlo_500_result.err results/Fremen_1_Monte_Carlo_500_result.err          |./mesas_2018_exposure/t-test $confidence
+echo -ne "	Error of FreMEn_1 VS FreMEn_2: "
+paste results/Fremen_1_Monte_Carlo_500_result.err results/Fremen_2_Monte_Carlo_500_result.err          |./mesas_2018_exposure/t-test $confidence
+gnuplot mesas_2018_exposure/map3.gnu >results/map3.fig 
