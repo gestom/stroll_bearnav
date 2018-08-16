@@ -257,7 +257,7 @@ int main(int argc, char **argv)
 	viewFile = fopen(filename,mode);*/
 	//logFile = fopen("Results.txt","w");
 
-	configureFeatures(3,2);
+	configureFeatures(2,2);
 	image_transport::ImageTransport it(n);
 
 	distEvent_pub_=n.advertise<std_msgs::Float32>("/distance_events",1);
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 	//const char *mapNames[] = {"A0","Y1","Y2","Y3","Y4","Y5","Y6","Y7","Y8","Y9","Y10","Y11","Y12","Y13","Y14","Y15","Y16"};
 	int numGlobalMaps = 39;
 	ROS_INFO("Maps: %i",numGlobalMaps);
-	for (int globalMapIndex = 17;globalMapIndex<numGlobalMaps;globalMapIndex++)
+	for (int globalMapIndex = 23;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
 		clientsResponded = 0;

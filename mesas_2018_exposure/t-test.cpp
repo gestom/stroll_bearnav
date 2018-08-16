@@ -13,7 +13,7 @@ int maina(int argc, char **argv)
 }
 
 float a,b;
-double xA[1000];
+double xA[100000];
 int numData = 0;
 
 int main(int argc, char **argv)
