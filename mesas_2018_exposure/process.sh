@@ -131,20 +131,20 @@ cp ~/.ros/Results.txt results/Map_adaptive_2.txt
 fi
 
 #map prediction effects 
-if [ 0 == 1 ];
+if [ 1 == 1 ];
 then
 #starting to build a summary map 
 rosparam set names_map  [A0,B0]
 rosparam set names_view [A0]
 f="$1/mesas_2018_exposure/temporal"
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': True,'remapRotGain': 0.0}"&
-#roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-#cp $f/A0_GT.txt $f/B0_GT.txt
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+cp $f/A0_GT.txt $f/B0_GT.txt
 
 rosparam set names_map [$(for i in $(seq 0 58);do echo -ne B$i,;done|sed s/,$//)]
 rosparam set names_view [$(for i in $(seq 1 58);do echo -ne A$i,;done|sed s/,$//)]
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': True, 'plasticMap': False,'remapRotGain': 1.0}"&
-#roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 
 rosparam set names_map [$(for i in $(seq 58 87);do echo -ne B56,;done|sed s/,$//)]
 rosparam set names_view [$(for i in $(seq 58 87);do echo -ne A$i,;done|sed s/,$//)]
@@ -209,10 +209,12 @@ paste results/Map_plastic_2.err results/Map_static_2.err |./mesas_2018_exposure/
 echo 
 gnuplot mesas_2018_exposure/map2.gnu >results/map2.fig 
 
-for i in Map_adaptive_LT Fremen_1_Monte_Carlo_500_result Fremen_0_Monte_Carlo_500_result Fremen_2_Monte_Carlo_500_result ;do grep reports results/$i.txt|awk '{a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
+for i in Map_adaptive_LT Fremen_0_Best_500_result Fremen_1_Best_500_result Fremen_2_Best_500_result ;do grep reports results/$i.txt|awk '{a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
+#for i in Map_adaptive_LT Fremen_1_Monte_Carlo_500_result Fremen_0_Monte_Carlo_500_result Fremen_2_Monte_Carlo_500_result ;do grep reports results/$i.txt|awk '{a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
 echo -ne "	Error of FreMEn_0 VS FreMEn_1: "
-paste results/Fremen_0_Monte_Carlo_500_result.err results/Fremen_1_Monte_Carlo_500_result.err          |./mesas_2018_exposure/t-test $confidence
+paste results/Fremen_0_Best_500_result.err results/Fremen_1_Best_500_result.err          |./mesas_2018_exposure/t-test $confidence
 echo -ne "	Error of FreMEn_1 VS FreMEn_2: "
-paste results/Fremen_1_Monte_Carlo_500_result.err results/Fremen_2_Monte_Carlo_500_result.err          |./mesas_2018_exposure/t-test $confidence
+paste results/Map_adaptive_LT.err results/Fremen_1_Best_500_result.err          |./mesas_2018_exposure/t-test $confidence
+#paste results/Fremen_1_Best_500_result.err results/Fremen_2_Best_500_result.err          |./mesas_2018_exposure/t-test $confidence
 gnuplot mesas_2018_exposure/map3.gnu >results/map3.fig 
