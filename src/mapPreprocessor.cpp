@@ -1,4 +1,8 @@
 #include <ros/ros.h>
+#include "strategies/CStrategy.h"
+#include "t_models/CTemporal.h"
+#include "std_msgs/Float32.h"
+#include "std_msgs/String.h"
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
@@ -18,6 +22,13 @@
 #include <opencv2/features2d.hpp>
 #include <actionlib/server/simple_action_server.h>
 #include <stroll_bearnav/loadMapAction.h>
+#include <time.h>
+#include <string>
+#include <stroll_bearnav/listenerConfig.h>
+#include <ros/callback_queue.h>
+#include <dynamic_reconfigure/server.h>
+
+
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -25,7 +36,9 @@ static const std::string OPENCV_WINDOW = "Image window";
 
 ros::Publisher cmd_pub_;
 ros::Publisher feat_pub_;
+ros::Publisher dist_view_pub_;
 ros::Subscriber dist_sub_;
+std_msgs::Float32 dist_;
 ros::Publisher pathPub;
 image_transport::Publisher image_pub_;
 
@@ -41,6 +54,10 @@ stroll_bearnav::Feature feature;
 
 /* map variables */
 vector<float> ratings;
+float stc_strategy_param=100;
+float stc_model_param = 0;
+string stc_model_type = "Sum";
+string stc_strategy_type = "Best";
 Mat img,img2;
 vector<KeyPoint> keypoints_1,keypoints_2;
 string currentMapName;
@@ -57,6 +74,13 @@ int numFeatures;
 float distanceT;
 string prefix;
 bool stop = false;
+std::vector<CTemporal*> models;
+string stc_fname;
+string tmp_param="shit";
+bool statistics = false;
+int f_index = 0;
+int last_size = 0;
+uint32_t t = time(NULL);
 
 /*map to be preloaded*/
 vector<vector<KeyPoint> > keypointsMap;
@@ -161,6 +185,13 @@ int loadMaps()
 	return numMaps;
 }
 
+void callback(stroll_bearnav::listenerConfig &config, uint32_t level)
+{
+	t=config.currentTime;
+  ROS_ERROR("mapPreprocessor setting time to %u ",t);
+	f_index = 0;
+}
+
 /* load map based on distance travelled  */
 void loadMap(int index)
 {
@@ -246,6 +277,8 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 	}
 }
 
+
+
 void distCallback(const std_msgs::Float32::ConstPtr& msg)
 {
 	if(state == ACTIVE){
@@ -263,69 +296,130 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 		}
 
 		//and publish it
+		int j = 0;
 		if (mindex > -1 && mindex != lastLoadedMap){
 			ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 			loadMap(mindex);
-			//			ROS_INFO("Sending a map %i features with %i descriptors",(int)keypoints_1.size(),descriptors_1.rows);
-
-			int stcs[keypoints_1.size()];
-			for(int i = 0; i<keypoints_1.size();i++){
-				stcs[i] = 0;
-			}
-			string line;
-			ifstream f("/home/eliska/stroll/statistics/statistics.txt");
-			int max = 0;
-			if (f.is_open())
+//			ROS_INFO("Sending a map %i features with %i descriptors",(int)keypoints_1.size(),descriptors_1.rows);
+			bool with_stcs = false;
+			int size = keypoints_1.size();
+			int len =max(size,1);
+			double stcs[len];
+			if(keypoints_1.size()>0 && statistics)
 			{
-				while ( getline (f,line) )
-				{
-					int was_ok = 0;
-					vector<string> strings;
-					istringstream l(line);
-					string s;
-					int index = -1;
+				ROS_INFO("Index = %d time = %u",f_index,t);
 
-					bool right_map_id = false;
-					if(getline(l, s, ' ')){
-						if(s.find(currentMapName) != string::npos){
-							right_map_id=true;
-							size_t pos = s.find("_");
-							string s_index = s.substr(0,pos);
-							index = atoi(s_index.c_str());
-							for(int i = 0; i<6;i++){
+				ifstream f(stc_fname.c_str());
+				if (f.is_open())
+				{
+					string type;
+					bool map_models_found = false;
+					vector<double> scores;
+					scores.clear();
+					for (size_t i = 0; i < keypoints_1.size(); i++) {
+						scores.push_back(0);
+					}
+
+					string f_id = to_string(0) + "_" + currentMapName;
+					while(f_index<models.size() && !map_models_found){
+						if(f_id.compare(models[f_index]->fid)==0){
+							map_models_found = true;
+							ROS_WARN("yes f_index =%d fid = %s mid = %s",f_index,f_id.c_str(),models[f_index]->fid.c_str());
+						}else{
+							f_index += last_size;
+							continue;
+						}
+						for(int j = 0; j<keypoints_1.size() && map_models_found;j++){
+							CTemporal* model = models[f_index+j];
+							model->update(stc_model_param);
+							scores[j] = model->predict(t);
+						}
+
+					}
+					if(!map_models_found){
+						string line;
+						bool id_found = false;
+						CTemporal* model;
+						int i = 0;
+						int l_index =-1;
+
+
+						while ( getline (f,line))
+						{
+							l_index++;
+							if(f_index > l_index){
+								continue;
+							}
+							if(f_index+keypoints_1.size()<=l_index){
+								break;
+							}
+
+							istringstream l(line);
+							string s;
+							string id = to_string(i) + "_" + currentMapName;
+							if(getline(l, s, ' ')){
+								id_found = id.compare(s)==0;
+							}
+							if(!id_found){
+								continue;
+							}
+							models.push_back(spawnTemporalModel(stc_model_type.c_str(), id, stc_model_param));
+							model = models[f_index + i];
+							for(int j = 0; j<6;j++){
 								getline(l, s, ' ');
 							}
-						}
-					}
-					while (getline(l, s, ' ') && right_map_id)
-					{
-						getline(l, s, ' ');
-						was_ok += atoi(s.c_str());
-					}
-					if(max<was_ok){
-						max = was_ok;
-					}
-					stcs[index] = was_ok;
-				}
-				f.close();
-			}
+							while (getline(l, s, ' '))
+							{
+								uint32_t t = atoi(s.c_str());
 
+								getline(l, s, ' ');
+								float state = (float)atoi(s.c_str());
+								model->add(t,state);
+							}
+							id_found = false;
+							model->update(stc_model_param);
+							model->print(true);
+							double score = model->predict(t);
+							scores[i] = score;
+							i++;
+						}
+
+					}
+
+
+					last_size = keypoints_1.size();
+
+					f.close();
+
+					Mat tmp_mat = descriptors_1.clone();
+					descriptors_1.release();
+
+					vector<KeyPoint> tmp(keypoints_1);
+					keypoints_1.clear();
+
+					// ROS_ERROR("ARGUMENT %f",stc_strategy_param);
+
+					// ROS_ERROR("key size: %lu score size %lu\n",keypoints_1.size(),scores.size());
+					CStrategy* strategy = spawnStrategy(stc_strategy_type.c_str(),stc_strategy_param);
+					// ROS_ERROR("size before %lu model %s param %f stategy %s param %f",tmp.size(),stc_model_type.c_str(),stc_model_param,stc_strategy_type.c_str(),stc_strategy_param);
+					strategy->filterFeatures(&keypoints_1,&descriptors_1,&tmp,&tmp_mat, scores);
+
+					ROS_ERROR("size after %lu",keypoints_1.size());
+				}
+			}
 
 			for(int i=0;i<keypoints_1.size();i++)
 			{
-				if(stcs[i]>=(max/2))
-				{
-					feature.x=keypoints_1[i].pt.x;
-					feature.y=keypoints_1[i].pt.y;
-					feature.size=keypoints_1[i].size;
-					feature.angle=keypoints_1[i].angle;
-					feature.response=keypoints_1[i].response;
-					feature.octave=keypoints_1[i].octave;
-					feature.class_id=keypoints_1[i].class_id;
-					feature.descriptor=descriptors_1.row(i);
-					feature.rating=ratings[i];
-					featureArray.feature.push_back(feature);
-				}
+				feature.x=keypoints_1[i].pt.x;
+				feature.y=keypoints_1[i].pt.y;
+				feature.size=keypoints_1[i].size;
+				feature.angle=keypoints_1[i].angle;
+				feature.response=keypoints_1[i].response;
+				feature.octave=keypoints_1[i].octave;
+				feature.class_id=keypoints_1[i].class_id;
+				feature.descriptor=descriptors_1.row(i);
+				feature.rating=ratings[i];
+				featureArray.feature.push_back(feature);
 			}
 			featureArray.distance = currentDistance;
 			featureArray.id = currentMapName;
@@ -341,6 +435,8 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 				image_pub_.publish(bridge.toImageMsg());
 			}
 		}
+		dist_.data=distanceT;
+		dist_view_pub_.publish(dist_);
 	}
 }
 
@@ -350,13 +446,30 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh_;
 	image_transport::ImageTransport it_(nh_);
 	ros::param::get("~folder", folder);
+	if(ros::param::get("~stc_file", stc_fname)){
+		ros::param::get("~stc_file", stc_fname);
+		ifstream f( stc_fname.c_str());
+		statistics = f.good();
+		ros::param::get("~stc_model_type", stc_model_type);
+		ros::param::get("~stc_strategy_type", stc_strategy_type);
+		ros::param::get("~stc_model_param", stc_model_param);
+		ros::param::get("~stc_strategy_param", stc_strategy_param);
+	}
 	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd",1);
 	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/pathProfile",1);
+	dist_view_pub_=nh_.advertise<std_msgs::Float32>("/distance_done",1);
+
+
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
+
 	image_pub_ = it_.advertise("/map_image", 1);
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);
 
 	/* Initiate action server */
+	dynamic_reconfigure::Server<stroll_bearnav::listenerConfig> server2;
+	dynamic_reconfigure::Server<stroll_bearnav::listenerConfig>::CallbackType clb = boost::bind(&callback, _1, _2);
+	server2.setCallback(clb);
+
 	server = new Server (nh_, "map_preprocessor", boost::bind(&executeCB, _1, server), false);
 	server->start();
 	ros::spin();

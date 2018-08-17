@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(stroll_bearnav)
-set ( CMAKE_CXX_FLAGS "-ggdb")
+set (CMAKE_CXX_FLAGS "-ggdb")
+set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -99,7 +100,8 @@ add_service_files(
   	cfg/distance.cfg
 	cfg/featureExtraction.cfg
 	cfg/navigator.cfg
-    cfg/supervisor.cfg
+	cfg/supervisor.cfg
+	cfg/listener.cfg
  )
 
 ###################################
@@ -150,7 +152,6 @@ add_executable(mapper_node src/mapper.cpp)
 add_executable(feature_extraction_node src/featureExtraction.cpp)
 add_executable(feature_testing_node src/featureTesting.cpp)
 add_executable(odometry_monitor_node src/odometryMonitor.cpp)
-add_executable(map_preprocessor_node src/mapPreprocessor.cpp)
 add_executable(tester_image_extractor src/testerImageExtractor.cpp)
 add_executable(navigator_node src/navigator.cpp)
 add_executable(visualisation_node src/visualisation.cpp)
@@ -161,6 +162,7 @@ add_executable(map_match_info_listener src/mapMatchInfoListener.cpp)
 add_executable(tester src/tester.cpp)
 add_executable(remapper src/remapper.cpp)
 add_executable(auto_remapper src/autoRemapTest.cpp)
+add_executable(map_preprocessor_node src/mapPreprocessor.cpp src/strategies/CBestStrategy.cpp src/strategies/CQuantilStrategy.cpp src/strategies/CMonteCarloStrategy.cpp src/strategies/CStrategy.cpp src/t_models/CTemporal.cpp src/t_models/CSum.cpp src/t_models/CWSum.cpp src/t_models/CMovAvg.cpp  src/t_models/CTimeMean.cpp src/t_models/CFrelement.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
