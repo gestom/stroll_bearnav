@@ -43,7 +43,7 @@ struct MatchInfo{
 };
 
 bool saveMapImages = false;
-bool saveViewImages = false
+bool saveViewImages = false;
 int numPrimaryMaps 	= 0;
 int primaryMapIndex 	= 0;
 int numSecondaryMaps 	= 0;
