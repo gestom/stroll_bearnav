@@ -35,20 +35,20 @@ rosrun dynamic_reconfigure dynparam set /feature_extraction "{'maxLine':0.5, 'ad
 rosparam set names_map  [B0,B1,B2,B3,B4,B5,B6,B7,B8,B9]
 rosparam set names_view [A1,A2,A3,A4,A5,A6,A7,A8,A9]
 
-# adaptive threshold, half image 
+# adaptive threshold, half image
 f="$1/mesas_2018_exposure/standard_converg"
-roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f 
-cp ~/.ros/Results.txt results/Standard.txt 
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+cp ~/.ros/Results.txt results/Standard.txt
 
-# fixed threshold 
+# fixed threshold
 f="$1/mesas_2018_exposure/exposure_fixed"
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Exposure_full.txt 
+cp ~/.ros/Results.txt results/Exposure_full.txt
 
-# adaptive threshold, full image 
+# adaptive threshold, full image
 f="$1/mesas_2018_exposure/exposure_full"
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Exposure_fixed.txt 
+cp ~/.ros/Results.txt results/Exposure_fixed.txt
 fi
 
 ############ Feature adaptation tests (Section 4.3)
@@ -67,9 +67,9 @@ rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': False,'remapR
 rosparam set names_map  [D0,D1,D2,D3,D4,D5,D6,D7,D8,D9]
 rosparam set names_view [A1,A2,A3,A4,A5,A6,A7,A8,A9]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Features_full.txt 
+cp ~/.ros/Results.txt results/Features_full.txt
 
-# adaptive - no threshold adaptation 
+# adaptive - no threshold adaptation
 rosparam set names_map  [A0,E0]
 rosparam set names_view [A0]
 rosrun dynamic_reconfigure dynparam set /feature_extraction "{'adaptThreshold': False, 'thresholdParam': 1346}"&
@@ -81,26 +81,34 @@ rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': False,'remapR
 rosparam set names_map  [E0,E1,E2,E3,E4,E5,E6,E7,E8,E9]
 rosparam set names_view [A1,A2,A3,A4,A5,A6,A7,A8,A9]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Features_fixed.txt 
+cp ~/.ros/Results.txt results/Features_fixed.txt
 fi
 
 ############ Map adaptation test (Section 4.4)
-if [ 0 == 1 ];then
-#adaptive map tests on the day dataset 
-f="$1/mesas_2018_exposure/standard_converg"
-rosparam set names_map  [B0,B0,B0,B0,B0,B0,B0,B0,B0]
-rosparam set names_view [A1,A2,A3,A4,A5,A6,A7,A8,A9]
+if [ 1 == 1 ];then
+#adaptive map tests on the day dataset
+f="$1/experimenty_icra_2018"
+#numbers=`seq 0 86`
+#maps=`for i in $numbers; do echo "A0,"; done`
+#maps=`echo "[$maps,87]"`
+#numbers=`seq 1 86`
+#views=`for i in $numbers; do echo "A$i,"; done`
+rosparam set names_map [A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0]
+rosparam set names_view [A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A22,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39,A40,A41,A42,A43,A44,A45,A46,A47,A48,A49,A50,A51,A52,A53,A54,A55,A56,A57,A58,A59,A60,A61,A62,A63,A64,A65,A66,A67,A68,A69,A70,A71,A72,A73,A74,A75,A76,A77,A78,A79,A80,A81,A82,A83,A84,A85,A86,A87]
 rosrun dynamic_reconfigure dynparam set /feature_extraction "{'maxLine':0.5, 'adaptThreshold':True}"&
 roslaunch stroll_bearnav evaluate.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_static.txt 
+cp ~/.ros/Results.txt results/Map_static.txt
 
-rosparam set names_map  [B0,F1,F2,F3,F4,F5,F6,F7,F8,F9]
+#numbers=`seq 0 86`
+#plastics=`for i in $numbers; do echo "A$i,"; done`
+#plastics=`echo "[$plastics,87]"`
+rosparam set names_map [A0,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A22,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39,A40,A41,A42,A43,A44,A45,A46,A47,A48,A49,A50,A51,A52,A53,A54,A55,A56,A57,A58,A59,A60,A61,A62,A63,A64,A65,A66,A67,A68,A69,A70,A71,A72,A73,A74,A75,A76,A77,A78,A79,A80,A81,A82,A83,A84,A85,A86,A87]
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': True,'remapRotGain': 1.0}"&
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_plastic.txt 
+cp ~/.ros/Results.txt results/Map_plastic.txt
 fi
 
-#adaptive map tests on the day/night dataset 
+#adaptive map tests on the day/night dataset
 if [ 0 == 1 ];
 then
 rosparam set names_map  [P0,M0]
@@ -110,7 +118,7 @@ f="$1/mesas_2018_exposure/maps"
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp $f/P0_GT.txt $f/M0_GT.txt
 
-#test the map update schemes 
+#test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': False,'remapRotGain': 1.0}"&
 rosparam set names_map  [M0,M0,M0,M0,M0,M0,M0,M0,M0,M0,M0,M0]
 rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
@@ -130,10 +138,10 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_adaptive_2.txt
 fi
 
-#map prediction effects 
+#map prediction effects
 if [ 0 == 1 ];
 then
-#starting to build a summary map 
+#starting to build a summary map
 rosparam set names_map  [A0,B0]
 rosparam set names_view [A0]
 f="$1/mesas_2018_exposure/temporal"
@@ -164,57 +172,54 @@ echo "in `pwd`"
 
 #for i in Standard Exposure_full Exposure_fixed Features_full Features_fixed Map_static Map_plastic;do grep reports results/$i.txt|tail -n $((7*94))|awk '{a=$21-$23;print sqrt(a*a)}'| tee results/$i.err|sort -nr > results/$i.srt;done
 for i in Standard Exposure_full Exposure_fixed;do grep reports results/$i.txt|tail -n $((7*94))|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done #tail is to eliminate the effect of the map start
-echo 
+echo
 echo EXPOSURE TESTS: Section 4.2
 echo -ne "	Error of Standard VS Fixed exposure: "
 paste results/Standard.err results/Exposure_fixed.err          |./mesas_2018_exposure/t-test $confidence
-echo -ne "	Error of Standard VS Exposure adapted to full image: " 
+echo -ne "	Error of Standard VS Exposure adapted to full image: "
 paste results/Standard.err results/Exposure_full.err 	   |./mesas_2018_exposure/t-test $confidence
-echo -ne "	Exposure adapted to full image VS Fixed exposure: " 
+echo -ne "	Exposure adapted to full image VS Fixed exposure: "
 paste results/Exposure_full.err results/Exposure_fixed.err |./mesas_2018_exposure/t-test  $confidence
-echo 
-gnuplot mesas_2018_exposure/exposure.gnu >results/exposure.fig 
+echo
+gnuplot mesas_2018_exposure/exposure.gnu >results/exposure.fig
 
 for i in Standard Features_full Features_fixed;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
-echo 
+echo
 echo FEATURE DETECTOR ADAPTATION TESTS: Section 4.3
 echo -ne "	Error of Standard VS Fixed hessian: "
 paste results/Standard.err results/Features_fixed.err          |./mesas_2018_exposure/t-test $confidence
-echo -ne "	Error of Standard VS Features extracted from full image: " 
+echo -ne "	Error of Standard VS Features extracted from full image: "
 paste results/Standard.err results/Features_full.err          |./mesas_2018_exposure/t-test  $confidence
-echo -ne "	Error of Features from full image image VS Fixed hessian: " 
-paste results/Features_full.err results/Features_fixed.err |./mesas_2018_exposure/t-test $confidence	
-echo 
-gnuplot mesas_2018_exposure/features.gnu >results/features.fig 
+echo -ne "	Error of Features from full image image VS Fixed hessian: "
+paste results/Features_full.err results/Features_fixed.err |./mesas_2018_exposure/t-test $confidence
+echo
+gnuplot mesas_2018_exposure/features.gnu >results/features.fig
 
 for i in Standard Map_plastic Map_static;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
 echo -ne "	Error of Adaptive VS Static: "
 paste results/Standard.err results/Map_static.err          |./mesas_2018_exposure/t-test $confidence
-echo -ne "	Error of Adaptive VS Plastic: " 
+echo -ne "	Error of Adaptive VS Plastic: "
 paste results/Standard.err results/Map_plastic.err          |./mesas_2018_exposure/t-test $confidence
-echo -ne "	Error of Plastic VS Static: " 
-paste results/Map_plastic.err results/Map_static.err |./mesas_2018_exposure/t-test $confidence	
-echo 
-gnuplot mesas_2018_exposure/map.gnu >results/map.fig 
+echo -ne "	Error of Plastic VS Static: "
+paste results/Map_plastic.err results/Map_static.err |./mesas_2018_exposure/t-test $confidence
+echo
+gnuplot mesas_2018_exposure/map.gnu >results/map.fig
 
 
 for i in Map_adaptive_2 Map_plastic_2 Map_static_2;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
 echo -ne "	Error of Adaptive VS Static: "
 paste results/Map_adaptive_2.err results/Map_static_2.err          |./mesas_2018_exposure/t-test $confidence
-echo -ne "	Error of Adaptive VS Plastic: " 
+echo -ne "	Error of Adaptive VS Plastic: "
 paste results/Map_adaptive_2.err results/Map_plastic_2.err          |./mesas_2018_exposure/t-test $confidence
-echo -ne "	Error of Plastic VS Static: " 
-paste results/Map_plastic_2.err results/Map_static_2.err |./mesas_2018_exposure/t-test $confidence	
-echo 
-gnuplot mesas_2018_exposure/map2.gnu >results/map2.fig 
+echo -ne "	Error of Plastic VS Static: "
+paste results/Map_plastic_2.err results/Map_static_2.err |./mesas_2018_exposure/t-test $confidence
+echo
+gnuplot mesas_2018_exposure/map2.gnu >results/map2.fig
 
 for i in Map_adaptive_LT Fremen_2_Monte_Carlo_500_result ;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
 echo -ne "	Error of Adaptive VS Static: "
 paste results/Map_adaptive_LT.err results/Fremen_2_Monte_Carlo_500_result.err          |./mesas_2018_exposure/t-test $confidence
-#gnuplot mesas_2018_exposure/map3.gnu >results/map3.fig 
-
-
-
+#gnuplot mesas_2018_exposure/map3.gnu >results/map3.fig

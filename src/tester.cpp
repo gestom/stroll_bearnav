@@ -125,7 +125,7 @@ void feedbackViewCb(const stroll_bearnav::loadMapFeedbackConstPtr& feedback)
 }
 
 void doneMapCb(const actionlib::SimpleClientGoalState& state,const stroll_bearnav::loadMapResultConstPtr& result)
-{ 
+{
 	ROS_INFO("Primary map client reports %s: Map covers %.3f meters and contains %i features in %i submaps.", state.toString().c_str(),result->distance,result->numFeatures,result->numMaps);
 	clientsResponded++;
 }
@@ -142,7 +142,7 @@ void activeCb()
 }
 
 void doneNavCb(const actionlib::SimpleClientGoalState& state,const stroll_bearnav::navigatorResultConstPtr& result)
-{ 
+{
 	ROS_INFO("Navigator client reports %s.",state.toString().c_str());
 	clientsResponded++;
 }
@@ -229,6 +229,10 @@ int main(int argc, char **argv)
 	ros::param::get("names_view", viewNames);
 	ros::param::get("names_map", mapNames);
 
+  for (int i=0; i<87;i++){
+    printf("[%i]: %s",i,viewNames[i].c_str());
+  }
+
 	logFile = fopen("Results.txt","w");
 
 	while (configureFeatures(2,2) < 0) sleep(1);
@@ -240,11 +244,11 @@ int main(int argc, char **argv)
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_view("map_preprocessor_view", true);
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_map("map_preprocessor_map", true);
 	actionlib::SimpleActionClient<stroll_bearnav::navigatorAction> nav("navigator", true);
-	mp_map.waitForServer(); 
+	mp_map.waitForServer();
 	ROS_INFO("Primary map server responding");
-	mp_view.waitForServer(); 
+	mp_view.waitForServer();
 	ROS_INFO("Secondary map server responding");
-	nav.waitForServer(); 
+	nav.waitForServer();
 	ROS_INFO("Navigator server responding");
 
 
@@ -269,7 +273,7 @@ int main(int argc, char **argv)
 		mapGoal.prefix = mapNames[globalMapIndex];
 		ROS_INFO("Clients %i\n",clientsResponded);
 		mp_view.sendGoal(viewGoal,&doneViewCb,&activeCb,&feedbackViewCb);
-		
+
 		/*wait for maps to load*/
 		while (clientsResponded < 1){
 			ROS_INFO("Waiting for map clients %i\n",clientsResponded);
@@ -323,7 +327,7 @@ int main(int argc, char **argv)
 		mp_view.cancelGoal();
 		mp_map.cancelGoal();
 		while (clientsResponded < 2) sleep(1);
-	
+
 		/*Flush statistics*/
 		ROS_INFO("Map test %s %s summary: %.3f %.3f %.3f",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
 		fprintf(logFile,"Map test %s %s summary: %.3f %.3f %.3f\n",mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),statSumMatches/statNumMaps,statSumCorrect/statNumMaps,statSumOutliers/statNumMaps);
