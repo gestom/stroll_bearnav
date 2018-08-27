@@ -316,14 +316,14 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		good_matches.clear();
 
 		int numBins = 41;
-		int histogram[numBins];
+		float histogram[numBins];
 		for (int i = 0;i<numBins;i++) histogram[i] = 0;
 
 		best_matches.clear();
 		bad_matches.clear();
 
 		/*establish correspondences, build the histogram and determine robot heading*/
-		int count=0,bestc=0;
+		float count=0,bestc=0;
 		info.updated=false;
 		info.view = *msg;
 		matches.clear();
@@ -405,7 +405,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			printf("Bin: ");
 			for (int i = 0;i<numBins;i++) {
 				
-				printf("%i ",histogram[i]);
+				printf("%.0f ",histogram[i]);
 				if (histogram[i]>max)
 				{
 					max=histogram[i];
@@ -425,8 +425,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
-					sum+=differences[i];
-					count++;
+					sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
+					count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
 					best_matches.push_back(good_matches[i]);
 					keypointsBest.push_back(keypointsGood[i]);
 				} else {
@@ -501,6 +501,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				// add the least similar features from view to map
 				for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
 					info.view.feature[i].rating = 0;
+					if (remapRotGain == 0) info.view.feature[i].rating = 1000;
 					info.view.feature[i].x = info.view.feature[i].x + differenceRot*remapRotGain;
 					mapFeatures.feature.push_back(info.view.feature[i]);
 				}

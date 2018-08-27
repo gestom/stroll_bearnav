@@ -222,7 +222,6 @@ int main(int argc, char **argv)
 	ros::param::get("~folder_map", mapFolder);
 	ros::param::get("names_view", viewNames);
 	ros::param::get("names_map", mapNames);
-
 	logFile = fopen("Results.txt","w");
 
 	if (configureFeatures(2,2) < 0) sleep(1);

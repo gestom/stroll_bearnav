@@ -2,8 +2,8 @@
 
 <!-- Default folders with maps-->
 
-<arg name="folder_map" default="$(env HOME)/mesas_2018_exposure/super"/>
-<arg name="folder_view" default="$(env HOME)/mesas_2018_exposure/super"/>
+<arg name="folder_map" default="$(env HOME)/icra_2019_adamap/short"/>
+<arg name="folder_view" default="$(env HOME)/icra_2019_adamap/short"/>
 
 <!-- feature extraction -->
   <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
@@ -18,13 +18,13 @@
 </node>
 
 <!-- map loader1 node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map" output="screen">
 <param name="folder" value="$(arg folder_map)" />
 <remap from="map_preprocessor" to="map_preprocessor_map"/>
 </node>
 
 <!-- map loader2 node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_view">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_view" output="screen">
 <param name="folder" value="$(arg folder_view)" />
 <remap from="localMap" to="featuresTrash" />
 <remap from="pathProfile" to="pathProfileDummy" />
