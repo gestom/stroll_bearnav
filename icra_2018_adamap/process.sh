@@ -85,12 +85,12 @@ cp ~/.ros/Results.txt results/Features_fixed.txt
 fi
 
 ############ Map adaptation test (Section 4.4)
-if [ 1 == 1 ];then
+if [ 0 == 1 ];then
 #adaptive map tests on the day dataset
 f="$1/experimenty_icra_2018"
-#numbers=`seq 0 86`
+#numbers=`seq 1 86`
 #maps=`for i in $numbers; do echo "A0,"; done`
-#maps=`echo "[$maps,87]"`
+#maps=`echo "[$mapsA87]"`
 #numbers=`seq 1 86`
 #views=`for i in $numbers; do echo "A$i,"; done`
 rosparam set names_map [A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0]
@@ -108,32 +108,35 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_plastic.txt
 fi
 
+# rename all map files from A to P
+#for i in `seq 0 87`; do for j in $files; do mv A$i$j P$i$j;done;done
+
 #adaptive map tests on the day/night dataset
-if [ 0 == 1 ];
+if [ 1 == 1 ];
 then
 rosparam set names_map  [P0,M0]
 rosparam set names_view [P0]
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False,'plasticMap': True,'remapRotGain': 0.0}"&
-f="$1/mesas_2018_exposure/maps"
+f="$1/experimenty_icra_2018"
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp $f/P0_GT.txt $f/M0_GT.txt
 
 #test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': False,'remapRotGain': 1.0}"&
-rosparam set names_map  [M0,M0,M0,M0,M0,M0,M0,M0,M0,M0,M0,M0]
-rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
+rosparam set names_map  [M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0, M0]
+rosparam set names_view [P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16, P17, P18, P19, P20, P21, P22, P23, P24, P25, P26, P27, P28, P29, P30, P31, P32, P33, P34, P35, P36, P37, P38, P39, P40, P41, P42, P43, P44, P45, P46, P47, P48, P49, P50, P51, P52, P53, P54, P55, P56, P57, P58, P59, P60, P61, P62, P63, P64, P65, P66, P67, P68, P69, P70, P71, P72, P73, P74, P75, P76, P77, P78, P79, P80, P81, P82, P83, P84, P85, P86, P87]
 roslaunch stroll_bearnav evaluate.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_static_2.txt
 
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': True,'remapRotGain': 1.0}"&
-rosparam set names_map  [M0,B1,B2,B3,B4,B5,B6,B7,B8,B9,B10,B11,B12]
-rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
+rosparam set names_map  [M0,B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27, B28, B29, B30, B31, B32, B33, B34, B35, B36, B37, B38, B39, B40, B41, B42, B43, B44, B45, B46, B47, B48, B49, B50, B51, B52, B53, B54, B55, B56, B57, B58, B59, B60, B61, B62, B63, B64, B65, B66, B67, B68, B69, B70, B71, B72, B73, B74, B75, B76, B77, B78, B79, B80, B81, B82, B83, B84, B85, B86, B87]
+rosparam set names_view [P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16, P17, P18, P19, P20, P21, P22, P23, P24, P25, P26, P27, P28, P29, P30, P31, P32, P33, P34, P35, P36, P37, P38, P39, P40, P41, P42, P43, P44, P45, P46, P47, P48, P49, P50, P51, P52, P53, P54, P55, P56, P57, P58, P59, P60, P61, P62, P63, P64, P65, P66, P67, P68, P69, P70, P71, P72, P73, P74, P75, P76, P77, P78, P79, P80, P81, P82, P83, P84, P85, P86, P87]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_plastic_2.txt
 
 rosrun dynamic_reconfigure dynparam set /navigator "{'plasticMap': False,'remapRotGain': 1.0}"&
-rosparam set names_map  [M0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12]
-rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
+rosparam set names_map  [M0,C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, C20, C21, C22, C23, C24, C25, C26, C27, C28, C29, C30, C31, C32, C33, C34, C35, C36, C37, C38, C39, C40, C41, C42, C43, C44, C45, C46, C47, C48, C49, C50, C51, C52, C53, C54, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65, C66, C67, C68, C69, C70, C71, C72, C73, C74, C75, C76, C77, C78, C79, C80, C81, C82, C83, C84, C85, C86, C87]
+rosparam set names_view [P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16, P17, P18, P19, P20, P21, P22, P23, P24, P25, P26, P27, P28, P29, P30, P31, P32, P33, P34, P35, P36, P37, P38, P39, P40, P41, P42, P43, P44, P45, P46, P47, P48, P49, P50, P51, P52, P53, P54, P55, P56, P57, P58, P59, P60, P61, P62, P63, P64, P65, P66, P67, P68, P69, P70, P71, P72, P73, P74, P75, P76, P77, P78, P79, P80, P81, P82, P83, P84, P85, P86, P87]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_adaptive_2.txt
 fi
