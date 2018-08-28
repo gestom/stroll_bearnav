@@ -63,7 +63,8 @@ bool showGoodMatches=true;
 int minFeatureRemap = 10;
 int maxFeatureRemap = 50;
 float remapRatio = 0.5;
-bool plasticMap = true;
+bool plasticMap = false;
+bool initialRating = true;
 bool summaryMap = false;
 
 geometry_msgs::Twist twist;
@@ -90,7 +91,7 @@ int descriptorType = CV_32FC1;
 /* Feature message */
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
- 
+
 typedef struct
 {
 	float distance;
@@ -148,9 +149,10 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	velocityGain=config.velocityGain;
 	ratioMatchConstant=config.matchingRatio;
 	maxVerticalDifference = config.maxVerticalDifference;
-	plasticMap = config.plasticMap;	
-	summaryMap = config.summaryMap;	
-	remapRatio = config.remapRatio;	
+	plasticMap = config.plasticMap;
+	initialRating = config.initialRating;
+	summaryMap = config.summaryMap;
+	remapRatio = config.remapRatio;
 	minFeatureRemap = config.minFeatureRemap;
 	maxFeatureRemap = config.maxFeatureRemap;
 	minGoodFeatures = config.minGoodFeatures;
@@ -162,7 +164,7 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
-{	
+{
 	mapFeatures = *msg;
 	ROS_INFO("Received a new reference map");
 	mapKeypoints.clear();
@@ -216,7 +218,7 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 			}
 		}
 	}
-	twist.linear.x = twist.linear.y = twist.linear.z = twist.angular.z = twist.angular.y = twist.angular.x = 0.0;	
+	twist.linear.x = twist.linear.y = twist.linear.z = twist.angular.z = twist.angular.y = twist.angular.x = 0.0;
 	cmd_pub_.publish(twist);
 }
 
@@ -276,7 +278,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			if (msg->feature[0].class_id != -1 && featureNorm != msg->feature[0].class_id)
 			{
 				matcher.release();
-				featureNorm = (NormTypes) msg->feature[0].class_id; 
+				featureNorm = (NormTypes) msg->feature[0].class_id;
 				if (featureNorm == NORM_HAMMING ||featureNorm == NORM_HAMMING2) descriptorType = CV_8U; else descriptorType = CV_32FC1;
 				matcher = BFMatcher::create(featureNorm);
 				ROS_INFO("Matcher switched to %i",featureNorm);
@@ -312,7 +314,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				mapDescriptors.push_back(mat);
 			}
 		}
- 
+
 		good_matches.clear();
 
 		int numBins = 41;
@@ -338,14 +340,14 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				matches.clear();
 				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
 			}
-			/*perform ratio matching*/ 
-			good_matches.reserve(matches.size());  
+			/*perform ratio matching*/
+			good_matches.reserve(matches.size());
 			for (size_t i = 0; i < matches.size(); i++)
 			{
 				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance) good_matches.push_back(matches[i][0]);
-				//TODO crosscheck matching //if (matches[i][0].trainIdx == revmatches[matches[i][0].trainIdx][0].queryIdx) 
+				//TODO crosscheck matching //if (matches[i][0].trainIdx == revmatches[matches[i][0].trainIdx][0].queryIdx)
 			}
-			
+
 			/* rating view features	*/
 			// maximasing minimal distance
 			for (int i = 0; i < info.view.feature.size(); i++) {
@@ -364,7 +366,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			//cout << "view: first " << info.view.feature[0].rating << " x " << info.view.feature[0].x << " last " << info.view.feature[info.view.feature.size()-1].rating  << " x " << info.view.feature[info.view.feature.size()-1].x  << endl;
 
 
-			/*building histogram*/	
+			/*building histogram*/
 			int num=good_matches.size();
 			matched_points1.clear();
 			matched_points2.clear();
@@ -384,7 +386,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				matched_points2.push_back(currentKeypoints[idx2].pt);
 				keypointsGood.push_back(currentKeypoints[idx2]);
 				/*difference in x and y positions*/
-				current.x=round(matched_points1[i].x-matched_points2[i].x);	
+				current.x=round(matched_points1[i].x-matched_points2[i].x);
 				current.y=round(matched_points1[i].y-matched_points2[i].y);
 				int difference = current.x;
 				int index = (difference+granularity/2)/granularity + numBins/2;
@@ -396,7 +398,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				//	if (index >= numBins) index = numBins-1;
 					if (index >= 0 || index < numBins) histogram[index]++;
 				}
-				count=0; 
+				count=0;
 			}
 
 			/*histogram printing*/
@@ -404,7 +406,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int position=0;
 			printf("Bin: ");
 			for (int i = 0;i<numBins;i++) {
-				
 				printf("%.0f ",histogram[i]);
 				if (histogram[i]>max)
 				{
@@ -418,7 +419,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int rotation=(position-numBins/2)*granularity;
 			printf("\n");
 			float sum=0;
-			keypointsBest.clear();	
+			keypointsBest.clear();
 			/* use good correspondences to determine heading */
 			best_matches.clear();
 			bad_matches.clear();
@@ -441,7 +442,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			feedback.keypoints_avg = (mapKeypoints.size() + currentKeypoints.size() )/2;
 			feedback.matches = good_matches.size();
 			/*difference between features */
-			differenceRot=sum/count; 
+			differenceRot=sum/count;
 			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 			//cout << "bm " << bad_matches.size()  << endl;
@@ -449,7 +450,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
 
 
-				
+
 		feedback.histogram.clear();
 		if (count<minGoodFeatures) differenceRot = 0;
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
@@ -461,30 +462,30 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info.mapMatchIndex.clear();
 		vector<int> mapIndex(mapFeatures.feature.size());
 		vector<int> mapEval(mapFeatures.feature.size());
-		std::fill(mapIndex.begin(),mapIndex.end(),-1); 
+		std::fill(mapIndex.begin(),mapIndex.end(),-1);
 		std::fill(mapEval.begin(),mapEval.end(),0);
 		for (int i = 0;i<good_matches.size();i++)
 		{
 			mapIndex[good_matches[i].queryIdx] = good_matches[i].trainIdx;
 			mapEval[good_matches[i].queryIdx] = -1;
-		}	
+		}
 		for (int i = 0;i<best_matches.size();i++) {
 			mapEval[best_matches[i].queryIdx] = 1;
 			// rating map features
 			if(isRating) mapFeatures.feature[best_matches[i].queryIdx].rating+=mapEval[best_matches[i].queryIdx];
 		}
-		if(isRating) 
+		if(isRating)
 		{
 			if (count>=minGoodFeatures){
 				for (int i = 0; i < bad_matches.size(); i++) {
 					mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
 				}
 				int numFeatureRemove = fmin(fmax(best_matches.size()*remapRatio,minFeatureRemap),maxFeatureRemap);
-				int numFeatureAdd = numFeatureRemove; 
+				int numFeatureAdd = numFeatureRemove;
 
 				//rebuild map completely
 				if (plasticMap){
-					numFeatureAdd = info.view.feature.size(); 
+					numFeatureAdd = info.view.feature.size();
 					mapFeatures.feature.clear();
 				}else{
 					sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
@@ -497,7 +498,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
 				}
-			
+
 				// add the least similar features from view to map
 				for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
 					info.view.feature[i].rating = 0;
@@ -521,27 +522,27 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info_pub_.publish(info);
 
 		/*Show good image features (Green) */
-		Mat output,outtran; 
+		Mat output,outtran;
 		if(image_pub_.getNumSubscribers()>0)
 		{
 			//drawKeypoints(currentImage,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
 			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0)
 			{
 				if (mapImage.rows==0) mapImage = currentImage;
-				Mat mapIm = mapImage.t();  
+				Mat mapIm = mapImage.t();
 				Mat curIm = currentImage.t();
 				vector<KeyPoint> kpMap,kpCur;
 				KeyPoint tmp;
 				for (int i = 0;i<mapKeypoints.size();i++)
 				{
-					tmp = mapKeypoints[i];	
+					tmp = mapKeypoints[i];
 					tmp.pt.y = mapKeypoints[i].pt.x;
 					tmp.pt.x = mapKeypoints[i].pt.y;
 					kpMap.push_back(tmp);
-				} 
+				}
 				for (int i = 0;i<currentKeypoints.size();i++)
 				{
-					tmp = currentKeypoints[i];	
+					tmp = currentKeypoints[i];
 					tmp.pt.y = currentKeypoints[i].pt.x;
 					tmp.pt.x = currentKeypoints[i].pt.y;
 					kpCur.push_back(tmp);
@@ -577,7 +578,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 }
 
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
-{	
+{
 
 	if (state == NAVIGATING){
 		/* check for end of path profile */
@@ -597,7 +598,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			//ROS_INFO("MOVE %i %f",currentPathElement,path[currentPathElement].forward);
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
 			if (fabs(path[currentPathElement].angular) > 0.001) velocityGain = 1.0;
-			twist.linear.x = path[currentPathElement].forward*velocityGain; 
+			twist.linear.x = path[currentPathElement].forward*velocityGain;
 			twist.angular.y = twist.angular.x = 0.0;
 			twist.angular.z=path[currentPathElement].angular*velocityGain;
 			twist.angular.z+=differenceRot*pixelTurnGain;

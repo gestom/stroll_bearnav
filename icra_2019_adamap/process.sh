@@ -62,10 +62,10 @@ echo "in `pwd`"
 for i in Map_weighted Map_adaptive Map_plastic Map_static;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
 echo -ne "	Error of Adaptive VS Static: "
-paste results/Map_adaptive.err results/Map_static.err          |./mesas_2018_exposure/t-test $confidence
+paste results/Map_adaptive.err results/Map_static.err          |./icra_2019_adamap/t-test $confidence
 echo -ne "	Error of Adaptive VS Plastic: " 
-paste results/Map_adaptive.err results/Map_plastic.err          |./mesas_2018_exposure/t-test $confidence
+paste results/Map_adaptive.err results/Map_plastic.err          |./icra_2019_adamap/t-test $confidence
 echo -ne "	Error of Plastic VS Static: " 
-paste results/Map_plastic.err results/Map_static.err |./mesas_2018_exposure/t-test $confidence	
+paste results/Map_plastic.err results/Map_static.err |./icra_2019_adamap/t-test $confidence	
 echo 
 gnuplot icra_2019_adamap/map.gnu >results/map.fig 
