@@ -18,6 +18,8 @@
 #include <opencv2/features2d.hpp>
 #include <actionlib/server/simple_action_server.h>
 #include <stroll_bearnav/loadMapAction.h>
+#include <dynamic_reconfigure/server.h>
+#include <stroll_bearnav/navigatorConfig.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -66,6 +68,9 @@ vector<string> namesMap;
 vector<Mat> imagesMap;
 vector<vector<float> > ratingsMap;
 
+/* adaptive maps */
+bool histogramRating = true;
+
 
 typedef enum
 {
@@ -74,6 +79,13 @@ typedef enum
 	COMPLETE
 }EMapLoaderState;
 EMapLoaderState state = IDLE;
+
+/* dynamic reconfigure of navigator */
+void navigatorCallback(const dynamic_reconfigure::Config::ConstPtr& msg)
+{
+    histogramRating = msg->bools[3].value;
+    printf("navigatorCallback, histogram rating %i\n",histogramRating);
+}
 
 /* Loads all maps from a folder
    returns number of loaded maps  */
@@ -130,7 +142,14 @@ int loadMaps()
 			fs["Image"]>>img;
 			ratings.clear();
 			fs["Ratings"]>>ratings;
-			for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
+
+							if(histogramRating && ratings.size() == 0){
+								// initial rating
+								for (int j = 0; j < keypoints_1.size(); j++) ratings.push_back(1);
+							} else {
+								for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
+							}
+
 			fs.release();
 			keypointsMap.push_back(keypoints_1);
 			descriptorMap.push_back(descriptors_1);
@@ -355,6 +374,8 @@ int main(int argc, char** argv)
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
 	image_pub_ = it_.advertise("/map_image", 1);
 	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);
+
+	ros::Subscriber nav_sub = nh_.subscribe("/navigator/parameter_updates", 1, navigatorCallback);
 
 	/* Initiate action server */
 	server = new Server (nh_, "map_preprocessor", boost::bind(&executeCB, _1, server), false);

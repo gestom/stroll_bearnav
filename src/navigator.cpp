@@ -64,8 +64,9 @@ int minFeatureRemap = 10;
 int maxFeatureRemap = 50;
 float remapRatio = 0.5;
 bool plasticMap = false;
-bool initialRating = true;
 bool summaryMap = false;
+
+bool histogramRating = false;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
@@ -150,8 +151,8 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	ratioMatchConstant=config.matchingRatio;
 	maxVerticalDifference = config.maxVerticalDifference;
 	plasticMap = config.plasticMap;
-	initialRating = config.initialRating;
 	summaryMap = config.summaryMap;
+	histogramRating = config.histogramRating;
 	remapRatio = config.remapRatio;
 	minFeatureRemap = config.minFeatureRemap;
 	maxFeatureRemap = config.maxFeatureRemap;
@@ -396,7 +397,11 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					differences[i] = difference;
 				//	if (index <= 0) index = 0;
 				//	if (index >= numBins) index = numBins-1;
+				if(histogramRating){
+					if (index >= 0 || index < numBins) histogram[index] = histogram[index] + (histogram[index]*mapFeatures.feature[idx1].rating+0.1);
+				} else {
 					if (index >= 0 || index < numBins) histogram[index]++;
+				}
 				}
 				count=0;
 			}
@@ -426,8 +431,13 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
-					sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
-					count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
+					if(histogramRating){
+						sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
+						count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
+					}else {
+						sum+=differences[i];
+						count++;
+					}
 					best_matches.push_back(good_matches[i]);
 					keypointsBest.push_back(keypointsGood[i]);
 				} else {
@@ -502,7 +512,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				// add the least similar features from view to map
 				for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
 					info.view.feature[i].rating = 0;
-					if (remapRotGain == 0) info.view.feature[i].rating = 1000;
 					info.view.feature[i].x = info.view.feature[i].x + differenceRot*remapRotGain;
 					mapFeatures.feature.push_back(info.view.feature[i]);
 				}
