@@ -73,8 +73,8 @@ nav_msgs::Odometry odometry;
 
 /* Image features parameters */
 Ptr<DescriptorMatcher> matcher;
-vector<KeyPoint> mapKeypoints, currentKeypoints,keypointsGood,keypointsBest;
-Mat mapDescriptors, currentDescriptors;
+vector<KeyPoint> mapKeypoints, currentKeypoints,keypointsGood,keypointsBest,experienceKeypoints;
+Mat mapDescriptors, currentDescriptors,experienceDescriptors;
 Mat img_goodKeypoints_1,currentImage,mapImage;
 KeyPoint keypoint,keypoint2;
 float ratioMatchConstant = 0.7;
@@ -88,6 +88,19 @@ float maximalAdaptiveSpeed = 1.0;
 bool imgShow;
 NormTypes featureNorm = NORM_INF;
 int descriptorType = CV_32FC1;
+
+/*experiences*/
+vector<vector<KeyPoint> > experiencesKeypoints;
+vector<Mat> experiencesDescriptors;
+int expCount=0;
+vector<int> statsGood,statsCorr,statsSucc;
+float sum=0;
+float count=0;
+int numBins = 41;
+float histogram[41];
+int expID=0;
+int succCount=0;
+int bestIdx=-1;
 
 /* Feature message */
 stroll_bearnav::FeatureArray featureArray;
@@ -171,6 +184,12 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	mapKeypoints.clear();
 	mapDescriptors.release();
 	mapDescriptors = Mat();
+	experienceKeypoints.clear();
+	experienceDescriptors.release();
+	experienceDescriptors = Mat();
+	experiencesKeypoints.clear();
+	experiencesDescriptors.clear();
+	expCount=0;
 	for(int i=0; i<msg->feature.size();i++){
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
@@ -179,11 +198,24 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypoint.response=msg->feature[i].response;
 		keypoint.octave=msg->feature[i].octave;
 		keypoint.class_id=msg->feature[i].class_id;
-		mapKeypoints.push_back(keypoint);
 		int size=msg->feature[i].descriptor.size();
 		Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
-		mapDescriptors.push_back(mat);
+		expID=msg->feature[i].expID;
+		ROS_INFO("expId: %i",expID);
+		if(expID==0){
+			mapKeypoints.push_back(keypoint);
+			mapDescriptors.push_back(mat);
+			ROS_INFO("map");
+		} else{
+			experienceKeypoints.push_back(keypoint);
+			experienceDescriptors.push_back(mat);
+			experiencesKeypoints.push_back(experienceKeypoints);
+			experiencesDescriptors.push_back(experienceDescriptors);
+			expCount++;
+			ROS_INFO("expCount: %i",expCount);
+		}
 	}
+	ROS_INFO("here");
 }
 
 void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *serv)
@@ -263,9 +295,126 @@ bool compare_rating(stroll_bearnav::Feature first, stroll_bearnav::Feature secon
 	if (first.rating > second.rating) return true; else return false;
 }
 
+void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vector<KeyPoint> currentKeypoints, Mat currentDescriptors, int currExpCount)
+{
+	ROS_INFO("start hist");
+	good_matches.clear();
+
+
+	for (int i = 0;i<numBins;i++) histogram[i] = 0;
+
+	best_matches.clear();
+	bad_matches.clear();
+
+	/*establish correspondences, build the histogram and determine robot heading*/
+	float bestc=0;
+	//info.updated=false;
+	//info.view = *msg;
+	matches.clear();
+	if (mappedKeypoints.size() >0 && currentKeypoints.size() >0){
+
+		/*feature matching*/
+		int knn = 5;
+		try{
+			 matcher->knnMatch( mappedDescriptors, currentDescriptors, matches, knn);
+			 //TODO crosscheck matching matcher->knnMatch( currentDescriptors,  mapDescriptors,revmatches, knn);
+		}catch (Exception& e){
+			matches.clear();
+			ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
+		}
+		/*perform ratio matching*/
+		good_matches.reserve(matches.size());
+		for (size_t i = 0; i < matches.size(); i++)
+		{
+			if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance) good_matches.push_back(matches[i][0]);
+			//TODO crosscheck matching //if (matches[i][0].trainIdx == revmatches[matches[i][0].trainIdx][0].queryIdx)
+		}
+
+		/*building histogram*/
+		int num=good_matches.size();
+		matched_points1.clear();
+		matched_points2.clear();
+		Point2f current;
+		Point2f best, possible;
+		::count=0;
+		bestc=0;
+		int granularity = 20;
+		int *differences = (int*)calloc(num,sizeof(int));
+
+		for (int i=0;i<num;i++){
+
+			int idx2=good_matches[i].trainIdx;
+			int idx1=good_matches[i].queryIdx;
+			//printf("MATCH: %i %i %i\n",i,idx2,idx1);
+			matched_points1.push_back(mappedKeypoints[idx1].pt);
+			matched_points2.push_back(currentKeypoints[idx2].pt);
+			keypointsGood.push_back(currentKeypoints[idx2]);
+			/*difference in x and y positions*/
+			current.x=round(matched_points1[i].x-matched_points2[i].x);
+			current.y=round(matched_points1[i].y-matched_points2[i].y);
+			int difference = current.x;
+			int index = (difference+granularity/2)/granularity + numBins/2;
+			if (fabs(current.y) > maxVerticalDifference){
+				differences[i] = -1000000;
+			}else{
+				differences[i] = difference;
+			//	if (index <= 0) index = 0;
+			//	if (index >= numBins) index = numBins-1;
+
+				if (index >= 0 || index < numBins) histogram[index]++;
+
+			}
+			::count=0;
+		}
+
+		/*histogram printing*/
+		int max=0;
+		int position=0;
+		printf("Bin ID %i: ",currExpCount);
+		for (int i = 0;i<numBins;i++) {
+			printf("%.0f ",histogram[i]);
+			if (histogram[i]>max)
+			{
+				max=histogram[i];
+				position=i;
+			}
+		}
+		feedback.max = max;
+
+		/* rotation between features based on histogram voting */
+		int rotation=(position-numBins/2)*granularity;
+		printf("\n");
+		keypointsBest.clear();
+		/* use good correspondences to determine heading */
+		best_matches.clear();
+		bad_matches.clear();
+		/* take only good correspondences */
+		for(int i=0;i<num;i++){
+			if (fabs(differences[i]-rotation) < granularity*1.5){
+					::sum+=differences[i];
+					::count++;
+				best_matches.push_back(good_matches[i]);
+				keypointsBest.push_back(keypointsGood[i]);
+			} else {
+				bad_matches.push_back(good_matches[i]);
+			}
+		}
+		free(differences);
+
+		statsGood.push_back(good_matches.size());
+		statsCorr.push_back(best_matches.size());
+		if (::count<minGoodFeatures){
+			statsSucc.push_back(0);
+		} else {
+			statsSucc.push_back(1);
+		}
+
+	}
+}
 
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
+	ROS_INFO("featurecall");
 	if(state == NAVIGATING){
 		currentKeypoints.clear();
 		keypointsBest.clear();
@@ -316,135 +465,70 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			}
 		}
 
-		good_matches.clear();
+		/*eventually, recalculate experiences descriptors*/
+		/*for(int j=0;j<experiencesDescriptors.size();j++)
+		if (experiencesDescriptors[j].type() != descriptorType)
+		{
+			ROS_INFO("Recalculating experience %i",j);
+			experiencesDescriptors[j].release();
+			experiencesDescriptors[j] = Mat();
+			for(int i=0; i<experiencesKeypoints[j].size();i++){
+				int size=experiencesDescriptors[j].size();
+				Mat mat(1,size,descriptorType,(void*)experiencesDescriptors[j]);
+				experiencesDescriptors[j].push_back(mat);
+			}
+		}*/
 
-		int numBins = 41;
-		float histogram[numBins];
-		for (int i = 0;i<numBins;i++) histogram[i] = 0;
-
-		best_matches.clear();
-		bad_matches.clear();
-
-		/*establish correspondences, build the histogram and determine robot heading*/
-		float count=0,bestc=0;
 		info.updated=false;
-		info.view = *msg;
-		matches.clear();
-		if (mapKeypoints.size() >0 && currentKeypoints.size() >0){
+ROS_INFO("make a circus");
+		/* perform matching and histogram building on map and all experiences*/
+		histogramMethod(mapKeypoints,mapDescriptors,currentKeypoints,currentDescriptors,0);
+		for(int a=1;a<expCount;a++){
+			histogramMethod(experiencesKeypoints[a],experiencesDescriptors[a],currentKeypoints,currentDescriptors,a);
+		}
 
-			/*feature matching*/
-			int knn = 5;
-			try{
-				 matcher->knnMatch( mapDescriptors, currentDescriptors, matches, knn);
-				 //TODO crosscheck matching matcher->knnMatch( currentDescriptors,  mapDescriptors,revmatches, knn);
-			}catch (Exception& e){
-				matches.clear();
-				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
-			}
-			/*perform ratio matching*/
-			good_matches.reserve(matches.size());
-			for (size_t i = 0; i < matches.size(); i++)
-			{
-				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance) good_matches.push_back(matches[i][0]);
-				//TODO crosscheck matching //if (matches[i][0].trainIdx == revmatches[matches[i][0].trainIdx][0].queryIdx)
-			}
+		int maxCorr=0;
+		int maxCorrIdx=-1;
+		int minOut=10000;
+		int minOutIdx=-1;
 
-			/* rating view features	*/
-			// maximasing minimal distance
-			for (int i = 0; i < info.view.feature.size(); i++) {
-				info.view.feature[i].rating=5000;
+		int minOutmaxCorr=-1;
+		int minOutmaxCorrIdx=-1;
+		for(int i=0;i<statsGood.size();i++){
+			if(statsSucc[i]==1) succCount++;
+			int outliers = statsGood[i]-statsCorr[i];
+			if(statsCorr[i]>maxCorr){
+				maxCorr=statsCorr[i];
+				maxCorrIdx=i;
 			}
-			int nIdx=-1;
-			float distance;
-			for (int i = 0; i < matches.size(); i++) {
-				for (int j = 0; j < matches[i].size(); j++) {
-					nIdx=matches[i][j].trainIdx;
-					distance=matches[i][j].distance;
-					info.view.feature[nIdx].rating=fmin(info.view.feature[nIdx].rating,distance);
+			if(outliers<minOut){
+				minOut=outliers;
+				minOutIdx=i;
+			} else if(outliers==minOut){
+				if(statsCorr[i]>minOutmaxCorr){
+					minOutmaxCorr=statsCorr[i];
+					minOutmaxCorrIdx=i;
 				}
 			}
-			sort(info.view.feature.begin(),info.view.feature.end(),compare_rating);
-			//cout << "view: first " << info.view.feature[0].rating << " x " << info.view.feature[0].x << " last " << info.view.feature[info.view.feature.size()-1].rating  << " x " << info.view.feature[info.view.feature.size()-1].x  << endl;
+		}
+		printf("sucess: %i, minOut[%i]: %i, maxCorr[%i]: %i, minOutmaxCorr[%i]: %i",succCount,minOutIdx,minOut,maxCorrIdx,maxCorr,minOutmaxCorrIdx,minOutmaxCorr);
 
 
-			/*building histogram*/
-			int num=good_matches.size();
-			matched_points1.clear();
-			matched_points2.clear();
-			Point2f current;
-			Point2f best, possible;
-			count=0;
-			bestc=0;
-			int granularity = 20;
-			int *differences = (int*)calloc(num,sizeof(int));
-
-			for (int i=0;i<num;i++){
-
-				int idx2=good_matches[i].trainIdx;
-				int idx1=good_matches[i].queryIdx;
-				//printf("MATCH: %i %i %i\n",i,idx2,idx1);
-				matched_points1.push_back(mapKeypoints[idx1].pt);
-				matched_points2.push_back(currentKeypoints[idx2].pt);
-				keypointsGood.push_back(currentKeypoints[idx2]);
-				/*difference in x and y positions*/
-				current.x=round(matched_points1[i].x-matched_points2[i].x);
-				current.y=round(matched_points1[i].y-matched_points2[i].y);
-				int difference = current.x;
-				int index = (difference+granularity/2)/granularity + numBins/2;
-				if (fabs(current.y) > maxVerticalDifference){
-					differences[i] = -1000000;
-				}else{
-					differences[i] = difference;
-				//	if (index <= 0) index = 0;
-				//	if (index >= numBins) index = numBins-1;
-				if(histogramRating){
-					if (index >= 0 || index < numBins) histogram[index] = histogram[index] + (histogram[index]*mapFeatures.feature[idx1].rating+0.1);
-				} else {
-					if (index >= 0 || index < numBins) histogram[index]++;
-				}
-				}
-				count=0;
+		if(minOutmaxCorrIdx!=-1){
+			bestIdx=minOutmaxCorrIdx;
+			if(minOutmaxCorrIdx == 0){
+				histogramMethod(mapKeypoints,mapDescriptors,currentKeypoints,currentDescriptors,0);
+			} else {
+				histogramMethod(experiencesKeypoints[minOutmaxCorrIdx-1],experiencesDescriptors[minOutmaxCorrIdx-1],currentKeypoints,currentDescriptors,minOutmaxCorrIdx);
 			}
-
-			/*histogram printing*/
-			int max=0;
-			int position=0;
-			printf("Bin: ");
-			for (int i = 0;i<numBins;i++) {
-				printf("%.0f ",histogram[i]);
-				if (histogram[i]>max)
-				{
-					max=histogram[i];
-					position=i;
-				}
+		} else{ //minOut
+			bestIdx=minOutIdx;
+			if(minOutIdx == 0){
+				histogramMethod(mapKeypoints,mapDescriptors,currentKeypoints,currentDescriptors,0);
+			} else {
+				histogramMethod(experiencesKeypoints[minOutIdx-1],experiencesDescriptors[minOutIdx-1],currentKeypoints,currentDescriptors,minOutIdx);
 			}
-			feedback.max = max;
-
-			/* rotation between features based on histogram voting */
-			int rotation=(position-numBins/2)*granularity;
-			printf("\n");
-			float sum=0;
-			keypointsBest.clear();
-			/* use good correspondences to determine heading */
-			best_matches.clear();
-			bad_matches.clear();
-			/* take only good correspondences */
-			for(int i=0;i<num;i++){
-				if (fabs(differences[i]-rotation) < granularity*1.5){
-					if(histogramRating){
-						sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
-						count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
-					}else {
-						sum+=differences[i];
-						count++;
-					}
-					best_matches.push_back(good_matches[i]);
-					keypointsBest.push_back(keypointsGood[i]);
-				} else {
-					bad_matches.push_back(good_matches[i]);
-				}
-			}
-			free(differences);
+		}
 
 			/* publish statistics */
 			feedback.correct = best_matches.size();
@@ -452,66 +536,31 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			feedback.keypoints_avg = (mapKeypoints.size() + currentKeypoints.size() )/2;
 			feedback.matches = good_matches.size();
 			/*difference between features */
-			differenceRot=sum/count;
+			differenceRot=::sum/::count;
 			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 			//cout << "bm " << bad_matches.size()  << endl;
 		}
-		velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
+		velocityGain = fmin(fmax(::count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
 
 
 
 		feedback.histogram.clear();
-		if (count<minGoodFeatures) differenceRot = 0;
+		if (::count<minGoodFeatures) differenceRot = 0;
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
 
 		/*forming navigation info messsage*/
-		//info.mapID = currentMapID;
+		info.view=*msg;
 		info.histogram = feedback.histogram;
 		info.ratio = ratioMatchConstant;
 		info.mapMatchIndex.clear();
-		vector<int> mapIndex(mapFeatures.feature.size());
-		vector<int> mapEval(mapFeatures.feature.size());
-		std::fill(mapIndex.begin(),mapIndex.end(),-1);
-		std::fill(mapEval.begin(),mapEval.end(),0);
-		for (int i = 0;i<good_matches.size();i++)
-		{
-			mapIndex[good_matches[i].queryIdx] = good_matches[i].trainIdx;
-			mapEval[good_matches[i].queryIdx] = -1;
-		}
-		for (int i = 0;i<best_matches.size();i++) {
-			mapEval[best_matches[i].queryIdx] = 1;
-			// rating map features
-			if(isRating) mapFeatures.feature[best_matches[i].queryIdx].rating+=mapEval[best_matches[i].queryIdx];
-		}
-		if(isRating)
-		{
-			if (count>=minGoodFeatures){
-				for (int i = 0; i < bad_matches.size(); i++) {
-					mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
-				}
-				int numFeatureRemove = fmin(fmax(best_matches.size()*remapRatio,minFeatureRemap),maxFeatureRemap);
-				int numFeatureAdd = numFeatureRemove;
 
-				//rebuild map completely
-				if (plasticMap){
-					numFeatureAdd = info.view.feature.size();
-					mapFeatures.feature.clear();
-				}else{
-					sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
-					if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
+		int succLocalisers=1;
 
-					//if summary map, remove only features with negative ranking
-					if (summaryMap){
-						while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating >= 0 && numFeatureRemove > 0) numFeatureRemove--;
-					}
-
-					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
-				}
-
-				// add the least similar features from view to map
-				for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
-					info.view.feature[i].rating = 0;
+		// add new experience
+			if (succCount<=succLocalisers){
+				for (int i = 0; i < mapFeatures.feature.size() && i < info.view.feature.size(); i++) {
+					info.view.feature[i].expID = expCount+1;
 					info.view.feature[i].x = info.view.feature[i].x + differenceRot*remapRotGain;
 					mapFeatures.feature.push_back(info.view.feature[i]);
 				}
@@ -519,11 +568,11 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			isRating=false;
 			mapChanges++;
 			info.updated=true;
-		}
+
 		info.mapChanges=mapChanges;
 		info.map = mapFeatures;
-		info.mapMatchIndex = mapIndex;
-		info.mapMatchEval = mapEval;
+		//info.mapMatchIndex = mapIndex;
+		//info.mapMatchEval = mapEval;
 		info.correct = feedback.correct;
 		info.matches = feedback.matches;
 		info.distance = feedback.distance;
@@ -535,19 +584,29 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		if(image_pub_.getNumSubscribers()>0)
 		{
 			//drawKeypoints(currentImage,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
-			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0)
+			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0 && experiencesKeypoints[bestIdx].size()>0)
 			{
 				if (mapImage.rows==0) mapImage = currentImage;
 				Mat mapIm = mapImage.t();
 				Mat curIm = currentImage.t();
 				vector<KeyPoint> kpMap,kpCur;
 				KeyPoint tmp;
-				for (int i = 0;i<mapKeypoints.size();i++)
-				{
-					tmp = mapKeypoints[i];
-					tmp.pt.y = mapKeypoints[i].pt.x;
-					tmp.pt.x = mapKeypoints[i].pt.y;
-					kpMap.push_back(tmp);
+				if(bestIdx==0){
+					for (int i = 0;i<mapKeypoints.size();i++)
+					{
+						tmp = mapKeypoints[i];
+						tmp.pt.y = mapKeypoints[i].pt.x;
+						tmp.pt.x = mapKeypoints[i].pt.y;
+						kpMap.push_back(tmp);
+					}
+				} else {
+					for (int i = 0;i<experiencesKeypoints[bestIdx].size();i++)
+					{
+						tmp = experiencesKeypoints[bestIdx][i];
+						tmp.pt.y = experiencesKeypoints[bestIdx][i].pt.x;
+						tmp.pt.x = experiencesKeypoints[bestIdx][i].pt.y;
+						kpMap.push_back(tmp);
+					}
 				}
 				for (int i = 0;i<currentKeypoints.size();i++)
 				{
@@ -583,7 +642,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		feedback.stats.push_back(feedback.outliers);
 
 		server->publishFeedback(feedback);
-	}
+
+
 }
 
 void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
