@@ -94,8 +94,8 @@ vector<vector<KeyPoint> > experiencesKeypoints;
 vector<Mat> experiencesDescriptors;
 int expCount=0;
 vector<int> statsGood,statsCorr,statsSucc;
-float sum=0;
-float count=0;
+float suma=0;
+float counta=0;
 int numBins = 41;
 float histogram[41];
 int expID=0;
@@ -298,6 +298,7 @@ bool compare_rating(stroll_bearnav::Feature first, stroll_bearnav::Feature secon
 void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vector<KeyPoint> currentKeypoints, Mat currentDescriptors, int currExpCount)
 {
 	ROS_INFO("start hist");
+	ROS_INFO("hist statsSucc size %i\n",(int) statsSucc.size());
 	good_matches.clear();
 
 
@@ -336,10 +337,10 @@ void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vec
 		matched_points2.clear();
 		Point2f current;
 		Point2f best, possible;
-		::count=0;
+		counta=0;
 		bestc=0;
 		int granularity = 20;
-		int *differences = (int*)calloc(num,sizeof(int));
+		int *differences = (int*)calloc(num+1,sizeof(int));
 
 		for (int i=0;i<num;i++){
 
@@ -364,7 +365,7 @@ void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vec
 				if (index >= 0 || index < numBins) histogram[index]++;
 
 			}
-			::count=0;
+			counta=0;
 		}
 
 		/*histogram printing*/
@@ -391,8 +392,8 @@ void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vec
 		/* take only good correspondences */
 		for(int i=0;i<num;i++){
 			if (fabs(differences[i]-rotation) < granularity*1.5){
-					::sum+=differences[i];
-					::count++;
+					suma+=differences[i];
+					counta++;
 				best_matches.push_back(good_matches[i]);
 				keypointsBest.push_back(keypointsGood[i]);
 			} else {
@@ -403,12 +404,13 @@ void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vec
 
 		statsGood.push_back(good_matches.size());
 		statsCorr.push_back(best_matches.size());
-		if (::count<minGoodFeatures){
+		ROS_INFO("hist statsSucc size %i\n",(int) statsSucc.size());
+		if (counta<minGoodFeatures){
 			statsSucc.push_back(0);
 		} else {
 			statsSucc.push_back(1);
 		}
-
+		ROS_INFO("hist statsSucc size %i\n",(int) statsSucc.size());
 	}
 }
 
@@ -481,11 +483,17 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 		info.updated=false;
 ROS_INFO("make a circus");
+		statsGood.clear();
+		statsCorr.clear();
+		statsSucc.clear();
+			ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
 		/* perform matching and histogram building on map and all experiences*/
 		histogramMethod(mapKeypoints,mapDescriptors,currentKeypoints,currentDescriptors,0);
+		ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
 		for(int a=1;a<expCount;a++){
 			histogramMethod(experiencesKeypoints[a],experiencesDescriptors[a],currentKeypoints,currentDescriptors,a);
 		}
+ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
 
 		int maxCorr=0;
 		int maxCorrIdx=-1;
@@ -495,6 +503,7 @@ ROS_INFO("make a circus");
 		int minOutmaxCorr=-1;
 		int minOutmaxCorrIdx=-1;
 		for(int i=0;i<statsGood.size();i++){
+			ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
 			if(statsSucc[i]==1) succCount++;
 			int outliers = statsGood[i]-statsCorr[i];
 			if(statsCorr[i]>maxCorr){
@@ -511,7 +520,7 @@ ROS_INFO("make a circus");
 				}
 			}
 		}
-		printf("sucess: %i, minOut[%i]: %i, maxCorr[%i]: %i, minOutmaxCorr[%i]: %i",succCount,minOutIdx,minOut,maxCorrIdx,maxCorr,minOutmaxCorrIdx,minOutmaxCorr);
+		ROS_INFO("sucess: %i, minOut[%i]: %i, maxCorr[%i]: %i, minOutmaxCorr[%i]: %i\n",succCount,minOutIdx,minOut,maxCorrIdx,maxCorr,minOutmaxCorrIdx,minOutmaxCorr);
 
 
 		if(minOutmaxCorrIdx!=-1){
@@ -536,17 +545,17 @@ ROS_INFO("make a circus");
 			feedback.keypoints_avg = (mapKeypoints.size() + currentKeypoints.size() )/2;
 			feedback.matches = good_matches.size();
 			/*difference between features */
-			differenceRot=::sum/::count;
+			differenceRot=suma/counta;
 			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
-			//cout << "Vektor: " << count << " " << differenceRot << endl;
+			//cout << "Vektor: " << counta << " " << differenceRot << endl;
 			//cout << "bm " << bad_matches.size()  << endl;
 		}
-		velocityGain = fmin(fmax(::count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
+		velocityGain = fmin(fmax(counta/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
 
 
 
 		feedback.histogram.clear();
-		if (::count<minGoodFeatures) differenceRot = 0;
+		if (counta<minGoodFeatures) differenceRot = 0;
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
 
 		/*forming navigation info messsage*/
@@ -584,7 +593,7 @@ ROS_INFO("make a circus");
 		if(image_pub_.getNumSubscribers()>0)
 		{
 			//drawKeypoints(currentImage,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
-			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0 && experiencesKeypoints[bestIdx].size()>0)
+			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0)
 			{
 				if (mapImage.rows==0) mapImage = currentImage;
 				Mat mapIm = mapImage.t();
@@ -599,7 +608,7 @@ ROS_INFO("make a circus");
 						tmp.pt.x = mapKeypoints[i].pt.y;
 						kpMap.push_back(tmp);
 					}
-				} else {
+				} else if(experiencesKeypoints.size()>0) {
 					for (int i = 0;i<experiencesKeypoints[bestIdx].size();i++)
 					{
 						tmp = experiencesKeypoints[bestIdx][i];
