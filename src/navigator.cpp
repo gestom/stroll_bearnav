@@ -327,6 +327,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 		/*establish correspondences, build the histogram and determine robot heading*/
 		float count=0,bestc=0;
+		float countPriv=0;
 		info.updated=false;
 		info.view = *msg;
 		matches.clear();
@@ -397,11 +398,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					differences[i] = difference;
 				//	if (index <= 0) index = 0;
 				//	if (index >= numBins) index = numBins-1;
-				if(histogramRating){
-					if (index >= 0 || index < numBins) histogram[index] = histogram[index] + (histogram[index]*mapFeatures.feature[idx1].rating+0.1);
-				} else {
-					if (index >= 0 || index < numBins) histogram[index]++;
-				}
+				if (index >= 0 && index < numBins) histogram[index]++;
+
 				}
 				count=0;
 			}
@@ -424,6 +422,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int rotation=(position-numBins/2)*granularity;
 			printf("\n");
 			float sum=0;
+			float sumPriv=0;
 			keypointsBest.clear();
 			/* use good correspondences to determine heading */
 			best_matches.clear();
@@ -431,13 +430,14 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
-					if(histogramRating){
-						sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
-						count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
-					}else {
-						sum+=differences[i];
-						count++;
+					ROS_INFO("privileged num %i is %i",i,mapFeatures.feature[good_matches[i].queryIdx].privileged);
+					if(mapFeatures.feature[good_matches[i].queryIdx].privileged==1){
+						sumPriv+=differences[i];
+						countPriv++;
 					}
+					sum+=differences[i];
+					count++;
+
 					best_matches.push_back(good_matches[i]);
 					keypointsBest.push_back(keypointsGood[i]);
 				} else {
@@ -445,6 +445,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				}
 			}
 			free(differences);
+			ROS_INFO("countPriv %0.3f sumPriv %0.3f",countPriv,sumPriv);
 
 			/* publish statistics */
 			feedback.correct = best_matches.size();
@@ -452,12 +453,25 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			feedback.keypoints_avg = (mapKeypoints.size() + currentKeypoints.size() )/2;
 			feedback.matches = good_matches.size();
 			/*difference between features */
-			differenceRot=sum/count;
+			if(countPriv!=0 && sumPriv!=0){
+				differenceRot=sumPriv/countPriv;
+				ROS_INFO("using countPriv %0.3f sumPriv %0.3f",countPriv,sumPriv);
+			} else{
+				differenceRot=sum/count;
+				ROS_INFO("NOT priv count %0.3f sum %0.3f",count,sum);
+			}
 			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 			//cout << "bm " << bad_matches.size()  << endl;
 		}
-		velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
+		if(countPriv!=0){
+			velocityGain = fmin(fmax(countPriv/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
+			ROS_INFO("using countPriv %0.3f velocityGain %0.3f",countPriv,velocityGain);
+		} else{
+			velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
+			ROS_INFO("NOT priv count %0.3f velocityGain %0.3f",count,velocityGain);
+		}
+
 
 
 

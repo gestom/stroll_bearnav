@@ -42,6 +42,7 @@ stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
 
 /* map variables */
+vector<int> privileges;
 vector<float> ratings;
 Mat img,img2;
 vector<KeyPoint> keypoints_1,keypoints_2;
@@ -67,9 +68,10 @@ vector<float> distanceMap;
 vector<string> namesMap;
 vector<Mat> imagesMap;
 vector<vector<float> > ratingsMap;
+vector<vector<int> > privilegesMap;
 
 /* adaptive maps */
-bool histogramRating = true;
+bool histogramRating = false;
 
 
 typedef enum
@@ -83,7 +85,7 @@ EMapLoaderState state = IDLE;
 /* dynamic reconfigure of navigator */
 void navigatorCallback(const dynamic_reconfigure::Config::ConstPtr& msg)
 {
-    histogramRating = msg->bools[3].value;
+    //histogramRating = msg->bools[3].value;
     printf("navigatorCallback, histogram rating %i\n",histogramRating);
 }
 
@@ -126,6 +128,7 @@ int loadMaps()
 	distanceMap.clear();
 	namesMap.clear();
 	ratingsMap.clear();
+	privilegesMap.clear();
 	char fileName[1000];
 
 	numFeatures=0;
@@ -142,20 +145,21 @@ int loadMaps()
 			fs["Image"]>>img;
 			ratings.clear();
 			fs["Ratings"]>>ratings;
-
-							if(histogramRating && ratings.size() == 0){
-								// initial rating
-								for (int j = 0; j < keypoints_1.size(); j++) ratings.push_back(1);
-							} else {
-								for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
-							}
-
+			for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
+			privileges.clear();
+			fs["Privileges"]>>privileges;
+			if(privileges.size()==0){
+				for (int j = privileges.size(); j < keypoints_1.size(); j++) privileges.push_back(1);
+			} else {
+				for (int j = privileges.size(); j < keypoints_1.size(); j++) privileges.push_back(0);
+			}
 			fs.release();
 			keypointsMap.push_back(keypoints_1);
 			descriptorMap.push_back(descriptors_1);
 			distanceMap.push_back(mapDistances[i]);
 			namesMap.push_back(fileName);
 			ratingsMap.push_back(ratings);
+			privilegesMap.push_back(privileges);
 			if (image_pub_.getNumSubscribers()>0) imagesMap.push_back(img);
 			numFeatures+=keypoints_1.size();
 			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
@@ -189,6 +193,7 @@ void loadMap(int index)
 	currentMapName = namesMap[index];
 	currentDistance = distanceMap[index];
 	ratings = ratingsMap[index];
+	privileges = privilegesMap[index];
 	numFeatures=keypoints_1.size();
 	char fileName[1000];
 	sprintf(fileName,"%i features loaded from %ith map at %.3f",numFeatures,index,distanceMap[index]);
@@ -343,6 +348,7 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 					feature.class_id=keypoints_1[i].class_id;
 					feature.descriptor=descriptors_1.row(i);
 					feature.rating=ratings[i];
+					feature.privileged=privileges[i];
 					featureArray.feature.push_back(feature);
 				}
 			}

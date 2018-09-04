@@ -20,7 +20,7 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp $f/P0_GT.txt $f/M0_GT.txt
 fi
 
-if [ 1 == 1 ]
+if [ 0 == 1 ]
 then
 test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
@@ -42,13 +42,22 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_adaptive.txt
 fi
 
-if [ 1 == 1 ]
+if [ 0 == 1 ]
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': True,'remapRotGain': 1.0}"&
 rosparam set names_map  [M0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D10,D11,D12]
 rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_weighted.txt
+fi
+
+if [ 1 == 1 ]
+then
+rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
+rosparam set names_map  [M0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D10,D11,D12]
+rosparam set names_view [P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12]
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+cp ~/.ros/Results.txt results/Map_privileged.txt
 fi
 
 path=`pwd`
@@ -59,7 +68,7 @@ cd $path
 
 echo "in `pwd`"
 
-for i in Map_weighted Map_adaptive Map_plastic Map_static;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
+for i in Map_privileged Map_weighted Map_adaptive Map_plastic Map_static;do grep reports results/$i.txt|awk '{a=$21-$23;print (sqrt(a*a)+384)%768-384}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
 echo -ne "	Error of Adaptive VS Static: "
 paste results/Map_adaptive.err results/Map_static.err          |./icra_2019_adamap/t-test $confidence
