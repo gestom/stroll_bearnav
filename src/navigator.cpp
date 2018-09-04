@@ -391,6 +391,8 @@ void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vec
 		/* use good correspondences to determine heading */
 		best_matches.clear();
 		bad_matches.clear();
+		suma = 0;
+		counta = 0;
 		/* take only good correspondences */
 		for(int i=0;i<num;i++){
 			if (fabs(differences[i]-rotation) < granularity*1.5){
