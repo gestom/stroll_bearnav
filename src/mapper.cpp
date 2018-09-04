@@ -213,7 +213,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 			timesMap.push_back(ros::Time::now().toSec());
 			ratingsMap.push_back(ratings);
 			experiencesMap.push_back(experiences);
-
+ROS_INFO("MAPPER saving");
 			/*and flush it to the disk*/
 			for (int i = 0;i<distanceMap.size();i++){
 				sprintf(name,"%s/%s_%.3f.yaml",folder.c_str(),baseName.c_str(),distanceMap[i]);
@@ -270,6 +270,7 @@ void flipperCallback(const std_msgs::Float32::ConstPtr& msg)
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
 	if(!isPlastic) {
+		//ROS_INFO("MAPPER FEATURE");
 		ROS_INFO("Features received\n");
 		if (state == SAVING) {
 			keypoints.clear();
@@ -322,6 +323,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 {
+	//ROS_INFO("MAPPER INFO");
 	isUpdated = msg->updated;
 
 	if(isPlastic && isUpdated) {
@@ -336,7 +338,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 			ratings.clear();
 			img.release();
 			experiences.clear();
-
+			//ROS_INFO("MAPPER exp forming");
 			//rating
 			for (int i = 0; i < msg->map.feature.size(); i++) {
 				stroll_bearnav::Feature feature = msg->map.feature[i];
@@ -371,7 +373,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 			timesMap.push_back(ros::Time::now().toSec());
 			ratingsMap.push_back(ratings);
 			experiencesMap.push_back(experiences);
-
+//ROS_INFO("MAPPER stored");
 			/* publish feedback */
 			sprintf(name, "%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
 			ROS_INFO("%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);

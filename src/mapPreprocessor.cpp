@@ -344,6 +344,7 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 					feature.class_id=keypoints_1[i].class_id;
 					feature.descriptor=descriptors_1.row(i);
 					feature.rating=ratings[i];
+					feature.expID=experiences[i];
 					featureArray.feature.push_back(feature);
 				}
 			}

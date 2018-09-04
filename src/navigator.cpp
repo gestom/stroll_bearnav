@@ -73,8 +73,8 @@ nav_msgs::Odometry odometry;
 
 /* Image features parameters */
 Ptr<DescriptorMatcher> matcher;
-vector<KeyPoint> mapKeypoints, currentKeypoints,keypointsGood,keypointsBest,experienceKeypoints;
-Mat mapDescriptors, currentDescriptors,experienceDescriptors;
+vector<KeyPoint> currentKeypoints,keypointsGood,keypointsBest,experienceKeypoints;
+Mat currentDescriptors,experienceDescriptors;
 Mat img_goodKeypoints_1,currentImage,mapImage;
 KeyPoint keypoint,keypoint2;
 float ratioMatchConstant = 0.7;
@@ -99,7 +99,7 @@ float counta=0;
 int numBins = 41;
 float histogram[41];
 int expID=0;
-int succCount=0;
+//int succCount=0;
 int bestIdx=-1;
 
 /* Feature message */
@@ -179,17 +179,17 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 /* reference map received */
 void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
+	int tmpcount=0;
 	mapFeatures = *msg;
 	ROS_INFO("Received a new reference map");
-	mapKeypoints.clear();
-	mapDescriptors.release();
-	mapDescriptors = Mat();
 	experienceKeypoints.clear();
 	experienceDescriptors.release();
 	experienceDescriptors = Mat();
 	experiencesKeypoints.clear();
 	experiencesDescriptors.clear();
 	expCount=0;
+	int lastExp=0;
+	int currExp=0;
 	for(int i=0; i<msg->feature.size();i++){
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
@@ -198,24 +198,27 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypoint.response=msg->feature[i].response;
 		keypoint.octave=msg->feature[i].octave;
 		keypoint.class_id=msg->feature[i].class_id;
+		expID=msg->feature[i].expID;
 		int size=msg->feature[i].descriptor.size();
 		Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
-		expID=msg->feature[i].expID;
-		ROS_INFO("expId: %i",expID);
-		if(expID==0){
-			mapKeypoints.push_back(keypoint);
-			mapDescriptors.push_back(mat);
-			ROS_INFO("map");
-		} else{
-			experienceKeypoints.push_back(keypoint);
-			experienceDescriptors.push_back(mat);
+		currExp=expID;
+		//ROS_INFO("expId: %i feature %i",expID,i);
+		if(currExp!=lastExp){
 			experiencesKeypoints.push_back(experienceKeypoints);
 			experiencesDescriptors.push_back(experienceDescriptors);
-			expCount++;
-			ROS_INFO("expCount: %i",expCount);
+			experienceKeypoints.clear();
+			experienceDescriptors.release();
+			experienceDescriptors = Mat();
+			lastExp=currExp;
 		}
+			experienceKeypoints.push_back(keypoint);
+			experienceDescriptors.push_back(mat);
+			//ROS_INFO("currExp: %i",currExp);
 	}
-	ROS_INFO("here");
+	experiencesKeypoints.push_back(experienceKeypoints);
+	experiencesDescriptors.push_back(experienceDescriptors);
+	expCount=currExp;
+	ROS_INFO("expCount: %i",expCount);
 }
 
 void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *serv)
@@ -297,8 +300,7 @@ bool compare_rating(stroll_bearnav::Feature first, stroll_bearnav::Feature secon
 
 void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vector<KeyPoint> currentKeypoints, Mat currentDescriptors, int currExpCount)
 {
-	ROS_INFO("start hist");
-	ROS_INFO("hist statsSucc size %i\n",(int) statsSucc.size());
+	//ROS_INFO("start hist");
 	good_matches.clear();
 
 
@@ -362,7 +364,7 @@ void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vec
 			//	if (index <= 0) index = 0;
 			//	if (index >= numBins) index = numBins-1;
 
-				if (index >= 0 || index < numBins) histogram[index]++;
+				if (index >= 0 && index < numBins) histogram[index]++;
 
 			}
 			counta=0;
@@ -404,19 +406,22 @@ void histogramMethod(vector<KeyPoint> mappedKeypoints, Mat mappedDescriptors,vec
 
 		statsGood.push_back(good_matches.size());
 		statsCorr.push_back(best_matches.size());
-		ROS_INFO("hist statsSucc size %i\n",(int) statsSucc.size());
-		if (counta<minGoodFeatures){
+		ROS_INFO("minGoodFeatures %i corr: %i out: %i gm: %i",minGoodFeatures,(int) best_matches.size(), (int) (good_matches.size()-best_matches.size()),(int) good_matches.size());
+		if (best_matches.size()<minGoodFeatures){
 			statsSucc.push_back(0);
+			//ROS_INFO("UNsuccessful");
 		} else {
 			statsSucc.push_back(1);
+			//ROS_INFO("successful");
 		}
-		ROS_INFO("hist statsSucc size %i\n",(int) statsSucc.size());
+
 	}
 }
 
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
-	ROS_INFO("featurecall");
+	//ROS_INFO("featurecall");
+	int succCount=0;
 	if(state == NAVIGATING){
 		currentKeypoints.clear();
 		keypointsBest.clear();
@@ -455,98 +460,88 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 
 		/*eventually, recalculate map descriptors*/
-		if (mapDescriptors.type() != descriptorType)
+		/*if (experiencesDescriptors[0].type() != descriptorType)
 		{
+			int j= 0;
 			ROS_INFO("Recalculating map");
-			mapDescriptors.release();
-			mapDescriptors = Mat();
-			for(int i=0; i<mapFeatures.feature.size();i++){
-				int size=mapFeatures.feature[i].descriptor.size();
-				Mat mat(1,size,descriptorType,(void*)mapFeatures.feature[i].descriptor.data());
-				mapDescriptors.push_back(mat);
-			}
-		}
-
-		/*eventually, recalculate experiences descriptors*/
-		/*for(int j=0;j<experiencesDescriptors.size();j++)
-		if (experiencesDescriptors[j].type() != descriptorType)
-		{
-			ROS_INFO("Recalculating experience %i",j);
 			experiencesDescriptors[j].release();
 			experiencesDescriptors[j] = Mat();
-			for(int i=0; i<experiencesKeypoints[j].size();i++){
-				int size=experiencesDescriptors[j].size();
-				Mat mat(1,size,descriptorType,(void*)experiencesDescriptors[j]);
+			int lastExp=0;
+			int currExp=0;
+			for(int i=0; i<mapFeatures.feature.size();i++){
+				currExp=mapFeatures.feature[i].expID;
+				int size=mapFeatures.feature[i].descriptor.size();
+				Mat mat(1,size,descriptorType,(void*)mapFeatures.feature[i].descriptor.data());
+				if(currExp!=lastExp){
+					j++;
+					experiencesDescriptors[j].release();
+					experiencesDescriptors[j] = Mat();
+					lastExp=currExp;
+				}
 				experiencesDescriptors[j].push_back(mat);
 			}
 		}*/
 
 		info.updated=false;
-ROS_INFO("make a circus");
+//ROS_INFO("make a circus");
 		statsGood.clear();
 		statsCorr.clear();
 		statsSucc.clear();
-			ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
+		//ROS_INFO("statsSucc size %i exp count %i\n",(int) statsSucc.size(),expCount);
 		/* perform matching and histogram building on map and all experiences*/
-		histogramMethod(mapKeypoints,mapDescriptors,currentKeypoints,currentDescriptors,0);
-		ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
-		for(int a=1;a<expCount;a++){
+		for(int a=0;a<=expCount;a++){
 			histogramMethod(experiencesKeypoints[a],experiencesDescriptors[a],currentKeypoints,currentDescriptors,a);
 		}
-ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
+		//ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
 
 		int maxCorr=0;
 		int maxCorrIdx=-1;
 		int minOut=10000;
 		int minOutIdx=-1;
-
+		succCount=0;
 		int minOutmaxCorr=-1;
 		int minOutmaxCorrIdx=-1;
 		for(int i=0;i<statsGood.size();i++){
-			ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
-			if(statsSucc[i]==1) succCount++;
-			int outliers = statsGood[i]-statsCorr[i];
-			if(statsCorr[i]>maxCorr){
-				maxCorr=statsCorr[i];
-				maxCorrIdx=i;
-			}
-			if(outliers<minOut){
-				minOut=outliers;
-				minOutIdx=i;
-			} else if(outliers==minOut){
-				if(statsCorr[i]>minOutmaxCorr){
-					minOutmaxCorr=statsCorr[i];
-					minOutmaxCorrIdx=i;
+			if(statsSucc[i]==1){
+				succCount++;
+				int outliers = statsGood[i]-statsCorr[i];
+				if(statsCorr[i]>maxCorr){
+					maxCorr=statsCorr[i];
+					maxCorrIdx=i;
+				}
+				if(outliers<minOut){
+					minOut=outliers;
+					minOutIdx=i;
+				} else if(outliers==minOut){
+					if(statsCorr[i]>minOutmaxCorr){
+						minOutmaxCorr=statsCorr[i];
+						minOutmaxCorrIdx=i;
+					}
 				}
 			}
 		}
 		ROS_INFO("sucess: %i, minOut[%i]: %i, maxCorr[%i]: %i, minOutmaxCorr[%i]: %i\n",succCount,minOutIdx,minOut,maxCorrIdx,maxCorr,minOutmaxCorrIdx,minOutmaxCorr);
 
+		if(succCount==0){
+			minOutmaxCorrIdx=0;
+		}
 
 		if(minOutmaxCorrIdx!=-1){
 			bestIdx=minOutmaxCorrIdx;
-			if(minOutmaxCorrIdx == 0){
-				histogramMethod(mapKeypoints,mapDescriptors,currentKeypoints,currentDescriptors,0);
-			} else {
-				histogramMethod(experiencesKeypoints[minOutmaxCorrIdx-1],experiencesDescriptors[minOutmaxCorrIdx-1],currentKeypoints,currentDescriptors,minOutmaxCorrIdx);
-			}
+				histogramMethod(experiencesKeypoints[minOutmaxCorrIdx],experiencesDescriptors[minOutmaxCorrIdx],currentKeypoints,currentDescriptors,minOutmaxCorrIdx);
 		} else{ //minOut
 			bestIdx=minOutIdx;
-			if(minOutIdx == 0){
-				histogramMethod(mapKeypoints,mapDescriptors,currentKeypoints,currentDescriptors,0);
-			} else {
-				histogramMethod(experiencesKeypoints[minOutIdx-1],experiencesDescriptors[minOutIdx-1],currentKeypoints,currentDescriptors,minOutIdx);
-			}
+				histogramMethod(experiencesKeypoints[minOutIdx],experiencesDescriptors[minOutIdx],currentKeypoints,currentDescriptors,minOutIdx);
 		}
 
 			/* publish statistics */
 			feedback.correct = best_matches.size();
 			feedback.outliers = good_matches.size() - best_matches.size();
-			feedback.keypoints_avg = (mapKeypoints.size() + currentKeypoints.size() )/2;
+			feedback.keypoints_avg = (experiencesKeypoints[bestIdx].size() + currentKeypoints.size() )/2;
 			feedback.matches = good_matches.size();
 			/*difference between features */
 			differenceRot=suma/counta;
-			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
+			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << experiencesKeypoints[bestIdx].size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
 			//cout << "Vektor: " << counta << " " << differenceRot << endl;
 			//cout << "bm " << bad_matches.size()  << endl;
 		}
@@ -564,11 +559,12 @@ ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
 		info.ratio = ratioMatchConstant;
 		info.mapMatchIndex.clear();
 
-		int succLocalisers=1;
+		int succLocalisers=3;
 
 		// add new experience
 			if (succCount<=succLocalisers){
-				for (int i = 0; i < mapFeatures.feature.size() && i < info.view.feature.size(); i++) {
+				ROS_INFO("Adding new experience %i\n",expCount+1);
+				for (int i = 0; i < info.view.feature.size(); i++) {
 					info.view.feature[i].expID = expCount+1;
 					info.view.feature[i].x = info.view.feature[i].x + differenceRot*remapRotGain;
 					mapFeatures.feature.push_back(info.view.feature[i]);
@@ -593,22 +589,14 @@ ROS_INFO("statsSucc size %i\n",(int) statsSucc.size());
 		if(image_pub_.getNumSubscribers()>0)
 		{
 			//drawKeypoints(currentImage,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
-			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0)
+			if (currentImage.rows >0 && experiencesKeypoints.size() >0 && currentKeypoints.size() >0)
 			{
 				if (mapImage.rows==0) mapImage = currentImage;
 				Mat mapIm = mapImage.t();
 				Mat curIm = currentImage.t();
 				vector<KeyPoint> kpMap,kpCur;
 				KeyPoint tmp;
-				if(bestIdx==0){
-					for (int i = 0;i<mapKeypoints.size();i++)
-					{
-						tmp = mapKeypoints[i];
-						tmp.pt.y = mapKeypoints[i].pt.x;
-						tmp.pt.x = mapKeypoints[i].pt.y;
-						kpMap.push_back(tmp);
-					}
-				} else if(experiencesKeypoints.size()>0) {
+				if(experiencesKeypoints[bestIdx].size()>0) {
 					for (int i = 0;i<experiencesKeypoints[bestIdx].size();i++)
 					{
 						tmp = experiencesKeypoints[bestIdx][i];
