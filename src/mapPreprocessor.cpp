@@ -130,8 +130,8 @@ int loadMaps()
 
 	numFeatures=0;
 	for (int i = 0;i<numMaps;i++){
-		sprintf(fileName,"%s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
-		ROS_INFO("Preloading %s/%s_%.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
+		sprintf(fileName,"%s/%s_%07.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
+		ROS_INFO("Preloading %s/%s_%07.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
 		FileStorage fs(fileName, FileStorage::READ);
 		if(fs.isOpened())
 		{

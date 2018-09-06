@@ -211,7 +211,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 
 			/*and flush it to the disk*/
 			for (int i = 0;i<distanceMap.size();i++){
-				sprintf(name,"%s/%s_%.3f.yaml",folder.c_str(),baseName.c_str(),distanceMap[i]);
+				sprintf(name,"%s/%s_%07.3f.yaml",folder.c_str(),baseName.c_str(),distanceMap[i]);
 				ROS_INFO("Saving map to %s",name);
 				FileStorage fs(name,FileStorage::WRITE);
 				write(fs, "Image", imagesMap[i]);

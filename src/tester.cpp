@@ -229,13 +229,9 @@ int main(int argc, char **argv)
 	ros::param::get("names_view", viewNames);
 	ros::param::get("names_map", mapNames);
 
-  for (int i=0; i<87;i++){
-    printf("[%i]: %s",i,viewNames[i].c_str());
-  }
-
 	logFile = fopen("Results.txt","w");
 
-	while (configureFeatures(2,2) < 0) sleep(1);
+	while (configureFeatures(3,1) < 0) sleep(1);
 	image_transport::ImageTransport it(n);
 
 	ros::Subscriber sub = n.subscribe("/navigationInfo", 1000, infoMapMatch);
