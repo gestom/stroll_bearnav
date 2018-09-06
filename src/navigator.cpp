@@ -66,7 +66,6 @@ float remapRatio = 0.5;
 bool plasticMap = false;
 bool summaryMap = false;
 
-bool histogramRating = false;
 
 geometry_msgs::Twist twist;
 nav_msgs::Odometry odometry;
@@ -152,7 +151,6 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	maxVerticalDifference = config.maxVerticalDifference;
 	plasticMap = config.plasticMap;
 	summaryMap = config.summaryMap;
-	histogramRating = config.histogramRating;
 	remapRatio = config.remapRatio;
 	minFeatureRemap = config.minFeatureRemap;
 	maxFeatureRemap = config.maxFeatureRemap;
@@ -395,19 +393,13 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					differences[i] = -1000000;
 				}else{
 					differences[i] = difference;
-				//	if (index <= 0) index = 0;
-				//	if (index >= numBins) index = numBins-1;
-				if(histogramRating){
-					if (index >= 0 && index < numBins) histogram[index] = histogram[index] + (histogram[index]*mapFeatures.feature[idx1].rating+0.1);
-				} else {
-					if (index >= 0 && index < numBins) histogram[index]++;
-				}
+					if (index >= 0 && index < numBins) histogram[index] = histogram[index] + mapFeatures.feature[idx1].rating+0.001;
 				}
 				count=0;
 			}
 
 			/*histogram printing*/
-			int max=0;
+			float max=0;
 			int position=0;
 			printf("Bin: ");
 			for (int i = 0;i<numBins;i++) {
@@ -431,13 +423,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
-					if(histogramRating){
-						sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
-						count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
-					}else {
-						sum+=differences[i];
-						count++;
-					}
+					sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.001);
+					count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.001);
 					best_matches.push_back(good_matches[i]);
 					keypointsBest.push_back(keypointsGood[i]);
 				} else {
