@@ -324,7 +324,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		bad_matches.clear();
 
 		/*establish correspondences, build the histogram and determine robot heading*/
-		float count=0,bestc=0;
+		float count=0,bestc=0,countReal=0;
 		info.updated=false;
 		info.view = *msg;
 		matches.clear();
@@ -372,6 +372,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			Point2f current;
 			Point2f best, possible;
 			count=0;
+			countReal=0;
 			bestc=0;
 			int granularity = 20;
 			int *differences = (int*)calloc(num,sizeof(int));
@@ -393,9 +394,10 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					differences[i] = -1000000;
 				}else{
 					differences[i] = difference;
-					if (index >= 0 && index < numBins) histogram[index] = histogram[index] + 1;//mapFeatures.feature[idx1].rating+0.001;
+					if (index >= 0 && index < numBins) histogram[index] = histogram[index] + mapFeatures.feature[idx1].rating+0.001;
 				}
 				count=0;
+				countReal=0;
 			}
 
 			/*histogram printing*/
@@ -425,6 +427,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				if (fabs(differences[i]-rotation) < granularity*1.5){
 					sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.001);
 					count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.001);
+					countReal++;
 					best_matches.push_back(good_matches[i]);
 					keypointsBest.push_back(keypointsGood[i]);
 				} else {
@@ -444,12 +447,12 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			//cout << "Vektor: " << count << " " << differenceRot << endl;
 			//cout << "bm " << bad_matches.size()  << endl;
 		}
-		velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
+		velocityGain = fmin(fmax(countReal/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
 
 
 
 		feedback.histogram.clear();
-		if (count<minGoodFeatures) differenceRot = 0;
+		if (countReal<minGoodFeatures) differenceRot = 0;
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
 
 		/*forming navigation info messsage*/
@@ -473,7 +476,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 		if(isRating)
 		{
-				if (count>=minGoodFeatures || remapRotGain == 0){
+				if (countReal>=minGoodFeatures || remapRotGain == 0){
 				for (int i = 0; i < bad_matches.size(); i++) {
 					mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
 				}
