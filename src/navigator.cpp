@@ -393,7 +393,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					differences[i] = -1000000;
 				}else{
 					differences[i] = difference;
-					if (index >= 0 && index < numBins) histogram[index] = histogram[index] + mapFeatures.feature[idx1].rating+0.001;
+					if (index >= 0 && index < numBins) histogram[index] = histogram[index] + 1;//mapFeatures.feature[idx1].rating+0.001;
 				}
 				count=0;
 			}
