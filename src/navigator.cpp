@@ -486,7 +486,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 		if(isRating)
 		{
-				if (count>=minGoodFeatures || remapRotGain == 0){
+			if (count>=minGoodFeatures || remapRotGain == 0){
 				for (int i = 0; i < bad_matches.size(); i++) {
 					mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
 				}
