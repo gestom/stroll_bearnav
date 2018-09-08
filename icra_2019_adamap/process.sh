@@ -8,13 +8,13 @@ esac
 
 mkdir "results"
 
-f="$1/icra_2019_adamap/short"
+f="$1/icra_2019_adamap/long"
 
 if [ 1 == 1 ]
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
-rosparam set names_map  [M000,C001,C002,C003,C004,C005,C006,C007,C008,C009,C010,C011,C012]
-rosparam set names_view [A001,A002,A003,A004,A005,A006,A007,A008,A009,A010,A011,A012]
+rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne D0$i,;done)]
+rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_rating.txt
 fi
