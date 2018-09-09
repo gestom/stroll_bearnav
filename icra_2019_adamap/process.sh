@@ -7,9 +7,9 @@ case $# in
 esac
 
 mkdir "results"
-
+date >time.txt
 f="$1/icra_2019_adamap/long"
-if [ 0 == 1 ] 
+if [ 1 == 1 ] 
 then
 for i in $(seq 1 5 10);
 do 
@@ -18,6 +18,7 @@ rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne 
 rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_adaptive_fixed_$i.txt
+date >>time.txt
 done
 fi
 
