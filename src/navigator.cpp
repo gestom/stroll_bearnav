@@ -394,7 +394,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					differences[i] = -1000000;
 				}else{
 					differences[i] = difference;
-					if (index >= 0 && index < numBins) histogram[index] = histogram[index] + mapFeatures.feature[idx1].rating+0.001;
+					if (index >= 0 && index < numBins) histogram[index] = histogram[index] + fmax(mapFeatures.feature[idx1].rating,0.001);
 				}
 				count=0;
 				countReal=0;
@@ -425,8 +425,10 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
-					sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.001);
-					count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.001);
+					//sum+=differences[i]*1.0/(fmax(mapFeatures.feature[good_matches[i].queryIdx].rating,0)+1.0);
+					//count+=1.0/(fmax(mapFeatures.feature[good_matches[i].queryIdx].rating,0)+1.0);
+					sum+=differences[i]*fmax(mapFeatures.feature[good_matches[i].queryIdx].rating,0.001);
+					count+=fmax(mapFeatures.feature[good_matches[i].queryIdx].rating,0.001);
 					countReal++;
 					best_matches.push_back(good_matches[i]);
 					keypointsBest.push_back(keypointsGood[i]);
