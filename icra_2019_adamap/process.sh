@@ -51,7 +51,7 @@ cd $path
 
 echo "in `pwd`"
 
-for i in Map_weighted Map_adaptive Map_plastic Map_static;do grep reports results/$i.txt|awk '{a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
+for i in Map_weighted Map_adaptive Map_plastic Map_static;do grep reports results/$i.txt|awk '($23<5000){a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
 echo MAP PLASTICITY TEST: Section 4.4
 echo -ne "	Error of Adaptive VS Static: "
 paste results/Map_adaptive.err results/Map_static.err          |./icra_2019_adamap/t-test $confidence
