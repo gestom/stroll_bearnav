@@ -397,11 +397,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					differences[i] = difference;
 				//	if (index <= 0) index = 0;
 				//	if (index >= numBins) index = numBins-1;
-				if(histogramRating){
-					if (index >= 0 && index < numBins) histogram[index] = histogram[index] + (histogram[index]*mapFeatures.feature[idx1].rating+0.1);
-				} else {
 					if (index >= 0 && index < numBins) histogram[index]++;
-				}
 				}
 				count=0;
 			}
@@ -431,13 +427,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			/* take only good correspondences */
 			for(int i=0;i<num;i++){
 				if (fabs(differences[i]-rotation) < granularity*1.5){
-					if(histogramRating){
-						sum+=differences[i]*(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
-						count+=(mapFeatures.feature[good_matches[i].queryIdx].rating+0.1);
-					}else {
-						sum+=differences[i];
-						count++;
-					}
+					sum+=differences[i];
+					count++;
 					best_matches.push_back(good_matches[i]);
 					keypointsBest.push_back(keypointsGood[i]);
 				} else {
@@ -473,14 +464,14 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		vector<int> mapIndex(mapFeatures.feature.size());
 		vector<int> mapEval(mapFeatures.feature.size());
 		std::fill(mapIndex.begin(),mapIndex.end(),-1);
-		std::fill(mapEval.begin(),mapEval.end(),0);
+		std::fill(mapEval.begin(),mapEval.end(),-1);
 		for (int i = 0;i<good_matches.size();i++)
 		{
 			mapIndex[good_matches[i].queryIdx] = good_matches[i].trainIdx;
-			mapEval[good_matches[i].queryIdx] = -1;
+			mapEval[good_matches[i].queryIdx] = -10;
 		}
 		for (int i = 0;i<best_matches.size();i++) {
-			mapEval[best_matches[i].queryIdx] = 1;
+			mapEval[best_matches[i].queryIdx] = 10;
 			// rating map features
 			if(isRating) mapFeatures.feature[best_matches[i].queryIdx].rating+=mapEval[best_matches[i].queryIdx];
 		}
@@ -499,12 +490,9 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					mapFeatures.feature.clear();
 				}else{
 					sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
-					if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
-
-					//if summary map, remove only features with negative ranking
-					if (summaryMap){
-						while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating >= 0 && numFeatureRemove > 0) numFeatureRemove--;
-					}
+					numFeatureRemove = numFeatureAdd = 0; 
+					while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating < 0 && numFeatureRemove < mapFeatures.feature.size()) numFeatureRemove++;
+					numFeatureAdd = numFeatureRemove;
 
 					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
 				}
