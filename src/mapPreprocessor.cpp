@@ -143,12 +143,11 @@ int loadMaps()
 			ratings.clear();
 			fs["Ratings"]>>ratings;
 
-							if(histogramRating && ratings.size() == 0){
-								// initial rating
-								for (int j = 0; j < keypoints_1.size(); j++) ratings.push_back(1);
-							} else {
-								for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
-							}
+			if(histogramRating && ratings.size() == 0){
+				for (int j = 0; j < keypoints_1.size(); j++) ratings.push_back(1);
+			} else {
+				for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
+			}
 
 			fs.release();
 			keypointsMap.push_back(keypoints_1);
