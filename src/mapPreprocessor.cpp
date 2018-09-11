@@ -133,8 +133,8 @@ int loadMaps()
 
 	numFeatures=0;
 	for (int i = 0;i<numMaps;i++){
-		sprintf(fileName,"%s/%s_%7.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
-		ROS_INFO("Preloading %s/%s_%7.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
+		sprintf(fileName,"%s/%s_%07.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
+		ROS_INFO("Preloading %s/%s_%07.3f.yaml",folder.c_str(),prefix.c_str(),mapDistances[i]);
 		FileStorage fs(fileName, FileStorage::READ);
 		if(fs.isOpened())
 		{
@@ -192,7 +192,7 @@ void loadMap(int index)
 	experiences=experiencesMap[index];
 	numFeatures=keypoints_1.size();
 	char fileName[1000];
-	sprintf(fileName,"%i features loaded from %ith map at %7.3f",numFeatures,index,distanceMap[index]);
+	sprintf(fileName,"%i features loaded from %ith map at %07.3f",numFeatures,index,distanceMap[index]);
 	feedback.fileName=fileName;
 	feedback.distance = currentDistance;
 	feedback.numFeatures=keypoints_1.size();
@@ -284,7 +284,7 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 
 		//and publish it
 		if (mindex > -1 && mindex != lastLoadedMap){
-			ROS_INFO("Current distance is %7.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
+			ROS_INFO("Current distance is %07.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 			loadMap(mindex);
 			//			ROS_INFO("Sending a map %i features with %i descriptors",(int)keypoints_1.size(),descriptors_1.rows);
 

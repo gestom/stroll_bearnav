@@ -216,7 +216,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 			ROS_INFO("MAPPER saving");
 			/*and flush it to the disk*/
 			for (int i = 0;i<distanceMap.size();i++){
-				sprintf(name,"%s/%s_%7.3f.yaml",folder.c_str(),baseName.c_str(),distanceMap[i]);
+				sprintf(name,"%s/%s_%07.3f.yaml",folder.c_str(),baseName.c_str(),distanceMap[i]);
 				ROS_INFO("Saving map to %s",name);
 				FileStorage fs(name,FileStorage::WRITE);
 				write(fs, "Image", imagesMap[i]);
@@ -310,8 +310,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			experiencesMap.push_back(experiences);
 
 			/* publish feedback */
-			sprintf(name, "%i keypoints stored at distance %7.3f", (int) keypoints.size(), distanceTotalEvent);
-			ROS_INFO("%i keypoints stored at distance %7.3f", (int) keypoints.size(), distanceTotalEvent);
+			sprintf(name, "%i keypoints stored at distance %07.3f", (int) keypoints.size(), distanceTotalEvent);
+			ROS_INFO("%i keypoints stored at distance %07.3f", (int) keypoints.size(), distanceTotalEvent);
 			state = MAPPING;
 			feedback.fileName = name;
 			server->publishFeedback(feedback);
@@ -375,8 +375,8 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 			experiencesMap.push_back(experiences);
 //ROS_INFO("MAPPER stored");
 			/* publish feedback */
-			sprintf(name, "%i keypoints stored at distance %7.3f", (int) keypoints.size(), distanceTotalEvent);
-			ROS_INFO("%i keypoints stored at distance %7.3f", (int) keypoints.size(), distanceTotalEvent);
+			sprintf(name, "%i keypoints stored at distance %07.3f", (int) keypoints.size(), distanceTotalEvent);
+			ROS_INFO("%i keypoints stored at distance %07.3f", (int) keypoints.size(), distanceTotalEvent);
 			state = MAPPING;
 			feedback.fileName = name;
 			server->publishFeedback(feedback);
