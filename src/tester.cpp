@@ -231,7 +231,7 @@ int main(int argc, char **argv)
 
 	logFile = fopen("Results.txt","w");
 
-	while (configureFeatures(2,2) < 0) sleep(1);
+	while (configureFeatures(3,1) < 0) sleep(1);
 	image_transport::ImageTransport it(n);
 
 	ros::Subscriber sub = n.subscribe("/navigationInfo", 1000, infoMapMatch);

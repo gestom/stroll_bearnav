@@ -224,7 +224,7 @@ int main(int argc, char **argv)
 	ros::param::get("names_map", mapNames);
 	logFile = fopen("Results.txt","w");
 
-	if (configureFeatures(2,2) < 0) sleep(1);
+	if (configureFeatures(3,1) < 0) sleep(1);
 	image_transport::ImageTransport it(n);
 
 	distEvent_pub_=n.advertise<std_msgs::Float32>("/distance_events",1);
