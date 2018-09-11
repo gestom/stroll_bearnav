@@ -530,10 +530,10 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 		if(minOutmaxCorrIdx!=-1){
 			bestIdx=minOutmaxCorrIdx;
-				histogramMethod(experiencesKeypoints[minOutmaxCorrIdx],experiencesDescriptors[minOutmaxCorrIdx],currentKeypoints,currentDescriptors,minOutmaxCorrIdx);
+			histogramMethod(experiencesKeypoints[minOutmaxCorrIdx],experiencesDescriptors[minOutmaxCorrIdx],currentKeypoints,currentDescriptors,minOutmaxCorrIdx);
 		} else{ //minOut
 			bestIdx=minOutIdx;
-				histogramMethod(experiencesKeypoints[minOutIdx],experiencesDescriptors[minOutIdx],currentKeypoints,currentDescriptors,minOutIdx);
+			histogramMethod(experiencesKeypoints[minOutIdx],experiencesDescriptors[minOutIdx],currentKeypoints,currentDescriptors,minOutIdx);
 		}
 
 			/* publish statistics */
@@ -561,7 +561,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info.ratio = ratioMatchConstant;
 		info.mapMatchIndex.clear();
 
-		int succLocalisers=3;
+		int succLocalisers=1;
 
 		// add new experience
 			if (succCount<=succLocalisers){
