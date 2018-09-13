@@ -474,7 +474,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 
 
-
 		feedback.histogram.clear();
 		if (count<minGoodFeatures) differenceRot = 0;
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
@@ -506,7 +505,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				}
 				int numFeatureRemove = fmin(fmax(best_matches.size()*remapRatio,minFeatureRemap),maxFeatureRemap);
 				int numFeatureAdd = numFeatureRemove;
-
 				//rebuild map completely
 				if (plasticMap){
 					numFeatureAdd = info.view.feature.size();
@@ -527,6 +525,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
 					info.view.feature[i].rating = 0;
 					info.view.feature[i].x = info.view.feature[i].x + differenceRot*remapRotGain;
+					info.view.feature[i].privileged=0;
 					mapFeatures.feature.push_back(info.view.feature[i]);
 				}
 			}
