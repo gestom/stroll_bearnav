@@ -11,17 +11,14 @@ mkdir "results"
 date >time.txt
 f="$1/icra_2019_adamap/long"
 
-if [ 1 == 1 ] 
+if [ 0 == 1 ] 
 then
-for i in $(seq 0.9 0.9 0.9|tr , .);
-do 
-rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 1000,'minFeatureRemap': 0,'remapRatio': $i }"&
-rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne C0$i,;done)]
+rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': True, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 50,'minFeatureRemap': 50,'remapRatio': 0.9 }"&
+rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne T0$i,;done)]
 rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_adaptive_randomx.txt
+cp ~/.ros/Results.txt results/Map_adaptive_summary_50.txt
 date >>time.txt
-done
 fi
 
 path=`pwd`
