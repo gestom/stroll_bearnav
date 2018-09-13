@@ -361,6 +361,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					nIdx=matches[i][j].trainIdx;
 					distance=matches[i][j].distance;
 					info.view.feature[nIdx].rating=fmin(info.view.feature[nIdx].rating,distance);
+					info.view.feature[nIdx].rating=rand()%100000;
 				}
 			}
 			sort(info.view.feature.begin(),info.view.feature.end(),compare_rating);
@@ -632,6 +633,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 
 int main(int argc, char** argv)
 {
+	srand(0);
 	ros::init(argc, argv, "navigator");
 
 	ros::NodeHandle nh;
