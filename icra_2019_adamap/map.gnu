@@ -12,3 +12,4 @@ plot [0:29] [:]\
 'results/Map_adaptive_aggresive.srt' using 1:(1-$0/A_records) with lines title "Strict strategy" lw 1 lc 4,\
 'results/Map_adaptive_summary_30.srt' using 1:(1-$0/A_records) with lines title "Summary map (n=30)" lw 1 lc 5,\
 'results/Map_adaptive_fixed_30.srt' using 1:(1-$0/A_records) with lines title "Adaptive map strategy (n=30)" lw 1 lc 7,\
+'results/Map_adaptive_fixed_30_random.srt' using 1:(1-$0/A_records) with lines title "Adaptive map strategy+random (n=30)" lw 1 lc 7,\

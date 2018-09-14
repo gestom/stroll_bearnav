@@ -35,12 +35,15 @@ rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne 
 rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_plastic.txt
+fi
 
-rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
+if [ 0 == 1 ]
+then
+rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 30,'minFeatureRemap': 30 }"&
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne C0$i,;done)]
 rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_adaptive.txt
+cp ~/.ros/Results.txt results/Map_adaptive_fixed_30_random.txt
 fi
 
 path=`pwd`
