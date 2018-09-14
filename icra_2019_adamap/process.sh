@@ -53,14 +53,14 @@ make
 cd $path
 
 echo "in `pwd`"
+echo >results/all.txt
+for i in $(ls results/Map_adaptive*.txt|sed s/.txt//);do  grep reports $i.txt|awk '($23<5000){a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee $i.err|sort -nr > $i.srt;done
 
-for i in Map_weighted Map_adaptive Map_plastic Map_static;do grep reports results/$i.txt|awk '($23<5000){a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee results/$i.err|sort -nr > results/$i.srt;done
-echo MAP PLASTICITY TEST: Section 4.4
-echo -ne "	Error of Adaptive VS Static: "
-paste results/Map_adaptive.err results/Map_static.err          |./icra_2019_adamap/t-test $confidence
-echo -ne "	Error of Adaptive VS Plastic: "
-paste results/Map_adaptive.err results/Map_plastic.err          |./icra_2019_adamap/t-test $confidence
-echo -ne "	Error of Plastic VS Static: "
-paste results/Map_plastic.err results/Map_static.err |./icra_2019_adamap/t-test $confidence
-echo
+for i in $(ls results/Map_adaptive*.txt|sed s/.txt//);do 
+echo >$i.tmp
+for j in $(ls results/Map_adaptive*.txt|sed s/.txt//);do 
+paste $j.err $i.err          |./icra_2019_adamap/t-test $confidence >>$i.tmp
+done
+echo "Error $i: " $(grep -c higher $i.tmp) $(grep -c smaller $i.tmp); >>results/all.txt
+done
 gnuplot icra_2019_adamap/map.gnu >results/map.fig
