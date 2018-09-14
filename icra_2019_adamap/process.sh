@@ -21,26 +21,12 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp $f/A000_GT.txt $f/M000_GT.txt
 fi
 
-if [ 0 == 1 ]
+if [ 1 == 1 ]
 then
-#test the map update schemes
-rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
-rosparam set names_map  [$(for i in $(seq -w 1 87);do echo -ne M000,;done)]
-rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
-roslaunch stroll_bearnav evaluate.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_static.txt
-
-rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': True,'histogramRating': False,'remapRotGain': 1.0}"&
-rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne B0$i,;done)]
-rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
-roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_plastic.txt
-
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne C0$i,;done)]
 rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_adaptive.txt
 fi
 
 path=`pwd`
@@ -60,4 +46,4 @@ paste results/Map_adaptive.err results/Map_plastic.err          |./icra_2019_ada
 echo -ne "	Error of Plastic VS Static: "
 paste results/Map_plastic.err results/Map_static.err |./icra_2019_adamap/t-test $confidence
 echo
-gnuplot icra_2019_adamap/map.gnu >results/map.fig
+#gnuplot icra_2019_adamap/map.gnu >results/map.fig
