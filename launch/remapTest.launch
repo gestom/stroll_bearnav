@@ -12,7 +12,7 @@
 
 <!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
-  <remap from="image" to="/image_view"/>
+  <remap from="image" to="/map_image"/>
   <param name="folder" value="$(arg folder_map)" />
   <param name="angularSpeed" value="1.1" />
 </node>
