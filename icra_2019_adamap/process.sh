@@ -10,10 +10,10 @@ mkdir "results"
 
 f="$1/icra_2019_adamap/long"
 
+############ Perform a remap
 confidence=0.05
-if [ 0 == 1 ]
+if [ 1 == 1 ]
 then
-############ Map adaptation test (Section 4.4)
 rosparam set names_map  [A000,M000]
 rosparam set names_view [A000]
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False,'plasticMap': True,'histogramRating': False,'remapRotGain': 0.0}"&
@@ -21,7 +21,8 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp $f/A000_GT.txt $f/M000_GT.txt
 fi
 
-if [ 0 == 1 ]
+#static and plastic maps
+if [ 1 == 1 ]
 then
 #test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
@@ -37,7 +38,8 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_plastic.txt
 fi
 
-if [ 0 == 1 ]
+#adaptive map
+if [ 1 == 1 ]
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 30,'minFeatureRemap': 30 }"&
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne C0$i,;done)]
@@ -46,7 +48,8 @@ roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_adaptive_fixed_30.txt
 fi
 
-if [ 0 == 1 ]
+#summary map
+if [ 1 == 1 ]
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': True, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 30,'minFeatureRemap': 30 }"&
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne D0$i,;done)]
