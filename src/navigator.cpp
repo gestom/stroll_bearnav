@@ -463,7 +463,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info.mapMatchIndex.clear();
 		vector<int> mapIndex(mapFeatures.feature.size());
 		vector<int> mapEval(mapFeatures.feature.size());
-		std::fill(mapIndex.begin(),mapIndex.end(),0);
+		std::fill(mapIndex.begin(),mapIndex.end(),-1);
 		std::fill(mapEval.begin(),mapEval.end(),0);
 		for (int i = 0;i<good_matches.size();i++)
 		{
