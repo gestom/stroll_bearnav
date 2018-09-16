@@ -463,8 +463,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info.mapMatchIndex.clear();
 		vector<int> mapIndex(mapFeatures.feature.size());
 		vector<int> mapEval(mapFeatures.feature.size());
-		std::fill(mapIndex.begin(),mapIndex.end(),-1);
-		std::fill(mapEval.begin(),mapEval.end(),-1);
+		std::fill(mapIndex.begin(),mapIndex.end(),0);
+		std::fill(mapEval.begin(),mapEval.end(),0);
 		for (int i = 0;i<good_matches.size();i++)
 		{
 			mapIndex[good_matches[i].queryIdx] = good_matches[i].trainIdx;
@@ -490,7 +490,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				}else{
 					sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
 					numFeatureRemove = numFeatureAdd = 0; 
-					while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating <= 0 && numFeatureRemove < mapFeatures.feature.size()) numFeatureRemove++;
+					while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating < 0 && numFeatureRemove < mapFeatures.feature.size()) numFeatureRemove++;
 					numFeatureAdd = numFeatureRemove;
 
 					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
