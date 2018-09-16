@@ -478,7 +478,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		if(isRating)
 		{
 			if (count>=minGoodFeatures || remapRotGain == 0){
-				for (int i = 0;i<mapFeatures.feature.size();i++) mapFeatures.feature[i].rating+=mapEval[i];
+				for (int i = 0;i<mapFeatures.feature.size();i++) mapFeatures.feature[i].rating=mapEval[i];
 
 				int numFeatureRemove = fmin(fmax(best_matches.size()*remapRatio,minFeatureRemap),maxFeatureRemap);
 				int numFeatureAdd = numFeatureRemove;

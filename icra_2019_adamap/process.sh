@@ -16,7 +16,7 @@ rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plast
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne C0$i,;done)]
 rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_adaptive_strict.txt
+cp ~/.ros/Results.txt results/Map_adaptive_aggresive.txt
 fi
 
 path=`pwd`
