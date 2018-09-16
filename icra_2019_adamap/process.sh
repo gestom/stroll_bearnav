@@ -10,13 +10,13 @@ mkdir "results"
 
 f="$1/icra_2019_adamap/long"
 
-if [ 0 == 1 ]
+if [ 1 == 1 ]
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne C0$i,;done)]
 rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
-cp ~/.ros/Results.txt results/Map_adaptive_aggresive.txt
+cp ~/.ros/Results.txt results/Map_adaptive_strict.txt
 fi
 
 path=`pwd`

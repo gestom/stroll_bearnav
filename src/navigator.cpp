@@ -490,7 +490,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				}else{
 					sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
 					numFeatureRemove = numFeatureAdd = 0; 
-					while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating < -5 && numFeatureRemove < mapFeatures.feature.size()) numFeatureRemove++;
+					while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating < 0 && numFeatureRemove < mapFeatures.feature.size()) numFeatureRemove++;
 					numFeatureAdd = numFeatureRemove;
 
 					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
