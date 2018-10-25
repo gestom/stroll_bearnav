@@ -11,6 +11,15 @@ mkdir "results"
 date >time.txt
 f="$1/icra_2019_adamap/long"
 
+if [ 1 == 1 ]
+then
+rosparam set names_map  [A000,M000]
+rosparam set names_view [A000]
+rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False,'plasticMap': True,'histogramRating': False,'remapRotGain': 0.0}"&
+roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
+cp $f/A000_GT.txt $f/M000_GT.txt
+fi
+
 if [ 0 == 1 ] 
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': True, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 50,'minFeatureRemap': 50,'remapRatio': 0.9 }"&
