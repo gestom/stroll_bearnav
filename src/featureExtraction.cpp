@@ -16,6 +16,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/featureExtractionConfig.h>
 #include <std_msgs/Int32.h>
+
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -74,10 +75,14 @@ void adaptive_threshold(vector<KeyPoint>& keypoints);
 int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 {
 	cv::Mat img;
+	ros::Time begin = ros::Time::now();
 	if (maxLine < 1.0) img = image(cv::Rect(0,0,image.cols,(int)(image.rows*maxLine))); else img = image;
 	if (usedDetector==DET_AGAST) agastDetector->detect(img,keypoints, Mat () );
 	if (usedDetector==DET_SURF) upSurf->detect(img,keypoints, Mat () );
 	if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
+	ros::Time end = ros::Time::now();
+	ros::Duration duration = end-begin;
+	ROS_INFO("Time to extract %i keypoints is %i ms.\n",(int)keypoints.size(),duration.sec*1000+duration.nsec/1000000);
 }
 
 int describeKeyPoints(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
