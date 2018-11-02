@@ -4,7 +4,7 @@
 <node pkg="actionlib" type="axclient.py" args="/mapper" name="Action_client_mapper"/>
 <node pkg="actionlib" type="axclient.py" args="/navigator" name="Action_client_navigator"/>
 <node pkg="actionlib" type="axclient.py" args="/map_preprocessor" name="Action_client_loader"/>
-<!--node pkg="rqt_reconfigure" type="rqt_reconfigure" name="Reconfigurator"/-->
+<node pkg="rqt_reconfigure" type="rqt_reconfigure" name="Reconfigurator"/>
 
 <!-- image view to check video stream-->
 <node pkg="image_view" type="image_view" name="Image_viewer">
