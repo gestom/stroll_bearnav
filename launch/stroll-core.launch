@@ -11,7 +11,6 @@
 <remap from="image" to="/stereo/left/image_raw"/>
 </node>
 
-<!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
 <remap from="image" to="/stereo/left/image_raw"/>
 <param name="folder" value="$(arg folder)" />

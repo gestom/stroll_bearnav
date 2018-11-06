@@ -569,7 +569,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		feedback.distance = currentDistance = msg->data;
 		if (currentPathElement+2 <= path.size())
 		{
-			if (path[currentPathElement+1].distance < msg->data){
+			while (path[currentPathElement+1].distance < msg->data){
 				//ROS_INFO("Next %i %f",currentPathElement,path[currentPathElement].forward);
 				 currentPathElement++;
 			}
