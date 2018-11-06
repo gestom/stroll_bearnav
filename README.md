@@ -21,7 +21,7 @@ During this phase, the robot is driven through the environment by a human operat
 
 ### Navigation phase
 
-During the navigation phase, the robot traverses the learned path by itself using the speeds in the *path profile* and *visual features* in the local maps. The path profile is simply 'replayed', i.e. the robot sets a relevant steering and forward velocity according to the distance traveled. The local maps are used to correct the robot heading. Videos 2 shows the navigation principle, videos 3 and 4 show an early version of the system where robots traverse a polyline-shaped path and finally, video 5 shows the robot traversing a smooth path.
+During the navigation phase, the robot traverses the learned path by itself using the speeds in the *path profile* and *visual features* in the local maps. The path profile is simply 'replayed', i.e. the robot sets a relevant steering and forward velocity according to the distance traveled. The local maps are used to correct the robot heading. Videos 2 shows the navigation principle, videos 3 and 4 show an early version of the system where robots traverse a polyline-shaped path and finally, videos 5,6 and 7 show the robot traversing a smooth path.
 
 [![P3AT moving along a straight line](https://img.youtube.com/vi/cfN587IjhKw/0.jpg)](https://www.youtube.com/watch?v=cfN587IjhKw)
 
@@ -30,6 +30,8 @@ During the navigation phase, the robot traverses the learned path by itself usin
 [![UAV autonomous flight](https://img.youtube.com/vi/QR5G3qubKsk/0.jpg)](https://www.youtube.com/watch?v=QR5G3qubKsk)
 
 [![Smooth path](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/indoor_0.jpg)](https://youtu.be/1ATh0FF48Ao)
+
+[![TAROS](https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/pics/vop.jpg)](https://youtu.be/44A4YcfsqVI)
 
 When moving, the robot retrieves image features from a relevant map (green crosses), extracts image features from its on-board camera (blue crosses), matches them  (green/blue lines) and calculates a histogram of their horizontal distances (green). The histogram maximum is then used to steer the robot close to the learned path.
 

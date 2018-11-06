@@ -8,11 +8,11 @@
 
 <!-- image view to check video stream-->
 <node pkg="image_view" type="image_view" name="Image_viewer">
-  <param name="~image_transport" value="compressed" />
-  <remap from="image" to="/navigationMatches"/>
-  <param name="autosize" value="true" />
+<!--param name="~image_transport" value="compressed" /-->
+<remap from="image" to="/navigationMatches"/>
+<param name="autosize" value="true" />
 </node>
 
-<node pkg="stroll_bearnav" type="gui_setup.sh" name="Configure_gui"/>
+<!--node pkg="stroll_bearnav" type="gui_setup.sh" name="Configure_gui"/-->
 
 </launch>

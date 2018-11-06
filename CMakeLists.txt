@@ -130,7 +130,7 @@ include_directories(
 )
 include_directories(${OpenCV_INCLUDE_DIRS})
 ## Declare a C++ library
-#add_library(cameleon_driver src/CRobot.cpp)
+add_library(tracia src/tracia.cpp)
 #add_library(cameleon_message src/CMessage.cpp)
 #add_library(cameleon_message_client src/CMessageClient.cpp)
 #add_library(cameleon_timer src/CTimer.cpp)
@@ -188,7 +188,7 @@ add_dependencies(auto_remapper ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_N
 #target_link_libraries(ImageConverter cameleon_timer ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(joyImage cameleon_timer ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(mapper_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(feature_extraction_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(feature_extraction_node tracia ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(feature_testing_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(odometry_monitor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(map_preprocessor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
