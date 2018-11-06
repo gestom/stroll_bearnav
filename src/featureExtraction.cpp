@@ -16,6 +16,8 @@
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/featureExtractionConfig.h>
 #include <std_msgs/Int32.h>
+#include "tracia.h"
+ 
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -33,6 +35,7 @@ typedef enum
 {
 	DES_NONE = 0,
 	DES_BRIEF,
+	DES_TRACIA,
 	DES_SURF
 }EDescriptorType;
 
@@ -52,6 +55,7 @@ Mat img;
 /*kokoti hlava, co delala OCV3, me donutila delat to uplne debilne*/
 Ptr<AgastFeatureDetector> agastDetector = AgastFeatureDetector::create(detectionThreshold);
 Ptr<BriefDescriptorExtractor> briefDescriptor = BriefDescriptorExtractor::create();
+TraciaDescriptorExtractor traciaDescriptor(32);
 Ptr<SURF> surf = SURF::create(detectionThreshold);
 Ptr<SURF> upSurf = SURF::create(detectionThreshold,4,3,false,true);
 
@@ -83,6 +87,7 @@ int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 int describeKeyPoints(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 {
 	if (usedDescriptor==DES_BRIEF) briefDescriptor->compute(img,keypoints,descriptors);
+	if (usedDescriptor==DES_TRACIA) traciaDescriptor.compute(img,keypoints,descriptors);
 	if (usedDescriptor==DES_SURF) surf->compute(img,keypoints,descriptors);
 }
 
