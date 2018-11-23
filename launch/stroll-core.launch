@@ -1,15 +1,22 @@
 <launch>
 
 <!-- Default folder with maps-->
-<arg name="folder" default="/home/gestom/hostibejk/"/>
+<arg name="folder" default="/home/gestom/dod/"/>
 
 <!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>
 
 <!-- feature extraction -->
-<node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
+<node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction_left">
 <remap from="image" to="/stereo/left/image_raw"/>
+<remap from="features" to="/features_left"/>
 </node>
+
+<node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction_right">
+<remap from="image" to="/stereo/right/image_raw"/>
+<remap from="features" to="/features_right"/>
+</node>
+
 
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
 <remap from="image" to="/stereo/left/image_raw"/>

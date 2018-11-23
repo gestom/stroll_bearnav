@@ -161,6 +161,7 @@ add_executable(map_match_info_listener src/mapMatchInfoListener.cpp)
 add_executable(tester src/tester.cpp)
 add_executable(remapper src/remapper.cpp)
 add_executable(auto_remapper src/autoRemapTest.cpp)
+add_executable(feature_evolver src/featureEvolver.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -177,6 +178,7 @@ add_dependencies(visualisation_node ${PROJECT_NAME}_generate_messages_cpp ${PROJ
 add_dependencies(supervisor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(feature_holder_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(map_match_info_listener ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+add_dependencies(feature_evolver ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(tester ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(remapper ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(auto_remapper ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
@@ -199,6 +201,7 @@ target_link_libraries(supervisor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(rosbag_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(feature_holder_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(map_match_info_listener ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(feature_evolver ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(tester ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(remapper ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(auto_remapper ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})

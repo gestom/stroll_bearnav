@@ -40,8 +40,8 @@
 //
 //M*/
 
-#include "tracia.h"
-//#include "precomp.hpp"
+#include "grief.h"
+#include "precomp.hpp"
 #include <algorithm>
 #include <vector>
 
@@ -49,11 +49,10 @@
 #include <iomanip>
 
 using namespace cv;
-int compSeq[32*8*4];
 
 inline int smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
 {
-    static const int HALF_KERNEL = TraciaDescriptorExtractor::KERNEL_SIZE / 2;
+    static const int HALF_KERNEL = GriefDescriptorExtractor::KERNEL_SIZE / 2;
 
     int img_y = (int)(pt.pt.y + 0.5) + y;
     int img_x = (int)(pt.pt.x + 0.5) + x;
@@ -69,42 +68,20 @@ static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints,
     {
         uchar* desc = descriptors.ptr(i);
         const KeyPoint& pt = keypoints[i];
-#include "generated_16.i"
+	int a[10000];
+#include "new.txt"
     }
 }
 
-/*static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
-{
-	for (int i = 0; i < (int)keypoints.size(); ++i)
-	{
-		uchar* desc = descriptors.ptr(i);
-		const KeyPoint& pt = keypoints[i];
-#include "generated_32.i"
-		//float x = 10/0;
-	}
-}*/
-
 static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
-	for (int i = 0; i < (int)keypoints.size(); ++i)
-	{
-		uchar* desc = descriptors.ptr(i);
-		const KeyPoint& pt = keypoints[i];
-		int *compSeqPtr;
-		for (int j = 0; j < 32; j++)
-		{
-			unsigned char a = 0;
-			for (int k = 0; k < 8; k++){
-				a = a*2;
-				compSeqPtr = &compSeq[(j*8+k)*4];
-			//	printf("%i %i %i %i %i %i\n",compSeqPtr[1], compSeqPtr[0],compSeqPtr[3], compSeqPtr[2],smoothedSum(sum, pt, compSeqPtr[1], compSeqPtr[0]),(smoothedSum(sum, pt, compSeqPtr[1], compSeqPtr[0]) < smoothedSum(sum, pt, compSeqPtr[3], compSeqPtr[2])));
-				a = a+(smoothedSum(sum, pt, compSeqPtr[1], compSeqPtr[0]) < smoothedSum(sum, pt, compSeqPtr[3], compSeqPtr[2]));
-			}
-			//printf("%i\n",a);
-			//float x = 10/0;
-			desc[j] = a;
-		}
-	}
+    for (int i = 0; i < (int)keypoints.size(); ++i)
+    {
+        uchar* desc = descriptors.ptr(i);
+        const KeyPoint& pt = keypoints[i];
+
+#include "generated_32.i"
+    }
 }
 
 static void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
@@ -118,49 +95,39 @@ static void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints,
     }
 }
 
-TraciaDescriptorExtractor::TraciaDescriptorExtractor(int bytes) :
+namespace cv
+{
+
+GriefDescriptorExtractor::GriefDescriptorExtractor(int bytes) :
     bytes_(bytes), test_fn_(NULL)
 {
-	loadFromFile("/home/gestom/test_pairs.grief");
-	switch (bytes)
-	{
-		case 16:
-			test_fn_ = pixelTests16;
-			break;
-		case 32:
-			test_fn_ = pixelTests32;
-			break;
-		case 64:
-			test_fn_ = pixelTests64;
-			break;
-		default:
-			CV_Error(CV_StsBadArg, "bytes must be 16, 32, or 64");
-	}
+    switch (bytes)
+    {
+        case 16:
+            test_fn_ = pixelTests16;
+            break;
+        case 32:
+            test_fn_ = pixelTests32;
+            break;
+        case 64:
+            test_fn_ = pixelTests64;
+            break;
+        default:
+            CV_Error(CV_StsBadArg, "bytes must be 16, 32, or 64");
+    }
 }
 
-int TraciaDescriptorExtractor::descriptorSize() const
+int GriefDescriptorExtractor::descriptorSize() const
 {
     return bytes_;
 }
 
-int TraciaDescriptorExtractor::descriptorType() const
+int GriefDescriptorExtractor::descriptorType() const
 {
     return CV_8UC1;
 }
 
-void TraciaDescriptorExtractor::loadFromFile(const char* name)
-{	
-	FILE *file = fopen(name,"r");
-	int *compSeqPtr;
-	for (int i = 0;i<32*8;i++)
-	{
-		compSeqPtr = &(compSeq[i*4]);
-		fscanf(file,"%i %i %i %i\n",&compSeqPtr[0],&compSeqPtr[1],&compSeqPtr[2],&compSeqPtr[3]);
-	}	
-	fclose(file);
-}
-
-void TraciaDescriptorExtractor::read( const FileNode& fn)
+void GriefDescriptorExtractor::read( const FileNode& fn)
 {
     int dSize = fn["descriptorSize"];
     switch (dSize)
@@ -180,12 +147,12 @@ void TraciaDescriptorExtractor::read( const FileNode& fn)
     bytes_ = dSize;
 }
 
-void TraciaDescriptorExtractor::write( FileStorage& fs) const
+void GriefDescriptorExtractor::write( FileStorage& fs) const
 {
     fs << "descriptorSize" << bytes_;
 }
 
-void TraciaDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
+void GriefDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
 {
     // Construct integral image for fast smoothing (box filter)
     Mat sum;
@@ -201,9 +168,11 @@ void TraciaDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoi
     integral( grayImage, sum, CV_32S);
 
     //Remove keypoints very close to the border
-    KeyPointsFilter::runByImageBorder(keypoints, image.size(), PATCH_SIZE/2 + KERNEL_SIZE/2 + 1 );
+    KeyPointsFilter::runByImageBorder(keypoints, image.size(), PATCH_SIZE/2 + KERNEL_SIZE/2);
 
     descriptors = Mat::zeros((int)keypoints.size(), bytes_, CV_8U);
     test_fn_(sum, keypoints, descriptors);
 }
+
+} // namespace cv
 

@@ -57,6 +57,7 @@ Server *server;
 stroll_bearnav::navigatorResult result;
 stroll_bearnav::navigatorFeedback feedback;
 stroll_bearnav::FeatureArray mapFeatures;
+stroll_bearnav::FeatureArray viewFeatures;
 
 bool showAllMatches=true;
 bool showGoodMatches=true;
@@ -171,7 +172,8 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 	mapKeypoints.clear();
 	mapDescriptors.release();
 	mapDescriptors = Mat();
-	for(int i=0; i<msg->feature.size();i++){
+	for(int i=0; i<msg->feature.size();i++)
+	{
 		keypoint.pt.x=msg->feature[i].x;
 		keypoint.pt.y=msg->feature[i].y;
 		keypoint.size=msg->feature[i].size;
@@ -181,7 +183,9 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypoint.class_id=msg->feature[i].class_id;
 		mapKeypoints.push_back(keypoint);
 		int size=msg->feature[i].descriptor.size();
-		Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
+
+		Mat mat(1,size,  CV_32FC1,(void*)msg->feature[i].descriptor.data());
+		if (descriptorType != CV_32FC1) mat.convertTo(mat,descriptorType);
 		mapDescriptors.push_back(mat);
 	}
 }
@@ -266,6 +270,7 @@ bool compare_rating(stroll_bearnav::Feature first, stroll_bearnav::Feature secon
 
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
+	viewFeatures = *msg;
 	if(state == NAVIGATING){
 		currentKeypoints.clear();
 		keypointsBest.clear();
@@ -298,13 +303,15 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			keypoint.class_id=msg->feature[i].class_id;
 			currentKeypoints.push_back(keypoint);
 			int size=msg->feature[i].descriptor.size();
-			Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
+
+			Mat mat(1,size,  CV_32FC1,(void*)msg->feature[i].descriptor.data());
+			if (descriptorType != CV_32FC1) mat.convertTo(mat,descriptorType);
 			currentDescriptors.push_back(mat);
 
 		}
 
 		/*eventually, recalculate map descriptors*/
-		if (mapDescriptors.type() != descriptorType)
+		if (mapDescriptors.type() != descriptorType && false)
 		{
 			ROS_INFO("Recalculating map");
 			mapDescriptors.release();
@@ -336,17 +343,17 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			int knn = 5;
 			try{
 				 matcher->knnMatch( mapDescriptors, currentDescriptors, matches, knn);
-				 //TODO crosscheck matching matcher->knnMatch( currentDescriptors,  mapDescriptors,revmatches, knn);
+				 //matcher->knnMatch( currentDescriptors,  mapDescriptors,revmatches, knn);//crosscheck
 			}catch (Exception& e){
 				matches.clear();
-				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
+				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible. %i %i",mapDescriptors.cols,currentDescriptors.cols);
 			}
 			/*perform ratio matching*/
 			good_matches.reserve(matches.size());
 			for (size_t i = 0; i < matches.size(); i++)
 			{
 				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance) good_matches.push_back(matches[i][0]);
-				//TODO crosscheck matching //if (matches[i][0].trainIdx == revmatches[matches[i][0].trainIdx][0].queryIdx)
+				//if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance && matches[i][0].trainIdx == revmatches[matches[i][0].trainIdx][0].queryIdx) good_matches.push_back(matches[i][0]);//crosscheck
 			}
 
 			/* rating view features	*/
@@ -523,6 +530,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 		info.mapChanges=mapChanges;
 		info.map = mapFeatures;
+		info.view = viewFeatures;
 		info.mapMatchIndex = mapIndex;
 		info.mapMatchEval = mapEval;
 		info.correct = feedback.correct;

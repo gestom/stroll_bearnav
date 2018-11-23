@@ -59,8 +59,8 @@ TraciaDescriptorExtractor traciaDescriptor(32);
 Ptr<SURF> surf = SURF::create(detectionThreshold);
 Ptr<SURF> upSurf = SURF::create(detectionThreshold,4,3,false,true);
 
-EDetectorType usedDetector = DET_NONE;
-EDescriptorType usedDescriptor = DES_NONE;
+EDetectorType usedDetector = DET_UPSURF;
+EDescriptorType usedDescriptor = DES_TRACIA;
 NormTypes featureNorm = NORM_INF;
 
 /* optimization parameters */
@@ -87,10 +87,7 @@ int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 int describeKeyPoints(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 {
 	if (usedDescriptor==DES_BRIEF) briefDescriptor->compute(img,keypoints,descriptors);
-	if (usedDescriptor==DES_TRACIA){
-		ROS_INFO("DETECT");
-		traciaDescriptor.computeImpl(img,keypoints,descriptors);
-	}
+	if (usedDescriptor==DES_TRACIA)traciaDescriptor.computeImpl(img,keypoints,descriptors);
 	if (usedDescriptor==DES_SURF) surf->compute(img,keypoints,descriptors);
 }
 
