@@ -51,6 +51,18 @@
 using namespace cv;
 int compSeq[32*8*4];
 
+inline int boxFilter(const Mat& sum, const KeyPoint& pt, int y0, int x0,int y1,int x1)
+{
+    int img_y0 = (int)(pt.pt.y + 0.5) + y0;
+    int img_x0 = (int)(pt.pt.x + 0.5) + x0;
+    int img_y1 = (int)(pt.pt.y + 0.5) + y1;
+    int img_x1 = (int)(pt.pt.x + 0.5) + x1;
+    return   sum.at<int>(img_y1, img_x1)
+           - sum.at<int>(img_y1, img_x0)
+           - sum.at<int>(img_y0, img_x1)
+           + sum.at<int>(img_y0, img_x0);
+}
+
 inline int smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
 {
     static const int HALF_KERNEL = TraciaDescriptorExtractor::KERNEL_SIZE / 2;
@@ -85,6 +97,30 @@ static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints,
 }*/
 
 static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+{
+	static const int HALF_KERNEL = TraciaDescriptorExtractor::KERNEL_SIZE / 2;
+	for (int i = 0; i < (int)keypoints.size(); ++i)
+	{
+		uchar* desc = descriptors.ptr(i);
+		const KeyPoint& pt = keypoints[i];
+		int *compSeqPtr;
+		for (int j = 0; j < 32; j++)
+		{
+			unsigned char a = 0;
+			for (int k = 0; k < 8; k++){
+				a = a*2;
+				compSeqPtr = &compSeq[(j*8+k)*4];
+			//	printf("%i %i %i %i %i %i\n",compSeqPtr[1], compSeqPtr[0],compSeqPtr[3], compSeqPtr[2],smoothedSum(sum, pt, compSeqPtr[1], compSeqPtr[0]),(smoothedSum(sum, pt, compSeqPtr[1], compSeqPtr[0]) < smoothedSum(sum, pt, compSeqPtr[3], compSeqPtr[2])));
+				//a = a+(boxFilter(sum, pt, compSeqPtr[1]-HALF_KERNEL, compSeqPtr[0]-HALF_KERNEL, compSeqPtr[1]+HALF_KERNEL+1, compSeqPtr[0]+HALF_KERNEL+1) < boxFilter(sum, pt, compSeqPtr[3]-HALF_KERNEL, compSeqPtr[2]-HALF_KERNEL, compSeqPtr[3]+HALF_KERNEL+1, compSeqPtr[2]+HALF_KERNEL+1));
+				a = a+(boxFilter(sum, pt, compSeqPtr[1], compSeqPtr[0], compSeqPtr[1], compSeqPtr[0]) < boxFilter(sum, pt, compSeqPtr[3], compSeqPtr[2], compSeqPtr[3], compSeqPtr[2]));
+			}
+			//printf("%i\n",a);
+			//float x = 10/0;
+			desc[j] = a;
+		}
+	}
+}
+static void pixelTests32a(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
 	for (int i = 0; i < (int)keypoints.size(); ++i)
 	{

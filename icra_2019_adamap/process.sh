@@ -14,7 +14,7 @@ f="$1/icra_2019_adamap/full"
 confidence=0.05
 if [ 1 == 1 ]
 then
-rosparam set names_map  [A000,M000]
+rosparam set names_map  [A000,M000TR]
 rosparam set names_view [A000]
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False,'plasticMap': True,'histogramRating': False,'remapRotGain': 0.0,'matchingRatio': 0.7}"&
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
@@ -22,7 +22,7 @@ cp $f/A000_GT.txt $f/M000_GT.txt
 fi
 
 #static and plastic maps
-if [ 1 == 1 ]
+if [ 1 == 0 ]
 then
 #test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
@@ -42,7 +42,7 @@ cp ~/.ros/Results.txt results/Map_plastic_tracia.txt
 fi
 
 #adaptive map
-if [ 1 == 1 ]
+if [ 1 == 0 ]
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 30,'minFeatureRemap': 30 }"&
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne C0$i,;done)]
