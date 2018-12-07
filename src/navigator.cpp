@@ -80,6 +80,7 @@ float pixelTurnGain = 0.0001;
 float differenceRot=0;
 float minimalAdaptiveSpeed = 1.0;
 float maximalAdaptiveSpeed = 1.0;
+float maximalCurvature = 1.0;
 bool imgShow;
 NormTypes featureNorm = NORM_INF;
 int descriptorType = CV_32FC1;
@@ -149,6 +150,7 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	pixelTurnGain = config.pixelTurnGain;
 	minimalAdaptiveSpeed = config.adaptiveSpeedMin;
 	maximalAdaptiveSpeed = config.adaptiveSpeedMax;
+	maximalCurvature = config.maximalCurvature;
 }
 
 /* reference map received */
@@ -581,18 +583,21 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		{
 			//ROS_INFO("MOVE %i %f",currentPathElement,path[currentPathElement].forward);
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+			twist.angular.z = twist.angular.y = twist.angular.x = 0.0;
 			if (fabs(path[currentPathElement].angular) > 0.001) velocityGain = 1.0;
 			twist.linear.x = path[currentPathElement].forward*velocityGain; 
-			twist.angular.y = twist.angular.x = 0.0;
-			twist.angular.z=path[currentPathElement].angular*velocityGain;
-			twist.angular.z+=differenceRot*pixelTurnGain;
+			twist.angular.z = path[currentPathElement].angular*velocityGain;
+			twist.angular.z+=differenceRot*pixelTurnGain*fabs(twist.linear.x);
+			if (twist.angular.z > +twist.linear.x*maximalCurvature) twist.angular.z  = +twist.linear.x*maximalCurvature; 
+			if (twist.angular.z < -twist.linear.x*maximalCurvature) twist.angular.z  = -twist.linear.x*maximalCurvature; 
+ 
 			cmd_pub_.publish(twist);
 		}
 		/*used for testing and demos*/
 		if (path.size()==0)
 		{
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-			twist.angular.y = twist.angular.x = 0.0;
+			twist.linear.y = twist.linear.z = twist.angular.y = twist.angular.x = 0.0;
 			twist.angular.z =differenceRot*pixelTurnGain;
 			cmd_pub_.publish(twist);
 		}
