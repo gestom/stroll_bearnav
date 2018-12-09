@@ -1,7 +1,7 @@
 <launch>
 
 <!-- Default folder with maps-->
-<arg name="folder" default="$(env HOME)/demo"/>
+<arg name="folder" default="$(env HOME)/Bear2"/>
 
 <!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>

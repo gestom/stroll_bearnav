@@ -77,7 +77,9 @@ int currentPathElement = 0;
 float currentDistance = 0;
 int minGoodFeatures = 2;
 float pixelTurnGain = 0.0001;
+float pixelTurnGainInt = 0;
 float differenceRot=0;
+float differenceRotInt=0;
 float minimalAdaptiveSpeed = 1.0;
 float maximalAdaptiveSpeed = 1.0;
 float maximalCurvature = 1.0;
@@ -151,6 +153,7 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	minimalAdaptiveSpeed = config.adaptiveSpeedMin;
 	maximalAdaptiveSpeed = config.adaptiveSpeedMax;
 	maximalCurvature = config.maximalCurvature;
+	pixelTurnGainInt = config.pixelTurnGainInt;
 }
 
 /* reference map received */
@@ -171,7 +174,8 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypoint.class_id=msg->feature[i].class_id;
 		mapKeypoints.push_back(keypoint);
 		int size=msg->feature[i].descriptor.size();
-		Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
+		Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
+		if (descriptorType != CV_32FC1) mat.convertTo(mat,descriptorType);
 		mapDescriptors.push_back(mat);
 	}
 }
@@ -181,6 +185,7 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 	state = NAVIGATING;
 	int traversals = goal->traversals;
 	currentPathElement = 0;
+	differenceRotInt = 0;
 
 	/* reset distance using service*/
 	srv.request.distance=overshoot=0;
@@ -288,7 +293,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			keypoint.class_id=msg->feature[i].class_id;
 			currentKeypoints.push_back(keypoint);
 			int size=msg->feature[i].descriptor.size();
-			Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
+			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
+			if (descriptorType != CV_32FC1) mat.convertTo(mat,descriptorType);
 			currentDescriptors.push_back(mat);
 
 		}
@@ -301,7 +307,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			mapDescriptors = Mat();
 			for(int i=0; i<mapFeatures.feature.size();i++){
 				int size=mapFeatures.feature[i].descriptor.size();
-				Mat mat(1,size,descriptorType,(void*)mapFeatures.feature[i].descriptor.data());
+				Mat mat(1,size,CV_32FC1,(void*)mapFeatures.feature[i].descriptor.data());
+				if (descriptorType != CV_32FC1) mat.convertTo(mat,descriptorType);
 				mapDescriptors.push_back(mat);
 			}
 		}
@@ -387,7 +394,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					differences[i] = difference;
 				//	if (index <= 0) index = 0;
 				//	if (index >= numBins) index = numBins-1;
-					if (index >= 0 || index < numBins) histogram[index]++;
+					if (index >= 0 && index < numBins) histogram[index]++;
 				}
 				count=0; 
 			}
@@ -587,7 +594,8 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			if (fabs(path[currentPathElement].angular) > 0.001) velocityGain = 1.0;
 			twist.linear.x = path[currentPathElement].forward*velocityGain; 
 			twist.angular.z = path[currentPathElement].angular*velocityGain;
-			twist.angular.z+=differenceRot*pixelTurnGain*fabs(twist.linear.x);
+			differenceRotInt+=differenceRot;
+			twist.angular.z+=(differenceRot+differenceRotInt*pixelTurnGainInt)*pixelTurnGain*fabs(twist.linear.x);
 			if (twist.angular.z > +twist.linear.x*maximalCurvature) twist.angular.z  = +twist.linear.x*maximalCurvature; 
 			if (twist.angular.z < -twist.linear.x*maximalCurvature) twist.angular.z  = -twist.linear.x*maximalCurvature; 
  
