@@ -58,6 +58,7 @@ stroll_bearnav::navigatorGoal navGoal;
 
 FILE *mapFile, *viewFile,*logFile;
 string mapFolder,viewFolder;
+int detector,descriptor;
 vector<string> mapNames;
 vector<string> viewNames;
 bool volatile exitting = false;
@@ -228,10 +229,12 @@ int main(int argc, char **argv)
 	ros::param::get("~folder_map", mapFolder);
 	ros::param::get("names_view", viewNames);
 	ros::param::get("names_map", mapNames);
+	ros::param::get("detector", detector);
+	ros::param::get("descriptor", descriptor);
 
 	logFile = fopen("Results.txt","w");
 
-	while (configureFeatures(2,2) < 0) sleep(1);
+	while (configureFeatures(detector,descriptor) < 0) sleep(1);
 	image_transport::ImageTransport it(n);
 
 	ros::Subscriber sub = n.subscribe("/navigationInfo", 1000, infoMapMatch);

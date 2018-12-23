@@ -60,6 +60,7 @@ stroll_bearnav::navigatorGoal navGoal;
 
 FILE *mapFile, *viewFile,*logFile;
 string mapFolder,viewFolder;
+int detector,descriptor;
 vector<string> mapNames;
 vector<string> viewNames;
 bool volatile exitting = false;
@@ -220,12 +221,15 @@ int main(int argc, char **argv)
 	ros::NodeHandle n;
 	ros::param::get("~folder_view", viewFolder);
 	ros::param::get("~folder_map", mapFolder);
+	ros::param::get("detector", detector);
+	ros::param::get("descriptor", descriptor);
 	ros::param::get("names_view", viewNames);
 	ros::param::get("names_map", mapNames);
 
 	logFile = fopen("Results.txt","w");
 
-	if (configureFeatures(2,2) < 0) sleep(1);
+	if (configureFeatures(detector,descriptor) < 0) sleep(1);
+
 	image_transport::ImageTransport it(n);
 
 	distEvent_pub_=n.advertise<std_msgs::Float32>("/distance_events",1);
