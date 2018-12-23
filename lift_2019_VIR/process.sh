@@ -36,11 +36,11 @@ roslaunch stroll_bearnav evaluate.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_static_$det\_$des.txt
 fi
 
-#does not make sense now
+#statisticak testing
 if [ 1 == 1 ];
 then
 path=`pwd`
-f="`pwd`/mesas_2018_exposure"
+f="`pwd`/lift_2019_VIR"
 cd $f
 make
 cd $path
@@ -53,4 +53,4 @@ done
 done
 #paste results/Map_static_1_1.err results/Map_static_1_2.err          |./mesas_2018_exposure/t-test $confidence
 echo 
-gnuplot mesas_2018_exposure/map.gnu >results/map.fig 
+gnuplot lift_2019_VIR/map.gnu >results/map.fig 
