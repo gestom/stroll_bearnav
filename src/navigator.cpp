@@ -181,7 +181,8 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		keypoint.class_id=msg->feature[i].class_id;
 		mapKeypoints.push_back(keypoint);
 		int size=msg->feature[i].descriptor.size();
-		Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
+		Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
+		if (descriptorType != CV_32FC1) mat.convertTo(mat,descriptorType);
 		mapDescriptors.push_back(mat);
 	}
 }
@@ -298,7 +299,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			keypoint.class_id=msg->feature[i].class_id;
 			currentKeypoints.push_back(keypoint);
 			int size=msg->feature[i].descriptor.size();
-			Mat mat(1,size,descriptorType,(void*)msg->feature[i].descriptor.data());
+			Mat mat(1,size,CV_32FC1,(void*)msg->feature[i].descriptor.data());
+			if (descriptorType != CV_32FC1) mat.convertTo(mat,descriptorType);
 			currentDescriptors.push_back(mat);
 
 		}
@@ -311,7 +313,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			mapDescriptors = Mat();
 			for(int i=0; i<mapFeatures.feature.size();i++){
 				int size=mapFeatures.feature[i].descriptor.size();
-				Mat mat(1,size,descriptorType,(void*)mapFeatures.feature[i].descriptor.data());
+				Mat mat(1,size, CV_32FC1,(void*)mapFeatures.feature[i].descriptor.data());
+				if (descriptorType != CV_32FC1) mat.convertTo(mat,descriptorType);
 				mapDescriptors.push_back(mat);
 			}
 		}
