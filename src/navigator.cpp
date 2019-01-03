@@ -88,7 +88,7 @@ float minimalAdaptiveSpeed = 1.0;
 float maximalAdaptiveSpeed = 1.0;
 bool imgShow;
 NormTypes featureNorm = NORM_INF;
-int descriptorType = CV_32FC1;
+int descriptorType = CV_8U;
 
 /* Feature message */
 stroll_bearnav::FeatureArray featureArray;
@@ -285,7 +285,10 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			{
 				matcher.release();
 				featureNorm = (NormTypes) msg->feature[0].class_id;
-				if (featureNorm == NORM_HAMMING ||featureNorm == NORM_HAMMING2) descriptorType = CV_8U; else descriptorType = CV_32FC1;
+				if (featureNorm == NORM_HAMMING ||featureNorm == NORM_HAMMING2){
+					descriptorType = CV_8U;
+					ROS_INFO("BINARY DESCRIPTORS");
+				} else descriptorType = CV_32FC1;
 				matcher = BFMatcher::create(featureNorm);
 				ROS_INFO("Matcher switched to %i",featureNorm);
 			}
@@ -641,6 +644,8 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 
 int main(int argc, char** argv)
 {
+printf("%i %i\n",CV_MAJOR_VERSION,CV_MINOR_VERSION);
+return 0;
 	srand(0);
 	ros::init(argc, argv, "navigator");
 

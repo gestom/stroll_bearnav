@@ -109,7 +109,7 @@ EMappingState state = IDLE;
 /* plastic map parameters*/
 int mapChanges=0;
 int lastMapChanges=-1;
-bool isPlastic=true;
+bool isPlastic=false;
 bool isUpdated=false;
 
 
@@ -246,7 +246,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 /*receiving joystick data*/
 void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {    
-	angularSpeed = maxAngularSpeed*forwardSpeed*0.5*joy->axes[angularAxis];
+	angularSpeed = maxAngularSpeed*forwardSpeed*0.1*joy->axes[angularAxis];
 	forwardAcceleration = maxForwardAcceleration*joy->axes[linearAxis];;
 	flipperSpeed = maxFlipperSpeed*joy->axes[flipperAxis];
 	if  (joy->buttons[stopButton] || joy->buttons[pauseButton]) angularSpeed = forwardSpeed = flipperSpeed = 0;
@@ -376,7 +376,7 @@ int main(int argc, char** argv)
 	/* joystick params */
 	nh.param("axis_linear", linearAxis, 1);
 	nh.param("axis_angular", angularAxis, 0);
-	nh.param("axis_flipper", flipperAxis, 4);
+	nh.param("axis_flipper", flipperAxis, 3);
 	nh.param("stopButton", stopButton, 2);
 	nh.param("pauseButton", pauseButton, 0);
 
