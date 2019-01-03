@@ -77,9 +77,12 @@ int currentPathElement = 0;
 float currentDistance = 0;
 int minGoodFeatures = 2;
 float pixelTurnGain = 0.0001;
+float pixelTurnGainInt = 0;
 float differenceRot=0;
+float differenceRotInt=0;
 float minimalAdaptiveSpeed = 1.0;
 float maximalAdaptiveSpeed = 1.0;
+float maximalCurvature = 1.0;
 bool imgShow;
 NormTypes featureNorm = NORM_INF;
 int descriptorType = CV_32FC1;
@@ -149,6 +152,8 @@ void callback(stroll_bearnav::navigatorConfig &config, uint32_t level)
 	pixelTurnGain = config.pixelTurnGain;
 	minimalAdaptiveSpeed = config.adaptiveSpeedMin;
 	maximalAdaptiveSpeed = config.adaptiveSpeedMax;
+	maximalCurvature = 0;//config.maximalCurvature;
+	pixelTurnGainInt = 0;//config.pixelTurnGainInt;
 }
 
 /* reference map received */
@@ -180,6 +185,7 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 	state = NAVIGATING;
 	int traversals = goal->traversals;
 	currentPathElement = 0;
+	differenceRotInt = 0;
 
 	/* reset distance using service*/
 	srv.request.distance=overshoot=0;
@@ -255,8 +261,7 @@ bool compare_rating(stroll_bearnav::Feature first, stroll_bearnav::Feature secon
 
 void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 {
-	if(state == NAVIGATING)
-	{
+	if(state == NAVIGATING){
 		currentKeypoints.clear();
 		keypointsBest.clear();
 		keypointsGood.clear();
@@ -307,10 +312,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				mapDescriptors.push_back(mat);
 			}
 		}
-
-		std::vector< DMatch > good_matches;
-		std::vector< DMatch > conflicted_matches;
-		std::vector< DMatch > conflicting_matches;
+ 
 		good_matches.clear();
 
 		int numBins = 41;
@@ -325,244 +327,231 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info.updated=false;
 		info.view = *msg;
 		matches.clear();
-		if (mapKeypoints.size() >0 && currentKeypoints.size() >0)
-		{
+		if (mapKeypoints.size() >0 && currentKeypoints.size() >0){
 
 			/*feature matching*/
 			int knn = 5;
 			try{
-				matcher->knnMatch( mapDescriptors, currentDescriptors, matches, knn);
-				//TODO crosscheck matching matcher->knnMatch( currentDescriptors,  mapDescriptors,revmatches, knn);
+				 matcher->knnMatch( mapDescriptors, currentDescriptors, matches, knn);
+				 //TODO crosscheck matching matcher->knnMatch( currentDescriptors,  mapDescriptors,revmatches, knn);
 			}catch (Exception& e){
 				matches.clear();
 				ROS_ERROR("Feature desriptors from the map and in from the image are not compatible.");
 			}
-
 			/*perform ratio matching*/ 
 			good_matches.reserve(matches.size());  
 			for (size_t i = 0; i < matches.size(); i++)
-			{ 
-				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance){
-					good_matches.push_back(matches[i][0]); 
+			{
+				if (matches[i][0].distance < ratioMatchConstant*matches[i][1].distance) good_matches.push_back(matches[i][0]);
+				//TODO crosscheck matching //if (matches[i][0].trainIdx == revmatches[matches[i][0].trainIdx][0].queryIdx) 
+			}
+			
+			/* rating view features	*/
+			// maximasing minimal distance
+			for (int i = 0; i < info.view.feature.size(); i++) {
+				info.view.feature[i].rating=5000;
+			}
+			int nIdx=-1;
+			float distance;
+			for (int i = 0; i < matches.size(); i++) {
+				for (int j = 0; j < matches[i].size(); j++) {
+					nIdx=matches[i][j].trainIdx;
+					distance=matches[i][j].distance;
+					info.view.feature[nIdx].rating=fmin(info.view.feature[nIdx].rating,distance);
+				}
+			}
+			sort(info.view.feature.begin(),info.view.feature.end(),compare_rating);
+            //cout << "view: first " << info.view.feature[0].rating << " x " << info.view.feature[0].x << " last " << info.view.feature[info.view.feature.size()-1].rating  << " x " << info.view.feature[info.view.feature.size()-1].x  << endl;
+
+
+			/*building histogram*/	
+			int num=good_matches.size();
+			matched_points1.clear();
+			matched_points2.clear();
+			Point2f current;
+			Point2f best, possible;
+			count=0;
+			bestc=0;
+			int granularity = 20;
+			int *differences = (int*)calloc(num,sizeof(int));
+
+			for (int i=0;i<num;i++){
+
+				int idx2=good_matches[i].trainIdx;
+				int idx1=good_matches[i].queryIdx;
+				//printf("MATCH: %i %i %i\n",i,idx2,idx1);
+				matched_points1.push_back(mapKeypoints[idx1].pt);
+				matched_points2.push_back(currentKeypoints[idx2].pt);
+				keypointsGood.push_back(currentKeypoints[idx2]);
+				/*difference in x and y positions*/
+				current.x=round(matched_points1[i].x-matched_points2[i].x);	
+				current.y=round(matched_points1[i].y-matched_points2[i].y);
+				int difference = current.x;
+				int index = (difference+granularity/2)/granularity + numBins/2;
+				if (fabs(current.y) > maxVerticalDifference){
+					differences[i] = -1000000;
 				}else{
-					conflicted_matches.push_back(matches[i][0]); 
-					conflicting_matches.push_back(matches[i][1]); 
+					differences[i] = difference;
+				//	if (index <= 0) index = 0;
+				//	if (index >= numBins) index = numBins-1;
+					if (index >= 0 && index < numBins) histogram[index]++;
 				}
-
-				/* rating view features	*/
-				// maximasing minimal distance
-				for (int i = 0; i < info.view.feature.size(); i++) {
-					info.view.feature[i].rating=5000;
-				}
-				int nIdx=-1;
-				float distance;
-				for (int i = 0; i < matches.size(); i++) {
-					for (int j = 0; j < matches[i].size(); j++) {
-						nIdx=matches[i][j].trainIdx;
-						distance=matches[i][j].distance;
-						info.view.feature[nIdx].rating=fmin(info.view.feature[nIdx].rating,distance);
-					}
-				}
-				sort(info.view.feature.begin(),info.view.feature.end(),compare_rating);
-				//cout << "view: first " << info.view.feature[0].rating << " x " << info.view.feature[0].x << " last " << info.view.feature[info.view.feature.size()-1].rating  << " x " << info.view.feature[info.view.feature.size()-1].x  << endl;
-
-
-				/*building histogram*/	
-				int num=good_matches.size();
-				matched_points1.clear();
-				matched_points2.clear();
-				Point2f current;
-				Point2f best, possible;
-				count=0;
-				bestc=0;
-				int granularity = 20;
-				int *differences = (int*)calloc(num,sizeof(int));
-
-				for (int i=0;i<num;i++){
-					int idx2=good_matches[i].trainIdx;
-					int idx1=good_matches[i].queryIdx;
-					//printf("MATCH: %i %i %i\n",i,idx2,idx1);
-					matched_points1.push_back(mapKeypoints[idx1].pt);
-					matched_points2.push_back(currentKeypoints[idx2].pt);
-					keypointsGood.push_back(currentKeypoints[idx2]);
-					/*difference in x and y positions*/
-					current.x=round(matched_points1[i].x-matched_points2[i].x);	
-					current.y=round(matched_points1[i].y-matched_points2[i].y);
-					int difference = current.x;
-					int index = (difference+granularity/2)/granularity + numBins/2;
-					if (fabs(current.y) > maxVerticalDifference){
-						differences[i] = -1000000;
-					}else{
-						differences[i] = difference;
-						if (index >= 0 && index < numBins) histogram[index]++;
-					}
-					count=0; 
-				}
-
-				/*histogram printing*/
-				int max=0;
-				int position=0;
-				printf("Bin: ");
-				for (int i = 0;i<numBins;i++) {
-
-					printf("%i ",histogram[i]);
-					if (histogram[i]>max)
-					{
-						max=histogram[i];
-						position=i;
-					}
-				}
-				feedback.max = max;
-
-				/* rotation between features based on histogram voting */
-				int rotation=(position-numBins/2)*granularity;
-				printf("\n");
-				float sum=0;
-				keypointsBest.clear();	
-				/* use good correspondences to determine heading */
-				best_matches.clear();
-				bad_matches.clear();
-
-				/* take only good correspondences */
-				for(int i=0;i<num;i++){
-					if (fabs(differences[i]-rotation) < granularity*1.5){
-						sum+=differences[i];
-						count++;
-						best_matches.push_back(good_matches[i]);
-						keypointsBest.push_back(keypointsGood[i]);
-					} else {
-						bad_matches.push_back(good_matches[i]);
-					}
-				}
-
-				/*these are the good points used for navigation*/
-				for(int i=0;i<num;i++){
-					if (fabs(differences[i]-rotation) < granularity*1.5){
-						//best_matches.push_back(good_matches[i]);
-						keypointsBest.push_back(keypointsGood[i]);
-					}
-				}
-				free(differences);
-
-				/* publish statistics */
-				feedback.correct = best_matches.size();
-				feedback.outliers = good_matches.size() - best_matches.size();
-				feedback.keypoints_avg = (mapKeypoints.size() + currentKeypoints.size() )/2;
-				feedback.matches = good_matches.size();
-				/*difference between features */
-				differenceRot=sum/count; 
-				cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
-				//cout << "Vektor: " << count << " " << differenceRot << endl;
-				//cout << "bm " << bad_matches.size()  << endl;
-			}
-			velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
-
-
-
-			feedback.histogram.clear();
-			if (count<minGoodFeatures) differenceRot = 0;
-			for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
-
-			/*forming navigation info messsage*/
-			//info.mapID = currentMapID;
-			info.histogram = feedback.histogram;
-			info.ratio = ratioMatchConstant;
-			info.mapMatchIndex.clear();
-			vector<int> mapIndex(mapFeatures.feature.size());
-			vector<int> mapEval(mapFeatures.feature.size());
-			std::fill(mapIndex.begin(),mapIndex.end(),-1); 
-			std::fill(mapEval.begin(),mapEval.end(),0);
-			for (int i = 0;i<good_matches.size();i++)
-			{
-				mapIndex[good_matches[i].queryIdx] = good_matches[i].trainIdx;
-				mapEval[good_matches[i].queryIdx] = -1;
-			}	
-			for (int i = 0;i<best_matches.size();i++) {
-				mapEval[best_matches[i].queryIdx] = 1;
-				// rating map features
-				if(isRating) mapFeatures.feature[best_matches[i].queryIdx].rating+=mapEval[best_matches[i].queryIdx];
-			}
-			if(isRating) 
-			{
-				for (int i = 0; i < bad_matches.size(); i++) {
-					mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
-				}
-
-				numFeatureAdd = numFeatureRemove = best_matches.size();
-
-				// remove the worst rating from map
-				sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
-				if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
-				if (numFeatureRemove > -1){
-					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
-				}else{
-					mapFeatures.feature.erase(mapFeatures.feature.end() - bad_matches.size(), mapFeatures.feature.end());
-				}
-
-				mapFeatures.feature.clear();
-				numFeatureAdd = 500;
-				// add the least similar features from view to map
-				for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
-					info.view.feature[i].rating = 0;
-					info.view.feature[i].x = info.view.feature[i].x + differenceRot;
-					mapFeatures.feature.push_back(info.view.feature[i]);
-					//info.view.feature.erase(info.view.feature.begin(), info.view.feature.begin() + 10);
-				}
-
-				isRating=false;
-				mapChanges++;
-				info.updated=true;
+				count=0; 
 			}
 
-			info.mapChanges=mapChanges;
-			info.map = mapFeatures;
-			info.mapMatchIndex = mapIndex;
-			info.mapMatchEval = mapEval;
-			info.correct = feedback.correct;
-			info.matches = feedback.matches;
-			info.distance = feedback.distance;
-			info.diffRot = differenceRot;
-			info_pub_.publish(info);
-
-		}
-			/*Show good image features (Green) */
-			Mat output,outtran; 
-			if(image_pub_.getNumSubscribers()>0)
-			{
-				//drawKeypoints(currentImage,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
-				if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0)
+			/*histogram printing*/
+			int max=0;
+			int position=0;
+			printf("Bin: ");
+			for (int i = 0;i<numBins;i++) {
+				
+				printf("%i ",histogram[i]);
+				if (histogram[i]>max)
 				{
-					if (mapImage.rows==0) mapImage = currentImage;
-					Mat mapIm = mapImage.t();  
-					Mat curIm = currentImage.t();
-					vector<KeyPoint> kpMap,kpCur;
-					KeyPoint tmp;
-					for (int i = 0;i<mapKeypoints.size();i++)
-					{
-						tmp = mapKeypoints[i];	
-						tmp.pt.y = mapKeypoints[i].pt.x;
-						tmp.pt.x = mapKeypoints[i].pt.y;
-						kpMap.push_back(tmp);
-					} 
-					for (int i = 0;i<currentKeypoints.size();i++)
-					{
-						tmp = currentKeypoints[i];	
-						tmp.pt.y = currentKeypoints[i].pt.x;
-						tmp.pt.x = currentKeypoints[i].pt.y;
-						kpCur.push_back(tmp);
-					}
-					if (showAllMatches){
-						drawMatches(mapIm,kpMap,curIm,kpCur,good_matches,outtran,Scalar(0,0,255),Scalar(0,0,255),vector<char>(),0);
-						if (showGoodMatches) drawMatches(mapIm,kpMap,curIm,kpCur,best_matches,outtran,Scalar(0,255,0),Scalar(0,255,0),vector<char>(),3);
-					}else{
-						if (showGoodMatches) drawMatches(mapIm,kpMap,curIm,kpCur,best_matches,outtran,Scalar(0,255,0),Scalar(0,255,0),vector<char>(),2);
-					}
-					output = outtran.t();
-					std_msgs::Header header;
-					cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::BGR8, output);
-					image_pub_.publish(bridge.toImageMsg());
+					max=histogram[i];
+					position=i;
 				}
 			}
+			feedback.max = max;
+
+			/* rotation between features based on histogram voting */
+			int rotation=(position-numBins/2)*granularity;
+			printf("\n");
+			float sum=0;
+			keypointsBest.clear();	
+			/* use good correspondences to determine heading */
+			best_matches.clear();
+			bad_matches.clear();
+			/* take only good correspondences */
+			for(int i=0;i<num;i++){
+				if (fabs(differences[i]-rotation) < granularity*1.5){
+					sum+=differences[i];
+					count++;
+					best_matches.push_back(good_matches[i]);
+					keypointsBest.push_back(keypointsGood[i]);
+				} else {
+					bad_matches.push_back(good_matches[i]);
+				}
+			}
+			free(differences);
+
+			/* publish statistics */
+			feedback.correct = best_matches.size();
+			feedback.outliers = good_matches.size() - best_matches.size();
+			feedback.keypoints_avg = (mapKeypoints.size() + currentKeypoints.size() )/2;
+			feedback.matches = good_matches.size();
+			/*difference between features */
+			differenceRot=sum/count; 
+			cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
+			//cout << "Vektor: " << count << " " << differenceRot << endl;
+			//cout << "bm " << bad_matches.size()  << endl;
+		}
+		velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
+
+
+				
+		feedback.histogram.clear();
+		if (count<minGoodFeatures) differenceRot = 0;
+		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
+
+		/*forming navigation info messsage*/
+		//info.mapID = currentMapID;
+		info.histogram = feedback.histogram;
+		info.ratio = ratioMatchConstant;
+		info.mapMatchIndex.clear();
+		vector<int> mapIndex(mapFeatures.feature.size());
+		vector<int> mapEval(mapFeatures.feature.size());
+		std::fill(mapIndex.begin(),mapIndex.end(),-1); 
+		std::fill(mapEval.begin(),mapEval.end(),0);
+		for (int i = 0;i<good_matches.size();i++)
+		{
+			mapIndex[good_matches[i].queryIdx] = good_matches[i].trainIdx;
+			mapEval[good_matches[i].queryIdx] = -1;
+		}	
+		for (int i = 0;i<best_matches.size();i++) {
+			mapEval[best_matches[i].queryIdx] = 1;
+			// rating map features
+			if(isRating) mapFeatures.feature[best_matches[i].queryIdx].rating+=mapEval[best_matches[i].queryIdx];
+		}
+		if(isRating) 
+		{
+			for (int i = 0; i < bad_matches.size(); i++) {
+				mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
+			}
+
+			numFeatureAdd = numFeatureRemove = best_matches.size()/2;
+
+			// remove the worst rating from map
+			sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
+			if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
+			if (numFeatureRemove > -1){
+				mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
+			}else{
+				mapFeatures.feature.erase(mapFeatures.feature.end() - bad_matches.size(), mapFeatures.feature.end());
+			}
+
+			//mapFeatures.feature.clear();
+			//numFeatureAdd = 500;
+			// add the least similar features from view to map
+			for (int i = 0; i < numFeatureAdd && i < info.view.feature.size(); i++) {
+				info.view.feature[i].rating = 0;
+				info.view.feature[i].x = info.view.feature[i].x + differenceRot;
+				mapFeatures.feature.push_back(info.view.feature[i]);
+				//info.view.feature.erase(info.view.feature.begin(), info.view.feature.begin() + 10);
+			}
+
+			isRating=false;
+			mapChanges++;
+			info.updated=true;
+		}
+		info.mapChanges=mapChanges;
+		info.map = mapFeatures;
+		info.mapMatchIndex = mapIndex;
+		info.mapMatchEval = mapEval;
+		info.correct = feedback.correct;
+		info.matches = feedback.matches;
+		info.distance = feedback.distance;
+		info.diffRot = differenceRot;
+		info_pub_.publish(info);
+
+		/*Show good image features (Green) */
+		Mat output,outtran; 
+		if(image_pub_.getNumSubscribers()>0)
+		{
+			//drawKeypoints(currentImage,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
+			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0)
+			{
+				if (mapImage.rows==0) mapImage = currentImage;
+				Mat mapIm = mapImage.t();  
+				Mat curIm = currentImage.t();
+				vector<KeyPoint> kpMap,kpCur;
+				KeyPoint tmp;
+				for (int i = 0;i<mapKeypoints.size();i++)
+				{
+					tmp = mapKeypoints[i];	
+					tmp.pt.y = mapKeypoints[i].pt.x;
+					tmp.pt.x = mapKeypoints[i].pt.y;
+					kpMap.push_back(tmp);
+				} 
+				for (int i = 0;i<currentKeypoints.size();i++)
+				{
+					tmp = currentKeypoints[i];	
+					tmp.pt.y = currentKeypoints[i].pt.x;
+					tmp.pt.x = currentKeypoints[i].pt.y;
+					kpCur.push_back(tmp);
+				}
+				if (showAllMatches){
+					drawMatches(mapIm,kpMap,curIm,kpCur,good_matches,outtran,Scalar(0,0,255),Scalar(0,0,255),vector<char>(),0);
+					if (showGoodMatches) drawMatches(mapIm,kpMap,curIm,kpCur,best_matches,outtran,Scalar(0,255,0),Scalar(0,255,0),vector<char>(),3);
+				}else{
+					if (showGoodMatches) drawMatches(mapIm,kpMap,curIm,kpCur,best_matches,outtran,Scalar(0,255,0),Scalar(0,255,0),vector<char>(),2);
+				}
+				output = outtran.t();
+				std_msgs::Header header;
+				cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::BGR8, output);
+				image_pub_.publish(bridge.toImageMsg());
+			}
+		}
 
 		/* publish statistics */
 		feedback.diffRot = differenceRot;
@@ -576,6 +565,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		feedback.stats.push_back(feedback.correct);
 		stats.push_back(feedback.outliers);
 		feedback.stats.push_back(feedback.outliers);
+
 		server->publishFeedback(feedback);
 	}
 }
@@ -588,7 +578,7 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		feedback.distance = currentDistance = msg->data;
 		if (currentPathElement+2 <= path.size())
 		{
-			if (path[currentPathElement+1].distance < msg->data){
+			while (path[currentPathElement+1].distance < msg->data){
 				//ROS_INFO("Next %i %f",currentPathElement,path[currentPathElement].forward);
 				 currentPathElement++;
 			}
@@ -600,18 +590,22 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		{
 			//ROS_INFO("MOVE %i %f",currentPathElement,path[currentPathElement].forward);
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
+			twist.angular.z = twist.angular.y = twist.angular.x = 0.0;
 			if (fabs(path[currentPathElement].angular) > 0.001) velocityGain = 1.0;
 			twist.linear.x = path[currentPathElement].forward*velocityGain; 
-			twist.angular.y = twist.angular.x = 0.0;
-			twist.angular.z=path[currentPathElement].angular*velocityGain;
+			twist.angular.z = path[currentPathElement].angular*velocityGain;
+			//differenceRotInt+=differenceRot;
 			twist.angular.z+=differenceRot*pixelTurnGain;
+			//if (twist.angular.z > +twist.linear.x*maximalCurvature) twist.angular.z  = +twist.linear.x*maximalCurvature; 
+			//if (twist.angular.z < -twist.linear.x*maximalCurvature) twist.angular.z  = -twist.linear.x*maximalCurvature; 
+ 
 			cmd_pub_.publish(twist);
 		}
 		/*used for testing and demos*/
 		if (path.size()==0)
 		{
 			twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
-			twist.angular.y = twist.angular.x = 0.0;
+			twist.linear.y = twist.linear.z = twist.angular.y = twist.angular.x = 0.0;
 			twist.angular.z =differenceRot*pixelTurnGain;
 			cmd_pub_.publish(twist);
 		}
