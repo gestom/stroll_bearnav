@@ -269,44 +269,6 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 			for(int i = 0; i<keypoints_1.size();i++){
 				stcs[i] = 0;
 			}
-			string line;
-			ifstream f("/home/gestom/projects/cameleon/src/stroll_bearnav/src/stats.txt");
-			int max = 0;
-			if (f.is_open())
-			{
-				while ( getline (f,line) )
-				{
-					int was_ok = 0;
-					vector<string> strings;
-					istringstream l(line);
-					string s;
-					int index = -1;
-
-					bool right_map_id = false;
-					if(getline(l, s, ' ')){
-						if(s.find(currentMapName) != string::npos){
-							right_map_id=true;
-							size_t pos = s.find("_");
-							string s_index = s.substr(0,pos);
-							index = atoi(s_index.c_str());
-							for(int i = 0; i<6;i++){
-								getline(l, s, ' ');
-							}
-						}
-					}
-					while (getline(l, s, ' ') && right_map_id)
-					{
-						getline(l, s, ' ');
-						was_ok += atoi(s.c_str());
-					}
-					if(max<was_ok){
-						max = was_ok;
-					}
-					stcs[index] = was_ok;
-				}
-				f.close();
-			}
-
 
 			for(int i=0;i<keypoints_1.size();i++)
 			{
