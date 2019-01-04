@@ -373,18 +373,18 @@ int main(int argc, char** argv)
 	nh.param("pauseButton", pauseButton, 0);
 
 	/* robot speed limits */
-	nh.param("angularSpeed", maxAngularSpeed, 0.2);
-	nh.param("forwardSpeed", maxForwardSpeed, 0.3);
+	nh.param("angularSpeed", maxAngularSpeed, 0.5);
+	nh.param("forwardSpeed", maxForwardSpeed, 1.5);
 	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
-	vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmda", 1);
+	if (isPlastic == false) vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10, joyCallback);
 	infoSub_ = nh.subscribe("/navigationInfo", 1000, infoMapMatch);
 
 	image_sub_ = it_.subscribe( "/image", 1,imageCallback);					//THIS IS A PROBLEM WHEN GENERATING GROUND TRUTH
-	featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
+	if(!isPlastic) featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
 	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance_events",1,distanceEventCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",1);
@@ -408,7 +408,7 @@ int main(int argc, char** argv)
 			twist.angular.z =  angularSpeed;;
 			flipperSpeed = fmin(fmax(flipperSpeed,-maxFlipperSpeed),maxFlipperSpeed);
 			twist.angular.y =  flipperSpeed;
-			vel_pub_.publish(twist);
+			if (isPlastic == false) vel_pub_.publish(twist);
 
 			/* saving path profile */
 			if (lastForwardSpeed != forwardSpeed || lastAngularSpeed != angularSpeed || lastFlipperSpeed != flipperSpeed)
@@ -425,7 +425,7 @@ int main(int argc, char** argv)
 		}
 		if (state == TERMINATING){
 			twist.linear.x = twist.angular.z = twist.angular.y = 0;
-			vel_pub_.publish(twist);
+			if (isPlastic == false) vel_pub_.publish(twist);
 			state = IDLE;
 		}
 		ros::spinOnce();

@@ -2,7 +2,7 @@
 
 <!-- Default folder with maps-->
 
-<arg name="folder" default="$(env HOME)/hosti_zima"/>
+<arg name="folder" default="$(env HOME)/test"/>
 
 <!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>
