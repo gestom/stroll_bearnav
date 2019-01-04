@@ -99,7 +99,6 @@ add_service_files(
   	cfg/distance.cfg
 	cfg/featureExtraction.cfg
 	cfg/navigator.cfg
-    cfg/supervisor.cfg
  )
 
 ###################################
@@ -141,64 +140,26 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 # add_dependencies(cameleon_ros_driver ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-#add_executable(cameleon_ros_driver src/cameleon_ros_driver.cpp)
-#add_executable(cameleon_video src/cameleon_video.cpp)
-#add_executable(pid src/pid.cpp)
-#add_executable(ImageConverter src/ImageConverter.cpp)
-#add_executable(joyImage src/joyImage.cpp)
 add_executable(mapper_node src/mapper.cpp)
 add_executable(feature_extraction_node src/featureExtraction.cpp)
-add_executable(feature_testing_node src/featureTesting.cpp)
 add_executable(odometry_monitor_node src/odometryMonitor.cpp)
 add_executable(map_preprocessor_node src/mapPreprocessor.cpp)
-add_executable(tester_image_extractor src/testerImageExtractor.cpp)
 add_executable(navigator_node src/navigator.cpp)
-add_executable(visualisation_node src/visualisation.cpp)
-add_executable(supervisor_node src/supervisor.cpp)
-add_executable(rosbag_node src/rosbag.cpp)
-add_executable(feature_holder_node src/featureHolder.cpp)
-add_executable(map_match_info_listener src/mapMatchInfoListener.cpp)
-add_executable(tester src/tester.cpp)
-add_executable(auto_remapper src/autoRemapper.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-#add_dependencies(cameleon_ros_driver cameleon_message_client cameleon_message ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-#add_dependencies(cameleon_video imgFeatures ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(feature_extraction_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(feature_testing_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(map_preprocessor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(tester_image_extractor ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(odometry_monitor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg  ${catkin_EXPORTED_TARGETS})
 add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(visualisation_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(supervisor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(feature_holder_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(map_match_info_listener ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(tester ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-add_dependencies(auto_remapper ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-#target_link_libraries(cameleon_ros_driver cameleon_message_client cameleon_message cameleon_timer${catkin_LIBRARIES})
-#target_link_libraries(cameleon_video ${catkin_LIBRARIES})
-#target_link_libraries(pid ${catkin_LIBRARIES})
-#target_link_libraries(ImageConverter cameleon_timer ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-#target_link_libraries(joyImage cameleon_timer ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(mapper_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(feature_extraction_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(feature_testing_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(odometry_monitor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(map_preprocessor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(tester_image_extractor ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(navigator_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(visualisation_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(supervisor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(rosbag_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(feature_holder_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(map_match_info_listener ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(tester ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(auto_remapper ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 #############
 ## Install ##

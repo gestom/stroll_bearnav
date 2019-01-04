@@ -108,7 +108,7 @@ EMappingState state = IDLE;
 /* plastic map parameters*/
 int mapChanges=0;
 int lastMapChanges=-1;
-bool isPlastic=true;
+bool isPlastic=false;
 bool isUpdated=false;
 
 

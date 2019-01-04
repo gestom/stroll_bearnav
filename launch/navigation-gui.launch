@@ -13,6 +13,4 @@
   <param name="autosize" value="true" />
 </node>
 
-<node pkg="stroll_bearnav" type="gui_setup.sh" name="Configure_gui"/>
-
 </launch>

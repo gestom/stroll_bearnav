@@ -1,4 +1,0 @@
-<launch>
-  <include file="$(find stroll_bearnav)/launch/stroll-core.launch" />
-  <include file="$(find stroll_bearnav)/launch/stroll-gui.launch" />
-</launch>
