@@ -7,9 +7,12 @@ Bearnav is a simple teach-and-repeat visual navigation system robust to appearan
 Early versions of the system proved their ability to reliably traverse polygonal trajectories indoors and outdoors during adverse illumination conditions [[1,2](#references)], in environments undergoing drastic appearance changes [[2,3](#references)] and on flying robots[[4](#references)].
 The version presented here is described in [[5](#references)] and it allows to learn arbitrary, smooth paths, is fully integrated in the ROS operating system and is available on-line in this repository.
 
-## How to make it work
+## Prerequisities - before the seminar 
 
-You should use Ubuntu 16 with ROS kinetic (recommended) or Ubuntu 18 with ROS melodic. If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib. To do so, follow the steps in the "OPENCV 4" section of the https://nicolas-bettenburg.com/2018-08-18-ubuntu-18-04-deep-learning-box/.
+You should install Ubuntu 16 with ROS kinetic (recommended) or Ubuntu 18 with ROS melodic.
+If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib. To do so, follow the steps in the "OPENCV 4" section of the https://nicolas-bettenburg.com/2018-08-18-ubuntu-18-04-deep-learning-box/.
+
+## Installation - before or during the seminar  
 
 Prepare your environment in the home folder:
 
