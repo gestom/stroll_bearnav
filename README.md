@@ -49,8 +49,8 @@ Make the `stroll_bearnav` package work:
 1. Compile it: `cd ..`, `catkin_make`
 1. Source your environment: `source devel/setup.bash`
 1. Run it: `roslaunch stroll_bearnav stroll-core.launch`
-1. Open a new terminal and check the image features: `rosrun rqt_image_view rqt_image_view /image_with_features`
-1. Open a new terminal and check the system structure `rosrun rqt_graph rqt_graph`
+1. Open a new terminal, source your environment and check the image features: `rosrun rqt_image_view rqt_image_view /image_with_features`
+1. Open a new terminal, source your environment and check the system structure `rosrun rqt_graph rqt_graph`
 1. Run the operator GUIs: `roslaunch stroll_bearnav stroll-gui.launch`
 1. Now find the `mapper` client gui and create a map by entering its name, e.g. `A` behind the `fileName`click `Send goal`, wait for feedback and then click `Cancel goal`.
 1. Now find the `loadMap` gui, enter the map name in the prefix and click `Send goal`
