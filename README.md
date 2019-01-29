@@ -21,12 +21,12 @@ Nothing special needs to be done here. You can continue with installation.
 If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib:
 
 1. Create a folder to perform the compilation and switch to it: `mkdir ~/opencv;cd ~/opencv`
-1. Download opencv: `git clone https://github.com/opencv/opencv.git`
-1. Download opencv-contrib: `git clone https://github.com/opencv/opencv_contrib.git`
+1. Download opencv: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv.git`
+1. Download opencv-contrib: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv_contrib.git`
 1. Go to opencv folder, create a build folder and switch to it: `mkdir opencv/build;cd opencv/build`
 1. Tell opencv to compile with the contrib: `cmake -DOPENCV_EXTRA_MODULES_PATH=~/opencv/opencv_contrib/modules ~/opencv/opencv`
 1. Compile it: `make -j5`.
-1.
+1. Install it: `sudo make install`
 
 ## Installation - before or during the seminar  
 
