@@ -24,6 +24,7 @@ Make your usb camera work:
 1. Source your environment: `source devel/setup.bash`
 1. Make your camera easy to access: `sudo chmod 777 /dev/video0`
 1. Run the camera node: `roslaunch usb_cam usb_cam-test.launch`
+1. In Ubuntu 18, you might experience a crash of the: image_view, which is supposed to display the live camera feed. Instead, use rqt_image_view `rosrun rqt_image_view rqt_image_view image:=/usb_cam/image_raw`.
 
 Make the `stroll_bearnav` package work:
 
