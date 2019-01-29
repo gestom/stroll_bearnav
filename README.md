@@ -9,8 +9,8 @@ The version presented here is described in [[5](#references)] and it allows to l
 
 ## Prerequisities - before the seminar 
 
-You should install Ubuntu 16 with ROS kinetic (recommended) or Ubuntu 18 with ROS melodic.
-Also, you should have git installed: `sudo apt install git`.
+1. You should install Ubuntu 16 with ROS kinetic or Ubuntu 18 with ROS melodic.
+2. Also, you should install other prerequisities: `sudo apt install git`.
 
 ### Ubuntu 16
 
