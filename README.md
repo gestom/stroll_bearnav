@@ -10,7 +10,23 @@ The version presented here is described in [[5](#references)] and it allows to l
 ## Prerequisities - before the seminar 
 
 You should install Ubuntu 16 with ROS kinetic (recommended) or Ubuntu 18 with ROS melodic.
-If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib. To do so, follow the steps in the "OPENCV 4" section of the https://nicolas-bettenburg.com/2018-08-18-ubuntu-18-04-deep-learning-box/.
+Also, you should have git installed: `sudo apt install git`.
+
+### Ubuntu 16
+
+Nothing special needs to be done here. You can continue with installation.
+
+### Ubuntu 18
+
+If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib:
+
+1. Create a folder to perform the compilation and switch to it: `mkdir ~/opencv;cd ~/opencv`
+1. Download opencv: `git clone https://github.com/opencv/opencv.git`
+1. Download opencv-contrib: `git clone https://github.com/opencv/opencv_contrib.git`
+1. Go to opencv folder, create a build folder and switch to it: `mkdir opencv/build;cd opencv/build`
+1. Tell opencv to compile with the contrib: `cmake -DOPENCV_EXTRA_MODULES_PATH=~/opencv/opencv_contrib/modules ~/opencv/opencv`
+1. Compile it: `make -j5`.
+1.
 
 ## Installation - before or during the seminar  
 
