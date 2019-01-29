@@ -35,7 +35,7 @@ Prepare your environment in the home folder:
 1. `cd `, `mkdir -p robotika_ws/src`, `cd robotika_ws/src`, `catkin_init_workspace`
 
 Make your usb camera work:
-1. Clone the usb_cam ROS driver: `git clone https://github.com/ros-drivers/usb_cam.git`
+1. Clone the usb_cam ROS driver: `git clone https://github.com/gestom/usb_cam.git`
 1. Compile it: `cd ..`, `catkin_make`
 1. Source your environment: `source devel/setup.bash`
 1. Make your camera easy to access: `sudo chmod 777 /dev/video0`
