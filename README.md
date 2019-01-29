@@ -32,7 +32,7 @@ If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib:
 
 Prepare your environment in the home folder:
 
-1. `cd `, `mkdir -p robotika_ws/src`, `cd robotika_ws/src`, `catkin_init_workspace`
+1. `cd `, `mkdir -p ~/robotika_ws/src`, `cd ~/robotika_ws/src`, `catkin_init_workspace`
 
 Make your usb camera work:
 1. Clone the usb_cam ROS driver: `git clone https://github.com/gestom/usb_cam.git`
