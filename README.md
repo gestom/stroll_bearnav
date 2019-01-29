@@ -24,7 +24,7 @@ If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib:
 1. Download opencv: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv.git`
 1. Download opencv-contrib: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv_contrib.git`
 1. Go to opencv folder, create a build folder and switch to it: `mkdir opencv/build;cd opencv/build`
-1. Tell opencv to compile with the contrib: `cmake -DOPENCV_EXTRA_MODULES_PATH=~/opencv/opencv_contrib/modules ~/opencv/opencv`
+1. Tell opencv to compile with the contrib: `cmake -DOPENCV_ENABLE_NONFREE:BOOL=ON -DOPENCV_EXTRA_MODULES_PATH=~/opencv/opencv_contrib/modules ~/opencv/opencv`
 1. Compile it: `make -j5`.
 1. Install it: `sudo make install`
 
@@ -40,7 +40,7 @@ Make your usb camera work:
 1. Source your environment: `source devel/setup.bash`
 1. Make your camera easy to access: `sudo chmod 777 /dev/video0`
 1. Run the camera node: `roslaunch usb_cam usb_cam-test.launch`
-1. In Ubuntu 18, you might experience a crash of the: image_view, which is supposed to display the live camera feed. Instead, use rqt_image_view `rosrun rqt_image_view rqt_image_view image:=/usb_cam/image_raw`.
+1. Keep the camera running.
 
 Make the `stroll_bearnav` package work:
 
