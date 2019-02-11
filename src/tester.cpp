@@ -210,7 +210,7 @@ int configureFeatures(int detector,int descriptor)
 
 	if (ros::service::call("/feature_extraction/set_parameters", srv_req, srv_resp) == false){
 		 ROS_WARN("Feature extraction module not configured.");
-		 return -1;
+		 return 0;
 	}
 	return 0;
 }

@@ -6,9 +6,9 @@
 <arg name="folder_view" default="$(env HOME)/mesas_2018_exposure/2"/>
 
 <!-- feature extraction -->
-  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
-	  <remap from="image" to="/image_view"/>
-  </node>
+<node pkg="stroll_bearnav" name="pyNN" type="featureExtraction.py" output="screen">
+    <remap from="image" to="/image_view"/>
+</node>
 
 <!-- mapping node -->
 <!--node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
@@ -33,7 +33,7 @@
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="navigator_node" name="navigator"  >
+<node pkg="stroll_bearnav" type="navigator_node" name="navigator" output="screen" >
   <param name="folder" value="$(arg folder_map)" />
   <remap from="image_with_features" to="image_view"/>
 </node>
