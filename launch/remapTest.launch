@@ -33,7 +33,7 @@
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="navigator_node" name="navigator">
+<node pkg="stroll_bearnav" type="navigator_node" name="navigator" output="screen" launch-prefix="gdb -ex run --args" >
   <param name="folder" value="$(arg folder_map)" />
   <remap from="image_with_features" to="image_view"/>
 </node>
@@ -48,10 +48,8 @@
 <!--node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigurator"/-->
 
 <!-- image view to check video stream-->
-<node pkg="image_view" type="image_view" name="image_viewer">
+<node pkg="rqt_image_view" type="rqt_image_view" name="rqt_image_viewer" args="/navigationMatches">
   <param name="~image_transport" value="compressed" />
-  <remap from="image" to="/navigationMatches"/>
-  <param name="autosize" value="true" />
 </node>
 
 <!-- image view to check video stream-->

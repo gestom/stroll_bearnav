@@ -521,7 +521,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 
 		/*Show good image features (Green) */
 		Mat output,outtran; 
-		if(image_pub_.getNumSubscribers()>0)
+		if(image_pub_.getNumSubscribers()>0 && best_matches.size() > 0)
 		{
 			//drawKeypoints(currentImage,keypointsBest,img_goodKeypoints_1,Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
 			if (currentImage.rows >0 && mapKeypoints.size() >0 && currentKeypoints.size() >0)
