@@ -12,7 +12,7 @@ f="$1/icra_2019_adamap/long"
 
 ############ Perform a remap
 confidence=0.05
-if [ 0 == 1 ]
+if [ 1 == 1 ]
 then
 rosparam set names_map  [A000,M000]
 rosparam set names_view [A000]
@@ -22,7 +22,7 @@ cp $f/A000_GT.txt $f/M000_GT.txt
 fi
 
 #static and plastic maps
-if [ 0 == 1 ]
+if [ 1 == 1 ]
 then
 #test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
