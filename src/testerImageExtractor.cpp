@@ -136,8 +136,8 @@ int loadMaps(char* folder,char* prefix,vector<Mat> *images)
 
 	numFeatures=0;
 	for (int i = 0;i<numMaps;i++){
-		sprintf(fileName,"%s/%s_%.3f.yaml",folder,prefix,mapDistances[i]);
-		printf("Loading %s/%s_%.3f.yaml\n",folder,prefix,mapDistances[i]);
+		sprintf(fileName,"%s/%s_%07.3f.yaml",folder,prefix,mapDistances[i]);
+		printf("Loading %s/%s_%07.3f.yaml\n",folder,prefix,mapDistances[i]);
 		FileStorage fs(fileName, FileStorage::READ);
 		if(fs.isOpened())
 		{
