@@ -18,13 +18,13 @@
 </node>
 
 <!-- map loader1 node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map" output="screen">
 <param name="folder" value="$(arg folder_map)" />
 <remap from="map_preprocessor" to="map_preprocessor_map"/>
 </node>
 
 <!-- map loader2 node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_view">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_view" output="screen">
 <param name="folder" value="$(arg folder_view)" />
 <remap from="localMap" to="featuresTrash" />
 <remap from="pathProfile" to="pathProfileDummy" />
@@ -48,7 +48,7 @@
 <!--node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigurator"/-->
 
 <!-- image view to check video stream-->
-<node pkg="image_view" type="image_view" name="image_viewer">
+<node pkg="rqt_image_view" type="rqt_image_view" name="image_viewer" args="/navigationMatches">
   <param name="~image_transport" value="compressed" />
   <remap from="image" to="/navigationMatches"/>
   <param name="autosize" value="true" />
