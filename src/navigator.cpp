@@ -529,6 +529,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info.mapMatchIndex = mapIndex;
 		info.mapMatchEval = mapEval;
 		info.correct = feedback.correct;
+		info.outliers = feedback.outliers;
 		info.matches = feedback.matches;
 		info.distance = feedback.distance;
 		info.diffRot = differenceRot;

@@ -18,13 +18,13 @@
 </node-->
 
 <!-- map loader1 node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map" output="screen">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_map">
 <param name="folder" value="$(arg folder_map)" />
 <remap from="map_preprocessor" to="map_preprocessor_map"/>
 </node>
 
 <!-- map loader2 node -->
-<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_view" output="screen">
+<node pkg="stroll_bearnav" type="map_preprocessor_node" name="map_preprocessor_view">
 <param name="folder" value="$(arg folder_view)" />
 <remap from="localMap" to="featuresa" />
 <remap from="pathProfile" to="pathProfileDummy" />
@@ -33,7 +33,7 @@
 </node>
 
 <!-- navigator node -->
-<node pkg="stroll_bearnav" type="navigator_node" name="navigator"  >
+<node pkg="stroll_bearnav" type="navigator_node" name="navigator" >
   <param name="folder" value="$(arg folder_map)" />
   <remap from="image_with_features" to="image_view"/>
 </node>
