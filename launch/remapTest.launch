@@ -54,13 +54,13 @@
   <param name="autosize" value="true" />
 </node>
 
-<!-- image view to check video stream-->
+<!-- image view to check video stream>
 <node pkg="image_view" type="image_saver" name="image_saver">
   <param name="~image_transport" value="compressed" />
   <remap from="image" to="/navigationMatches"/>
   <param name="autosize" value="true" />
 </node>
-
+-->
 
 
 
