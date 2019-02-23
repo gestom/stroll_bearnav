@@ -7,3 +7,5 @@ int32 octave
 int32 class_id
 float32[] descriptor
 float32 rating
+int32[] timeStamps
+int32[] visibilities

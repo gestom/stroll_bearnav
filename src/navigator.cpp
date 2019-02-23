@@ -476,6 +476,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		info.mapMatchIndex.clear();
 		vector<int> mapIndex(mapFeatures.feature.size());
 		vector<int> mapEval(mapFeatures.feature.size());
+
 		std::fill(mapIndex.begin(),mapIndex.end(),-1);
 		std::fill(mapEval.begin(),mapEval.end(),0);
 		for (int i = 0;i<good_matches.size();i++)
@@ -486,8 +487,12 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		for (int i = 0;i<best_matches.size();i++) {
 			mapEval[best_matches[i].queryIdx] = 1;
 			// rating map features
-			if(isRating) mapFeatures.feature[best_matches[i].queryIdx].rating+=mapEval[best_matches[i].queryIdx];
+			if(isRating){
+			       	mapFeatures.feature[best_matches[i].queryIdx].rating+=mapEval[best_matches[i].queryIdx];
+			}
 		}
+		//mapFeatures.feature[best_matches[i].queryIdx].timeStamps.push_back(msg->time);
+		//mapFeatures.feature[best_matches[i].queryIdx].visibility=mapEval[best_matches[i].queryIdx];
 		if(isRating)
 		{
 			if (count>=minGoodFeatures || remapRotGain == 0){
