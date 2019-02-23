@@ -56,7 +56,7 @@ fi
 #summary map
 if [ 1 == 1 ]
 then
-rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': True, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 15,'minFeatureRemap': 15 }"&
+rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': True, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 30,'minFeatureRemap': 15 }"&
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 178);do echo -ne D$i,;done)]
 rosparam set names_view [$(for i in $(seq -w 1 178);do echo -ne A$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
