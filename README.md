@@ -1,3 +1,6 @@
+# For initial testing, USE THE CORE BRANCH
+------------------------------------------------------------
+
 # STRoLL BearNav 
 ## Simple and Robust Visual Teach-and-replay Navigation System
 
