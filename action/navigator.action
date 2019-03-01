@@ -14,4 +14,5 @@ int32 correct
 int32 outliers
 int32 keypoints_avg
 int32 matches
+bool intervention
 int32[] stats

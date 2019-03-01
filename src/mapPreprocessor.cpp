@@ -47,7 +47,7 @@ vector<int32_t> timeStamps;
 int32_t timeStamp;
 vector<int> visibility;
 Mat img,img2;
-vector<KeyPoint> keypoints_1,keypoints_2;
+vector<KeyPoint> keypoints_1;
 string currentMapName;
 float currentDistance = -1.0;
 Mat descriptors_1,descriptors_2;
@@ -147,7 +147,9 @@ int loadMaps()
 			img.release();
 			descriptors_1.release();
 			fs["Keypoints"]  >> keypoints_1;
+			printf("keypoints %i\n",keypoints_1.size());
 			fs["Descriptors"]>>descriptors_1;
+			printf("descriptors %i\n",descriptors_1.rows);
 			fs["Image"]>>img;
 			ratings.clear();
 			fs["Ratings"]>>ratings;

@@ -22,7 +22,7 @@ cp $f/A000_GT.txt $f/M000_GT.txt
 fi
 
 #static maps
-if [ 1 == 1 ]
+if [ 0 == 1 ]
 then
 #test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
