@@ -43,6 +43,9 @@ stroll_bearnav::Feature feature;
 
 /* map variables */
 vector<float> ratings;
+vector<int32_t> timeStamps;
+int32_t timeStamp;
+vector<int> visibility;
 Mat img,img2;
 vector<KeyPoint> keypoints_1,keypoints_2;
 string currentMapName;
@@ -66,7 +69,10 @@ vector<Mat> descriptorMap;
 vector<float> distanceMap;
 vector<string> namesMap;
 vector<Mat> imagesMap;
-vector<vector<float> > ratingsMap;
+vector<vector<float>> ratingsMap;
+vector<vector<int32_t>> timeStampsMap;
+vector<int32_t> timeStampMap;
+vector<vector<int>> visibilityMap;
 
 /* adaptive maps */
 bool histogramRating = true;
@@ -126,6 +132,9 @@ int loadMaps()
 	distanceMap.clear();
 	namesMap.clear();
 	ratingsMap.clear();
+	timeStampsMap.clear();
+	timeStampMap.clear();
+	visibilityMap.clear();
 	char fileName[1000];
 
 	numFeatures=0;
@@ -142,20 +151,26 @@ int loadMaps()
 			fs["Image"]>>img;
 			ratings.clear();
 			fs["Ratings"]>>ratings;
-
-							if(histogramRating && ratings.size() == 0){
-								// initial rating
-								for (int j = 0; j < keypoints_1.size(); j++) ratings.push_back(1);
-							} else {
-								for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
-							}
-
+			if(histogramRating && ratings.size() == 0){
+				for (int j = 0; j < keypoints_1.size(); j++) ratings.push_back(1);
+			} else {
+				for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
+			}
+			timeStamps.clear();
+			fs["Timestamps"]>>timeStamps;
+			fs["Time"] >> timeStamp;
+			visibility.clear();
+			fs["Visibility"]>>visibility;
 			fs.release();
+
 			keypointsMap.push_back(keypoints_1);
 			descriptorMap.push_back(descriptors_1);
 			distanceMap.push_back(mapDistances[i]);
 			namesMap.push_back(fileName);
 			ratingsMap.push_back(ratings);
+			timeStampsMap.push_back(timeStamps);
+			timeStampMap.push_back(timeStamp);
+			visibilityMap.push_back(visibility);
 			if (image_pub_.getNumSubscribers()>0) imagesMap.push_back(img);
 			numFeatures+=keypoints_1.size();
 			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
@@ -243,6 +258,7 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 		result.numMaps=0;
 		server->setAborted(result);
 	}
+
 	/* server returns distance travelled, total number of features
 	   and number of loaded map on preempt request*/
 	while(state != IDLE){
@@ -285,66 +301,20 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 		if (mindex > -1 && mindex != lastLoadedMap){
 			ROS_INFO("Current distance is %.3f Closest map found at %i, last was %i",distanceT,mindex,lastLoadedMap);
 			loadMap(mindex);
-			//			ROS_INFO("Sending a map %i features with %i descriptors",(int)keypoints_1.size(),descriptors_1.rows);
-
-			int stcs[keypoints_1.size()];
-			for(int i = 0; i<keypoints_1.size();i++){
-				stcs[i] = 0;
-			}
-			string line;
-			ifstream f("/home/eliska/stroll/statistics/statistics.txt");
-			int max = 0;
-			if (f.is_open())
-			{
-				while ( getline (f,line) )
-				{
-					int was_ok = 0;
-					vector<string> strings;
-					istringstream l(line);
-					string s;
-					int index = -1;
-
-					bool right_map_id = false;
-					if(getline(l, s, ' ')){
-						if(s.find(currentMapName) != string::npos){
-							right_map_id=true;
-							size_t pos = s.find("_");
-							string s_index = s.substr(0,pos);
-							index = atoi(s_index.c_str());
-							for(int i = 0; i<6;i++){
-								getline(l, s, ' ');
-							}
-						}
-					}
-					while (getline(l, s, ' ') && right_map_id)
-					{
-						getline(l, s, ' ');
-						was_ok += atoi(s.c_str());
-					}
-					if(max<was_ok){
-						max = was_ok;
-					}
-					stcs[index] = was_ok;
-				}
-				f.close();
-			}
-
+			ROS_INFO("Sending a map %i features with %i descriptors",(int)keypoints_1.size(),descriptors_1.rows);
 
 			for(int i=0;i<keypoints_1.size();i++)
 			{
-				if(stcs[i]>=(max/2))
-				{
-					feature.x=keypoints_1[i].pt.x;
-					feature.y=keypoints_1[i].pt.y;
-					feature.size=keypoints_1[i].size;
-					feature.angle=keypoints_1[i].angle;
-					feature.response=keypoints_1[i].response;
-					feature.octave=keypoints_1[i].octave;
-					feature.class_id=keypoints_1[i].class_id;
-					feature.descriptor=descriptors_1.row(i);
-					feature.rating=ratings[i];
-					featureArray.feature.push_back(feature);
-				}
+				feature.x=keypoints_1[i].pt.x;
+				feature.y=keypoints_1[i].pt.y;
+				feature.size=keypoints_1[i].size;
+				feature.angle=keypoints_1[i].angle;
+				feature.response=keypoints_1[i].response;
+				feature.octave=keypoints_1[i].octave;
+				feature.class_id=keypoints_1[i].class_id;
+				feature.descriptor=descriptors_1.row(i);
+				feature.rating=ratings[i];
+				featureArray.feature.push_back(feature);
 			}
 			featureArray.distance = currentDistance;
 			featureArray.id = currentMapName;

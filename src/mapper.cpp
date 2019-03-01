@@ -69,6 +69,12 @@ vector<double> timesMap;
 vector<Mat> imagesMap;
 vector<vector<float> > ratingsMap;
 
+Mat timeStampsArray;
+vector<Mat> timeStampsMap;
+
+Mat visibilitiesArray;
+vector<Mat> visibilitiesMap;
+
 /* Feature messages */
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
@@ -182,6 +188,9 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 	timesMap.clear();
 	ratingsMap.clear();
 
+	visibilitiesMap.clear();
+	timeStampsMap.clear();
+
 	/* reset distance using service*/
 	srv.request.distance = distanceTravelled = distanceTotalEvent = 0;
 	userStop = false;
@@ -208,6 +217,8 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 			distanceMap.push_back(distanceTravelled);
 			timesMap.push_back(ros::Time::now().toSec());
 			ratingsMap.push_back(ratings);
+			visibilitiesMap.push_back(visibilitiesArray);
+			timeStampsMap.push_back(timeStampsArray);
 
 			/*and flush it to the disk*/
 			for (int i = 0;i<distanceMap.size();i++){
@@ -219,6 +230,8 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 				write(fs, "Descriptors",descriptorMap[i]);
 				write(fs, "Ratings",ratingsMap[i]);
 				write(fs, "Time",timesMap[i]);
+				write(fs, "Visibilities",visibilitiesMap[i]);
+				write(fs, "TimeStamps",timeStampsMap[i]);
 				fs.release();
 			}
 			result.fileName=name;
@@ -286,6 +299,11 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 				descriptors.push_back(mat);
 				rating=msg->feature[i].rating;
 				ratings.push_back(rating);
+
+				Mat tims(1, size, CV_32S, (void *) msg->feature[i].timeStamps.data());
+				timeStampsArray.push_back(tims);
+				Mat visis(1, size, CV_8U, (void *) msg->feature[i].visibilities.data());
+				visibilitiesArray.push_back(visis);
 			}
 			
 			/*store in memory rather than on disk*/
@@ -297,6 +315,8 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 			distanceMap.push_back(distanceTotalEvent);
 			timesMap.push_back(ros::Time::now().toSec());
 			ratingsMap.push_back(ratings);
+			visibilitiesMap.push_back(visibilitiesArray);
+			timeStampsMap.push_back(timeStampsArray);
 
 			/* publish feedback */
 			sprintf(name, "%i keypoints stored at distance %.3f", (int) keypoints.size(), distanceTotalEvent);
@@ -307,8 +327,6 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 	}
 }
-
-
 
 void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 {
@@ -324,6 +342,8 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 			keypoints.clear();
 			descriptors.release();
 			ratings.clear();
+			visibilitiesArray.release();
+			timeStampsArray.release();
 			img.release();
 
 			//rating
@@ -341,9 +361,15 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 				int size = feature.descriptor.size();
 				Mat mat(1, size, CV_32FC1, (void *) feature.descriptor.data());
 				descriptors.push_back(mat);
-
+				
 				rating = feature.rating;
 				ratings.push_back(rating);
+
+				Mat tims(1, size, CV_32S, (void *) feature.timeStamps.data());
+				timeStampsArray.push_back(tims);
+				Mat visis(1, size, CV_8U, (void *) feature.visibilities.data());
+				visibilitiesArray.push_back(visis);
+
 			}
 			//cout << "mapper: first " << msg->map.feature[0].rating << " x " << msg->map.feature[0].x << " last " << msg->map.feature[msg->map.feature.size()-1].rating  << " x " << msg->map.feature[msg->map.feature.size()-1].x  << endl;
 
