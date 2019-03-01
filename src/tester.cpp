@@ -194,6 +194,24 @@ void viewImageCallback(const sensor_msgs::ImageConstPtr& msg)
 	viewImageNum++;
 }
 
+void fillNavGoal(bool groundTruth)
+{
+	navGoal.groundTruth.clear();
+	int offsetMap = 0;
+	int offsetView = 0;
+	int dummy = 0;
+	float displacementGT;
+	while (feof(mapFile) == 0){
+		fscanf(mapFile, "%i %i\n",&offsetMap,&dummy);
+		fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
+		displacementGT = offsetView - offsetMap;
+		navGoal.groundTruth.push_back(displacementGT);
+	}
+	rewind(mapFile);
+	rewind(viewFile);
+}
+
+
 int configureFeatures(int detector,int descriptor)
 {
 	dynamic_reconfigure::ReconfigureRequest srv_req;
@@ -256,8 +274,6 @@ int main(int argc, char **argv)
 	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
-		clientsResponded = clientsDone = 0;
-		navGoal.traversals = 1;
 
 		char filename[1000];
 		sprintf(filename,"%s/%s_GT.txt",mapFolder.c_str(),mapNames[0].c_str());
@@ -266,6 +282,10 @@ int main(int argc, char **argv)
 		sprintf(filename,"%s/%s_GT.txt",viewFolder.c_str(),viewNames[globalMapIndex].c_str());
 		printf("%s/%s_GT.txt\n",viewFolder.c_str(),viewNames[globalMapIndex].c_str());
 		viewFile = fopen(filename,"r");
+
+		clientsResponded = clientsDone = 0;
+		navGoal.traversals = 1;
+		fillNavGoal(true);
 
 		viewGoal.prefix = viewNames[globalMapIndex];
 		mapGoal.prefix = mapNames[globalMapIndex];

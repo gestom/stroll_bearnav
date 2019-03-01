@@ -28,7 +28,8 @@ using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
-
+vector<float> groundTruth;
+int groundTruthIndex=0;
 vector<Point2f> matched_points1;
 vector<Point2f> matched_points2;
 vector< vector<DMatch> > matches,revmatches;
@@ -46,6 +47,8 @@ ros::Subscriber distEventSub_;
 image_transport::Subscriber image_sub_;
 image_transport::Subscriber image_map_sub_;
 image_transport::Publisher image_pub_;
+bool intervention = false;
+int interventions = 0;
 
 /* Service for set/reset distance */
 stroll_bearnav::SetDistance srv;
@@ -185,6 +188,7 @@ void loadFeatureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		if (descriptorType != CV_32FC1) mat.convertTo(mat,descriptorType);
 		mapDescriptors.push_back(mat);
 	}
+	groundTruthIndex++;
 }
 
 void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *serv)
@@ -192,6 +196,9 @@ void actionServerCB(const stroll_bearnav::navigatorGoalConstPtr &goal, Server *s
 	state = NAVIGATING;
 	int traversals = goal->traversals;
 	currentPathElement = 0;
+	groundTruthIndex = -1;
+	groundTruth.clear();
+	for (int i = 0;i<goal->groundTruth.size();i++)groundTruth.push_back(goal->groundTruth[i]);
 
 	/* reset distance using service*/
 	srv.request.distance=overshoot=0;
@@ -463,10 +470,16 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 		velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
 
-
-
 		feedback.histogram.clear();
-		if (count<minGoodFeatures) differenceRot = 0;
+		intervention = false;
+		if (count<minGoodFeatures){
+		       	differenceRot = 0;
+			if (groundTruth.size() > groundTruthIndex){
+			       	differenceRot = groundTruth[groundTruthIndex];
+				intervention = true;
+				interventions++;
+			}
+		}
 		for (int i = 0;i<numBins;i++) feedback.histogram.push_back(histogram[i]);
 
 		/*forming navigation info messsage*/
@@ -490,7 +503,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 		if(isRating)
 		{
-			if (count>=minGoodFeatures || remapRotGain == 0){
+			if (count>=minGoodFeatures || remapRotGain == 0 || intervention){
 				for (int i = 0; i < bad_matches.size(); i++) {
 					mapFeatures.feature[bad_matches[i].queryIdx].rating += mapEval[bad_matches[i].queryIdx];
 				}
@@ -503,13 +516,12 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 					mapFeatures.feature.clear();
 				}else{
 					sort(mapFeatures.feature.begin(), mapFeatures.feature.end(), compare_rating);
+					if (intervention) numFeatureRemove = numFeatureAdd = info.view.feature.size()/2.0;
 					if (numFeatureRemove >mapFeatures.feature.size()) numFeatureAdd = numFeatureRemove = mapFeatures.feature.size();
-
 					//if summary map, remove only features with negative ranking
 					if (summaryMap){
 						while (mapFeatures.feature[mapFeatures.feature.size()-1-numFeatureRemove].rating >= 0 && numFeatureRemove > 0) numFeatureRemove--;
 					}
-
 					mapFeatures.feature.erase(mapFeatures.feature.end() - numFeatureRemove, mapFeatures.feature.end());
 				}
 

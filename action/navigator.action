@@ -1,5 +1,6 @@
 #goal definiton
 int32 traversals
+int32[] groundTruth
 ---
 #result definition
 bool success

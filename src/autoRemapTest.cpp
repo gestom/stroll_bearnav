@@ -120,6 +120,24 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 	statNumMaps++;
 }
 
+void fillNavGoal(bool groundTruth)
+{
+	navGoal.groundTruth.clear();
+	int offsetMap = 0;
+	int offsetView = 0;
+	int dummy = 0;
+	float displacementGT;
+	while (feof(mapFile) == 0){
+		fscanf(mapFile, "%i %i\n",&offsetMap,&dummy);
+		fscanf(viewFile,"%i %i\n",&offsetView,&dummy);
+		displacementGT = offsetView - offsetMap;
+		navGoal.groundTruth.push_back(displacementGT);
+	}
+	rewind(mapFile);
+	rewind(viewFile);
+}
+
+
 /*Map loader feedback for debugging*/
 void feedbackMapCb(const stroll_bearnav::loadMapFeedbackConstPtr& feedback)
 {
@@ -255,11 +273,11 @@ int main(int argc, char **argv)
 		printf("%s/%s_GT.txt\n",viewFolder.c_str(),viewNames[globalMapIndex].c_str());
 		viewFile = fopen(filename,"r");
 		if (mapFile == NULL || viewFile == NULL) groundTruth = false; else groundTruth = true;
-
 		/*set map and view info */
 		clientsResponded = 0;
 		clientsDone = 0;
 		navGoal.traversals = 1;
+		fillNavGoal(groundTruth);
 
 		viewGoal.prefix = viewNames[globalMapIndex];
 		mapGoal.prefix = mapNames[globalMapIndex];

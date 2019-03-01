@@ -12,7 +12,7 @@ f="$1/consolidated"
 
 ############ Perform a remap
 confidence=0.05
-if [ 0 == 1 ]
+if [ 1 == 1 ]
 then
 rosparam set names_map  [A000,M000]
 rosparam set names_view [A000]
@@ -22,7 +22,7 @@ cp $f/A000_GT.txt $f/M000_GT.txt
 fi
 
 #static maps
-if [ 0 == 1 ]
+if [ 1 == 1 ]
 then
 #test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
@@ -54,7 +54,7 @@ cp ~/.ros/Results.txt results/Map_adaptive_fixed_$i.txt
 fi
 
 #summary map
-if [ 1 == 1 ]
+if [ 0 == 1 ]
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': True, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 30,'minFeatureRemap': 15 }"&
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 178);do echo -ne D$i,;done)]
@@ -64,7 +64,7 @@ cp ~/.ros/Results.txt results/Map_adaptive_summary_30.txt
 fi
 
 path=`pwd`
-f="`pwd`/icra_2019_adamap"
+f="`pwd`/ral_2019_adamap"
 cd $f
 make
 cd $path
@@ -78,8 +78,8 @@ for i in $(ls results/Map_adaptive*.txt|sed s/.txt//);do  grep reports $i.txt|aw
 for i in $(ls results/Map_*.txt|sed s/.txt//);do 
 echo >$i.tmp
 for j in $(ls results/Map_*.txt|sed s/.txt//);do 
-paste $j.err $i.err          |./icra_2019_adamap/t-test $confidence >>$i.tmp
+paste $j.err $i.err          |./ral_2019_adamap/t-test $confidence >>$i.tmp
 done
 echo "Error $i: " $(grep -c higher $i.tmp) $(grep -c smaller $i.tmp); >>results/all.txt
 done
-gnuplot icra_2019_adamap/map.gnu >results/map.fig
+gnuplot ral_2019_adamap/map.gnu >results/map.fig
