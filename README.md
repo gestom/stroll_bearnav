@@ -7,20 +7,40 @@ Bearnav is a simple teach-and-repeat visual navigation system robust to appearan
 Early versions of the system proved their ability to reliably traverse polygonal trajectories indoors and outdoors during adverse illumination conditions [[1,2](#references)], in environments undergoing drastic appearance changes [[2,3](#references)] and on flying robots[[4](#references)].
 The version presented here is described in [[5](#references)] and it allows to learn arbitrary, smooth paths, is fully integrated in the ROS operating system and is available on-line in this repository.
 
-## How to make it work
+## Prerequisities - before the seminar 
 
-You should use Ubuntu 16 with ROS kinetic (recommended) or Ubuntu 18 with ROS melodic. If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib. To do so, follow the steps in the "OPENCV 4" section of the https://nicolas-bettenburg.com/2018-08-18-ubuntu-18-04-deep-learning-box/.
+1. You should install Ubuntu 16 with ROS kinetic or Ubuntu 18 with ROS melodic.
+2. Also, you should install other prerequisities: `sudo apt install git`.
+
+### Ubuntu 16
+
+Nothing special needs to be done here. You can continue with installation.
+
+### Ubuntu 18
+
+If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib:
+
+1. Create a folder to perform the compilation and switch to it: `mkdir ~/opencv;cd ~/opencv`
+1. Download opencv: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv.git`
+1. Download opencv-contrib: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv_contrib.git`
+1. Go to opencv folder, create a build folder and switch to it: `mkdir opencv/build;cd opencv/build`
+1. Tell opencv to compile with the contrib: `cmake -DOPENCV_ENABLE_NONFREE:BOOL=ON -DOPENCV_EXTRA_MODULES_PATH=~/opencv/opencv_contrib/modules ~/opencv/opencv`
+1. Compile it: `make -j5`.
+1. Install it: `sudo make install`
+
+## Installation - before or during the seminar  
 
 Prepare your environment in the home folder:
 
-1. `cd `, `mkdir -p robotika_ws/src`, `cd robotika_ws/src`, `catkin_init_workspace`
+1. `cd `, `mkdir -p ~/robotika_ws/src`, `cd ~/robotika_ws/src`, `catkin_init_workspace`
 
 Make your usb camera work:
-1. Clone the usb_cam ROS driver: `git clone https://github.com/ros-drivers/usb_cam.git`
+1. Clone the usb_cam ROS driver: `git clone https://github.com/gestom/usb_cam.git`
 1. Compile it: `cd ..`, `catkin_make`
 1. Source your environment: `source devel/setup.bash`
 1. Make your camera easy to access: `sudo chmod 777 /dev/video0`
 1. Run the camera node: `roslaunch usb_cam usb_cam-test.launch`
+1. Keep the camera running and open a new terminal to continue.
 
 Make the `stroll_bearnav` package work:
 
@@ -29,8 +49,8 @@ Make the `stroll_bearnav` package work:
 1. Compile it: `cd ..`, `catkin_make`
 1. Source your environment: `source devel/setup.bash`
 1. Run it: `roslaunch stroll_bearnav stroll-core.launch`
-1. Check the image features: `rosrun image_view image_view image:=/image_with_features`
-1. Check the system structure `rosrun rqt_graph rqt_graph`
+1. Open a new terminal, source your environment and check the image features: `rosrun rqt_image_view rqt_image_view /image_with_features`
+1. Open a new terminal, source your environment and check the system structure `rosrun rqt_graph rqt_graph`
 1. Run the operator GUIs: `roslaunch stroll_bearnav stroll-gui.launch`
 1. Now find the `mapper` client gui and create a map by entering its name, e.g. `A` behind the `fileName`click `Send goal`, wait for feedback and then click `Cancel goal`.
 1. Now find the `loadMap` gui, enter the map name in the prefix and click `Send goal`
