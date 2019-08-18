@@ -14,11 +14,11 @@ The version presented here is described in [[5,6](#references)] and it allows to
 
 ## Installation - before or during the seminar  
 
-Prepare your environment and switch to it:
+### Prepare your environment and switch to it:
 
 1. `cd `, `mkdir -p ~/bearnav_ws/src`, `cd ~/bearnav_ws/src`, `catkin_init_workspace`
 
-Make your usb camera work:
+### Make your usb camera work:
 1. Clone the usb_cam ROS driver: `git clone https://github.com/gestom/usb_cam.git`
 1. Compile it: `cd ..`, `catkin_make`
 1. Source your environment: `source devel/setup.bash`
@@ -26,20 +26,20 @@ Make your usb camera work:
 1. Run the camera node: `roslaunch usb_cam usb_cam-test.launch`
 1. You should see a live feed from your camera. If yes, you can terminate the programme.
 
-Make the `stroll_bearnav` package work:
+### Make the `stroll_bearnav` package work:
 1. `cd ~/bearnav_ws/src`
 1. Clone the stroll_bearnav package: `git clone --branch robotcraft_2019 https://github.com/gestom/stroll_bearnav.git`
 1. Compile it: `cd ..`, `catkin_make`
 1. Source your environment: `source devel/setup.bash`
 
-Test the mapping:
+### Test the mapping:
 1. Run the mapping: `roslaunch stroll_bearnav stroll-map.launch`
 1. You should see an image with the detected features and a graph with the ROS nodes.
 1. Examine the graph of the ROS nodes and the topics used for communication.
 1. Find the `mapper` client gui and create a map by entering its name, e.g. `A` inside of the parentheses behind the `fileName`. Then click `Send goal`, wait for feedback (you should see something like `500 features saved at distance 0.000` and then click `Cancel goal`.
 1. Terminate the mapping (e.g. by CTRL-C in the terminal you launched it).
 
-Test the navigation:
+### Test the navigation:
 1. Run the mapping: `roslaunch stroll_bearnav stroll-nav.launch`
 1. Examine the graph of the ROS nodes and the topics used for communication.
 1. Now find the `loadMap` gui, enter the map name (e.g. `A`) in the prefix and click `Send goal`
