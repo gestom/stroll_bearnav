@@ -15,7 +15,6 @@
 #include <cmath>
 #include <std_msgs/Float32.h>
 #include <opencv2/opencv.hpp>
-#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
 #include <stroll_bearnav/navigatorAction.h>
 #include <stroll_bearnav/SetDistance.h>
@@ -24,7 +23,6 @@
 #include <stroll_bearnav/navigatorConfig.h>
 #include <stroll_bearnav/NavigationInfo.h>
 using namespace cv;
-using namespace cv::xfeatures2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 

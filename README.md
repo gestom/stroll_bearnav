@@ -28,7 +28,7 @@ The version presented here is described in [[5,6](#references)] and it allows to
 
 #### Make the `stroll_bearnav` package work:
 1. `cd ~/bearnav_ws/src`
-1. Clone the stroll_bearnav package: `git clone --branch robotcraft_2019 https://github.com/gestom/stroll_bearnav.git`
+1. Clone the stroll_bearnav package: `git clone --branch coimbra_2019 https://github.com/gestom/stroll_bearnav.git`
 1. Compile it: `cd ..`, `catkin_make`
 1. Source your environment: `source devel/setup.bash`
 
