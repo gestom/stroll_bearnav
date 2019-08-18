@@ -5,8 +5,8 @@ int32 traversals
 bool success
 ---
 #feedback
+float32 rotation 
 float32 distance
-float32 diffRot
 int32[] histogram
 int32 max
 int32 correct

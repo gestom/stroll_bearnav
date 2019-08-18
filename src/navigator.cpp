@@ -552,7 +552,7 @@ void featureCallback(const stroll_bearnav::FeatureArray::ConstPtr& msg)
 		}
 
 		/* publish statistics */
-		feedback.diffRot = differenceRot;
+		feedback.rotation = differenceRot;
 		std::vector<int> stats;
 		feedback.stats.clear();
 		stats.push_back(feedback.keypoints_avg);
