@@ -11,13 +11,13 @@
 #include <stroll_bearnav/Feature.h>
 #include <cmath>
 #include <opencv2/opencv.hpp>
-#include <opencv2/xfeatures2d.hpp>
+//#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/featureExtractionConfig.h>
 #include <std_msgs/Int32.h>
 using namespace cv;
-using namespace cv::xfeatures2d;
+//using namespace cv::features2d;
 using namespace std;
 static const std::string OPENCV_WINDOW = "Image window";
 
@@ -25,15 +25,13 @@ typedef enum
 {
 	DET_NONE = 0,
 	DET_AGAST,
-	DET_SURF,
-	DET_UPSURF
+	DET_BRISK
 }EDetectorType;
 
 typedef enum
 {
 	DES_NONE = 0,
-	DES_BRIEF,
-	DES_SURF
+	DES_BRISK
 }EDescriptorType;
 
 
@@ -51,9 +49,9 @@ Mat img;
 
 /*kokoti hlava, co delala OCV3, me donutila delat to uplne debilne*/
 Ptr<AgastFeatureDetector> agastDetector = AgastFeatureDetector::create(detectionThreshold);
-Ptr<BriefDescriptorExtractor> briefDescriptor = BriefDescriptorExtractor::create();
-Ptr<SURF> surf = SURF::create(detectionThreshold);
-Ptr<SURF> upSurf = SURF::create(detectionThreshold,4,3,false,true);
+Ptr<BRISK> brisk = BRISK::create();
+//Ptr<SURF> surf = SURF::create(detectionThreshold);
+//Ptr<SURF> upSurf = SURF::create(detectionThreshold,4,3,false,true);
 
 EDetectorType usedDetector = DET_NONE;
 EDescriptorType usedDescriptor = DES_NONE;
@@ -76,20 +74,19 @@ int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 	cv::Mat img;
 	if (maxLine < 1.0) img = image(cv::Rect(0,0,image.cols,(int)(image.rows*maxLine))); else img = image;
 	if (usedDetector==DET_AGAST) agastDetector->detect(img,keypoints, Mat () );
-	if (usedDetector==DET_SURF) surf->detect(img,keypoints, Mat () );
-	if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
+	if (usedDetector==DET_BRISK) brisk->detect(img,keypoints, Mat () );
+//	if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
 }
 
 int describeKeyPoints(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 {
-	if (usedDescriptor==DES_BRIEF) briefDescriptor->compute(img,keypoints,descriptors);
-	if (usedDescriptor==DES_SURF) surf->compute(img,keypoints,descriptors);
+	if (usedDescriptor==DES_BRISK) brisk->compute(img,keypoints,descriptors);
+//	if (usedDescriptor==DES_SURF) surf->compute(img,keypoints,descriptors);
 }
 
 int detectAndDescribe(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 {
-	if (usedDescriptor==DES_SURF && usedDetector == DET_SURF) surf->detectAndCompute(img,Mat(),keypoints,descriptors);
-	else if (usedDescriptor==DES_SURF && usedDetector == DET_UPSURF) upSurf->detectAndCompute(img,Mat(),keypoints,descriptors);
+	if (usedDescriptor==DES_BRISK && usedDetector == DET_BRISK) brisk->detectAndCompute(img,Mat(),keypoints,descriptors);
 	else {
 		detectKeyPoints(image,keypoints);
 		describeKeyPoints(image,keypoints,descriptors);
@@ -99,7 +96,7 @@ int detectAndDescribe(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 int setThreshold(int thres)
 {
 	if (usedDetector==DET_AGAST) agastDetector->setThreshold(thres);
-	if (usedDetector==DET_SURF) surf->setHessianThreshold(thres);
+	//if (usedDetector==DET_BRISK) brisk->setHessianThreshold(thres);
 }
 
 /* dynamic reconfigure of surf threshold and showing images */
@@ -118,8 +115,8 @@ void callback(stroll_bearnav::featureExtractionConfig &config, uint32_t level)
 	usedDetector = (EDetectorType) config.detector;
 	switch (usedDescriptor)
 	{
-		case DES_BRIEF:featureNorm = NORM_HAMMING;break;
-		case DES_SURF:featureNorm = NORM_L2;break;
+		case DES_BRISK:featureNorm = NORM_HAMMING;break;
+//		case DES_SURF:featureNorm = NORM_L2;break;
 	}
 	setThreshold(detectionThreshold);
 

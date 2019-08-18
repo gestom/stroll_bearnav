@@ -1,0 +1,39 @@
+<launch>
+
+<!-- Default folder with maps-->
+<arg name="folder" default="$(env HOME)"/>
+
+<node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="video_device" value="/dev/video0" />
+    <param name="image_width" value="640" />
+    <param name="image_height" value="480" />
+    <param name="pixel_format" value="yuyv" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap"/>
+</node>
+
+<!-- Distance Measurement Node -->
+<node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>
+
+<!-- feature extraction -->
+  <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
+  <remap from="image" to="/usb_cam/image_raw"/>
+  </node>
+
+<!-- mapping node -->
+<node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
+  <remap from="image" to="/usb_cam/image_raw"/>
+  <param name="folder" value="$(arg folder)" />
+  <param name="angularSpeed" value="1.1" />
+</node>
+
+<!-- action and reconfigure clients to control the system -->
+<node pkg="actionlib" type="axclient.py" args="/mapper" name="Action_client_mapper"/>
+
+<!-- view to check video stream-->
+<node name="rqt_image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/image_with_features"/>
+
+<!--system structure for a demo -->
+<node name="rqt_graph" pkg="rqt_graph" type="rqt_graph"/>
+
+</launch>

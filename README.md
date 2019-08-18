@@ -12,27 +12,11 @@ The version presented here is described in [[5,6](#references)] and it allows to
 1. You should install Ubuntu 16 with ROS kinetic or Ubuntu 18 with ROS melodic.
 2. Also, you should install other prerequisities: `sudo apt install git`.
 
-### Ubuntu 16
-
-Nothing special needs to be done here. You can continue with installation.
-
-### Ubuntu 18
-
-If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib:
-
-1. Create a folder to perform the compilation and switch to it: `mkdir ~/opencv;cd ~/opencv`
-1. Download opencv: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv.git`
-1. Download opencv-contrib: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv_contrib.git`
-1. Go to opencv folder, create a build folder and switch to it: `mkdir opencv/build;cd opencv/build`
-1. Tell opencv to compile with the contrib: `cmake -DOPENCV_ENABLE_NONFREE:BOOL=ON -DOPENCV_EXTRA_MODULES_PATH=~/opencv/opencv_contrib/modules ~/opencv/opencv`
-1. Compile it: `make -j5`.
-1. Install it: `sudo make install`
-
 ## Installation - before or during the seminar  
 
-Prepare your environment in the home folder:
+Prepare your environment and switch to it:
 
-1. `cd `, `mkdir -p ~/robotika_ws/src`, `cd ~/robotika_ws/src`, `catkin_init_workspace`
+1. `cd `, `mkdir -p ~/bearnav_ws/src`, `cd ~/bearnav_ws/src`, `catkin_init_workspace`
 
 Make your usb camera work:
 1. Clone the usb_cam ROS driver: `git clone https://github.com/gestom/usb_cam.git`
@@ -40,23 +24,27 @@ Make your usb camera work:
 1. Source your environment: `source devel/setup.bash`
 1. Make your camera easy to access: `sudo chmod 777 /dev/video0`
 1. Run the camera node: `roslaunch usb_cam usb_cam-test.launch`
-1. Keep the camera running and open a new terminal to continue.
+1. You should see a live feed from your camera. If yes, you can terminate the programme.
 
 Make the `stroll_bearnav` package work:
-
-1. `cd ~/robotika_ws/src`
-1. Clone the stroll_bearnav package: `git clone --branch robotika_sk_19 https://github.com/gestom/stroll_bearnav.git`
+1. `cd ~/bearnav_ws/src`
+1. Clone the stroll_bearnav package: `git clone --branch robotcraft_2019 https://github.com/gestom/stroll_bearnav.git`
 1. Compile it: `cd ..`, `catkin_make`
 1. Source your environment: `source devel/setup.bash`
-1. Run it: `roslaunch stroll_bearnav stroll-core.launch`
-1. Open a new terminal, source your environment and check the image features: `rosrun rqt_image_view rqt_image_view /image_with_features`
-1. Open a new terminal, source your environment and check the system structure `rosrun rqt_graph rqt_graph`
-1. Run the operator GUIs: `roslaunch stroll_bearnav stroll-gui.launch`
-1. Now find the `mapper` client gui and create a map by entering its name, e.g. `A` behind the `fileName`click `Send goal`, wait for feedback and then click `Cancel goal`.
-1. Now find the `loadMap` gui, enter the map name in the prefix and click `Send goal`
-1. Start the navigation by clicking `Send goal` in the `navigator` gui.
 
-Test how the image features' matches from the map to the current view reflect the pan of the camera.
+Test the mapping:
+1. Run the mapping: `roslaunch stroll_bearnav stroll-map.launch`
+1. You should see an image with the detected features and a graph with the ROS nodes.
+1. Examine the graph of the ROS nodes and the topics used for communication.
+1. Find the `mapper` client gui and create a map by entering its name, e.g. `A` inside of the parentheses behind the `fileName`. Then click `Send goal`, wait for feedback (you should see something like `500 features saved at distance 0.000` and then click `Cancel goal`.
+1. Terminate the mapping (e.g. by CTRL-C in the terminal you launched it).
+
+Test the navigation:
+1. Run the mapping: `roslaunch stroll_bearnav stroll-nav.launch`
+1. Examine the graph of the ROS nodes and the topics used for communication.
+1. Now find the `loadMap` gui, enter the map name (e.g. `A`) in the prefix and click `Send goal`
+1. Start the navigation by clicking `Send goal` in the `navigator` gui.
+1. Test how the image features' match between the map and the current view reflect the pan of the camera.
 
 A detailed system description is provided in [[5](#references)].
 
