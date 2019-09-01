@@ -8,11 +8,11 @@ esac
 
 mkdir "results"
 
-f="$1/icra_2019_adamap/long"
+f="$1/autodidact"
 
 ############ Perform a remap
 confidence=0.05
-if [ 1 == 1 ]
+if [ 0 == 1 ]
 then
 rosparam set names_map  [A000,M000]
 rosparam set names_view [A000]
@@ -22,37 +22,37 @@ cp $f/A000_GT.txt $f/M000_GT.txt
 fi
 
 #static and plastic maps
-if [ 1 == 1 ]
+if [ 0 == 1 ]
 then
 #test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
-rosparam set names_map  [$(for i in $(seq -w 1 87);do echo -ne M000,;done)]
-rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
+rosparam set names_map  [$(for i in $(seq -w 1 178);do echo -ne M000,;done)]
+rosparam set names_view [$(for i in $(seq -w 1 178);do echo -ne A$i,;done)]
 roslaunch stroll_bearnav evaluate.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_static.txt
 
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': True,'histogramRating': False,'remapRotGain': 1.0}"&
-rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne B0$i,;done)]
-rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
+rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 178);do echo -ne B$i,;done)]
+rosparam set names_view [$(for i in $(seq -w 1 178);do echo -ne A$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_plastic.txt
 fi
 
 #adaptive map
-if [ 1 == 1 ]
+if [ 0 == 1 ]
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 30,'minFeatureRemap': 30 }"&
-rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne C0$i,;done)]
-rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
+rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 178);do echo -ne C$i,;done)]
+rosparam set names_view [$(for i in $(seq -w 1 178);do echo -ne A$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_adaptive_fixed_30.txt
 fi
 
 #summary map
-if [ 1 == 1 ]
+if [ 0 == 1 ]
 then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': True, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0,'maxFeatureRemap': 30,'minFeatureRemap': 30 }"&
-rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 87);do echo -ne D0$i,;done)]
+rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1  178);do echo -ne D$i,;done)]
 rosparam set names_view [$(for i in $(seq -w 1 87);do echo -ne A0$i,;done)]
 roslaunch stroll_bearnav remapTest.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_adaptive_summary_30.txt
@@ -66,11 +66,11 @@ cd $path
 
 echo "in `pwd`"
 echo >results/all.txt
-for i in $(ls results/Map_adaptive*.txt|sed s/.txt//);do  grep reports $i.txt|awk '($23<5000){a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee $i.err|sort -nr > $i.srt;done
+for i in $(ls results/Map_*.txt|sed s/.txt//);do  grep reports $i.txt|awk '($23<5000){a=$21-$23;b=(sqrt(a*a)+384)%768-384;print sqrt(b*b)}'| tee $i.err|sort -nr > $i.srt;done
 
-for i in $(ls results/Map_adaptive*.txt|sed s/.txt//);do 
+for i in $(ls results/Map_*.err|sed s/.err//);do 
 echo >$i.tmp
-for j in $(ls results/Map_adaptive*.txt|sed s/.txt//);do 
+for j in $(ls results/Map_*.err|sed s/.err//);do 
 paste $j.err $i.err          |./icra_2019_adamap/t-test $confidence >>$i.tmp
 done
 echo "Error $i: " $(grep -c higher $i.tmp) $(grep -c smaller $i.tmp); >>results/all.txt

@@ -48,11 +48,11 @@
 <!--node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigurator"/-->
 
 <!-- image view to check video stream-->
-<node pkg="image_view" type="image_view" name="image_viewer">
+<!--node pkg="image_view" type="image_view" name="image_viewer">
   <param name="~image_transport" value="compressed" />
   <remap from="image" to="/navigationMatches"/>
   <param name="autosize" value="true" />
-</node>
+</nodei-->
 
 <!-- image view to check video stream-->
 <node pkg="image_view" type="image_saver" name="image_saver">
