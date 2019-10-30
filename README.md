@@ -24,7 +24,7 @@ If you are using Ubuntu 18, you will need to compile opencv with opencv-contrib:
 1. Download opencv: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv.git`
 1. Download opencv-contrib: `git clone -b 3.4 --single-branch https://github.com/opencv/opencv_contrib.git`
 1. Go to opencv folder, create a build folder and switch to it: `mkdir opencv/build;cd opencv/build`
-1. Tell opencv to compile with the contrib: `cmake -DOPENCV_ENABLE_NONFREE:BOOL=ON -DOPENCV_EXTRA_MODULES_PATH=~/opencv/opencv_contrib/modules ~/opencv/opencv`
+1. Tell opencv to compile with the contrib (the following lines are ONE command, do not copy/paste it in separate): `cmake -DOPENCV_ENABLE_NONFREE:BOOL=ON -DOPENCV_EXTRA_MODULES_PATH=~/opencv/opencv_contrib/modules ~/opencv/opencv`
 1. Compile it: `make -j5`.
 1. Install it: `sudo make install`
 
