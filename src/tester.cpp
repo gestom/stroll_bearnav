@@ -65,12 +65,16 @@ ros::CallbackQueue* my_queue;
 ros::Publisher dist_pub_;
 std_msgs::Float32 dist_;
 float totalDist = 0;
-image_transport::Subscriber mapImageSub;
-image_transport::Subscriber viewImageSub;
+image_transport::Subscriber imageMapSub;
+image_transport::Subscriber imageViewSub;
 vector<float> distanceMap;
+Mat currentImage,mapImage;
 
-bool saveMapImages = false;
+bool saveMapImages = true;
 bool saveViewImages = true;
+bool saveMatchInfo = true;
+float lastSavedImageDistance = 0; 
+int globalMapIndex = 0;
 
 void mySigHandler(int sig)
 {
@@ -103,6 +107,10 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 		totalDist = distanceMap[primaryMapIndex+1];
 		dist_.data=totalDist;
 		dist_pub_.publish(dist_);
+		if (totalDist - lastSavedImageDistance > 1.0){ 
+			lastSavedImageDistance = floor(totalDist);
+			saveViewImages = saveMapImages = saveMatchInfo = true;
+		}
 	}else{
 		 exitting = 1;
 	}
@@ -160,6 +168,14 @@ void feedbackNavCb(const stroll_bearnav::navigatorFeedbackConstPtr& feedback)
 
 	ROS_INFO("Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s. Displacement %.3f GT %.3f",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),feedback->diffRot,displacementGT);
 	fprintf(logFile,"Navigation reports %i correct matches and %i outliers out of %i matches at distance %.3f with maps %s %s. Displacement %.3f GT %.3f\n",feedback->correct,feedback->outliers,feedback->matches,feedback->distance,mapGoal.prefix.c_str(),viewGoal.prefix.c_str(),feedback->diffRot,displacementGT);
+	if (saveMatchInfo){
+		char fileName[1000];
+		sprintf(fileName,"%s/images/%06.3f_%03i.txt",viewFolder.c_str(),lastSavedImageDistance,globalMapIndex);
+		FILE* file = fopen(fileName,"w+");
+		fprintf(file,"%.3f %.3f %.3f\n",feedback->diffRot,displacementGT,feedback->distance);
+		fclose(file);
+		saveMatchInfo = false;
+	}
 	statSumCorrect += feedback->correct;
 	statSumMatches += feedback->matches;
 	statSumOutliers += feedback->outliers;
@@ -173,8 +189,10 @@ void mapImageCallback(const sensor_msgs::ImageConstPtr& msg)
 		cv_bridge::CvImagePtr cv_ptr;
 		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 		char fileName[1000];
-		sprintf(fileName,"%s/%09i.bmp",mapFolder.c_str(),mapImageNum);
+		sprintf(fileName,"%s/images/%06.3f_%03i_map.bmp",mapFolder.c_str(),lastSavedImageDistance,globalMapIndex);
+		printf("%s/%09i.bmp",mapFolder.c_str(),mapImageNum);
 		imwrite(fileName,cv_ptr->image);
+		saveMapImages = false;
 	}
 	mapImageNum++;
 }
@@ -186,8 +204,9 @@ void viewImageCallback(const sensor_msgs::ImageConstPtr& msg)
 		cv_bridge::CvImagePtr cv_ptr;
 		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 		char fileName[1000];
-		sprintf(fileName,"%s/%09i.bmp",viewFolder.c_str(),viewImageNum);
+		sprintf(fileName,"%s/images/%06.3f_%03i_view.bmp",viewFolder.c_str(),lastSavedImageDistance,globalMapIndex);
 		imwrite(fileName,cv_ptr->image);
+		saveViewImages = false;
 	}
 	viewImageNum++;
 }
@@ -214,7 +233,6 @@ int configureFeatures(int detector,int descriptor)
 	return 0;
 }
 
-
 int main(int argc, char **argv)
 {
 	signal(SIGINT, mySigHandler);
@@ -235,10 +253,13 @@ int main(int argc, char **argv)
 	image_transport::ImageTransport it(n);
 
 	ros::Subscriber sub = n.subscribe("/navigationInfo", 1000, infoMapMatch);
+	imageMapSub = it.subscribe( "/map_image", 1,mapImageCallback);
+	imageViewSub = it.subscribe( "/image_view", 1,viewImageCallback);
 	dist_pub_=n.advertise<std_msgs::Float32>("/distance",1);
 
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_view("map_preprocessor_view", true);
 	actionlib::SimpleActionClient<stroll_bearnav::loadMapAction> mp_map("map_preprocessor_map", true);
+
 	actionlib::SimpleActionClient<stroll_bearnav::navigatorAction> nav("navigator", true);
 	mp_map.waitForServer();
 	ROS_INFO("Primary map server responding");
@@ -251,7 +272,7 @@ int main(int argc, char **argv)
 	bool finished_before_timeout = true;
 
 	int numGlobalMaps = min(mapNames.size(),viewNames.size());
-	for (int globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
+	for (globalMapIndex = 0;globalMapIndex<numGlobalMaps;globalMapIndex++)
 	{
 		/*set map and view info */
 		clientsResponded = 0;
@@ -303,11 +324,12 @@ int main(int argc, char **argv)
 		nav.sendGoal(navGoal,&doneNavCb,&activeCb,&feedbackNavCb);
 		while (clientsResponded < 3) sleep(1);
 
-
 		/*send first odometry info*/
 		totalDist = 0.0;
 		dist_.data=totalDist;
 		dist_pub_.publish(dist_);
+		lastSavedImageDistance = 0;
+		saveMatchInfo = saveViewImages = saveMapImages = true;
 
 		/*perform navigation*/
 		while(ros::ok && !exitting)

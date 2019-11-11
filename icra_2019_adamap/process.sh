@@ -8,11 +8,11 @@ esac
 
 mkdir "results"
 
-f="$1/autodidact"
+f="$1"
 
 ############ Perform a remap
 confidence=0.05
-if [ 1 == 1 ]
+if [ 0 == 1 ]
 then
 rosparam set names_map  [A000,M000]
 rosparam set names_view [A000]
@@ -22,15 +22,18 @@ cp $f/A000_GT.txt $f/M000_GT.txt
 fi
 
 #static and plastic maps
-if [ 0 == 1 ]
+if [ 1 == 1 ]
 then
 #test the map update schemes
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': False,'histogramRating': False,'remapRotGain': 1.0}"&
-rosparam set names_map  [$(for i in $(seq -w 1 178);do echo -ne M000,;done)]
-rosparam set names_view [$(for i in $(seq -w 1 178);do echo -ne A$i,;done)]
+rosparam set names_map  [$(for i in $(seq -w 1 10 178);do echo -ne M000,;done)]
+rosparam set names_view [$(for i in $(seq -w 1 10 178);do echo -ne A$i,;done)]
 roslaunch stroll_bearnav evaluate.launch folder_map:=$f folder_view:=$f
 cp ~/.ros/Results.txt results/Map_static.txt
+fi
 
+if [ 0 == 1 ]
+then
 rosrun dynamic_reconfigure dynparam set /navigator "{'summaryMap': False, 'plasticMap': True,'histogramRating': False,'remapRotGain': 1.0}"&
 rosparam set names_map  [$(echo -ne "M000,";for i in $(seq -w 1 178);do echo -ne B$i,;done)]
 rosparam set names_view [$(for i in $(seq -w 1 178);do echo -ne A$i,;done)]
