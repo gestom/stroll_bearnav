@@ -1,9 +1,0 @@
-cameleon_port:              50004
-
-cameleon_ip:                "172.43.50.193"
-
-cameleon_maxForwardSpeed:   0.1
-
-cameleon_maxBackwardSpeed:  0.1
-
-cameleon_maxTurnSpeed:      0.1
