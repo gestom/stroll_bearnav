@@ -7,41 +7,18 @@ Bearnav is a simple teach-and-repeat visual navigation system robust to appearan
 Early versions of the system proved their ability to reliably traverse polygonal trajectories indoors and outdoors during adverse illumination conditions [[1,2](#references)], in environments undergoing drastic appearance changes [[2,3](#references)] and on flying robots[[4](#references)].
 The version presented here is described in [[5,6](#references)] and it allows to learn arbitrary, smooth paths, is fully integrated in the ROS operating system and is available on-line in this repository.
 
-## Prerequisities - before the seminar 
+## Download and install
 
-1. You should install Ubuntu 16 with ROS kinetic or Ubuntu 18 with ROS melodic.
-2. Also, you should install other prerequisities: `sudo apt install git`.
+1. You should have Ubuntu 18 with [ROS melodic]((http://wiki.ros.org/melodic/Installation/Ubuntu).
+1. Make sure your environment is sourced as suggested in Section 1.6 of the the [ROS installation walkthorugh]((http://wiki.ros.org/melodic/Installation/Ubuntu).
+1. This example uses a [usb_cam](http://wiki.ros.org/usb_cam) package. Install simply by `sudo apt install ros-melodic-usb-cam`.
+1. Download the stroll_bearnav package file: `wget https://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/files/ros-melodic-stroll-bearnav_1.0.0-0bionic_amd64.deb`.
+1. Install bearnav: `sudo dpkg -i ros-melodic-stroll-bearnav_1.0.0-0bionic_amd64.deb`.
 
-## Installation - before or during the seminar  
-
-### Prepare your environment and switch to it:
-
-1. `cd `, `mkdir -p ~/bearnav_ws/src`, `cd ~/bearnav_ws/src`, `catkin_init_workspace`
-
-#### Make your usb camera work:
-1. Clone the usb_cam ROS driver: `git clone https://github.com/gestom/usb_cam.git`
-1. Compile it: `cd ..`, `catkin_make`
-1. Source your environment: `source devel/setup.bash`
-1. Make your camera easy to access: `sudo chmod 777 /dev/video0`
-1. Run the camera node: `roslaunch usb_cam usb_cam-test.launch`
-1. You should see a live feed from your camera. If yes, you can terminate the programme.
-
-#### Make the `stroll_bearnav` package work:
-1. `cd ~/bearnav_ws/src`
-1. Clone the stroll_bearnav package: `git clone --branch coimbra_2019 https://github.com/gestom/stroll_bearnav.git`
-1. Compile it: `cd ..`, `catkin_make`
-1. Source your environment: `source devel/setup.bash`
-
-#### Test the mapping:
-1. Run the mapping: `roslaunch stroll_bearnav stroll-map.launch`
-1. You should see an image with the detected features and a graph with the ROS nodes.
-1. Examine the graph of the ROS nodes and the topics used for communication.
+#### How to quickly test it:
+1. Run the camera node: `roslaunch usb_cam usb_cam-test.launch` You should see a live feed from your camera.
+1. Run the stroll_bearnav: `roslaunch stroll_bearnav stroll.launch`
 1. Find the `mapper` client gui and create a map by entering its name, e.g. `A` inside of the parentheses behind the `fileName`. Then click `Send goal`, wait for feedback (you should see something like `500 features saved at distance 0.000` and then click `Cancel goal`.
-1. Terminate the mapping (e.g. by CTRL-C in the terminal you launched it).
-
-#### Test the navigation:
-1. Run the mapping: `roslaunch stroll_bearnav stroll-nav.launch`
-1. Examine the graph of the ROS nodes and the topics used for communication.
 1. Now find the `loadMap` gui, enter the map name (e.g. `A`) in the prefix and click `Send goal`
 1. Start the navigation by clicking `Send goal` in the `navigator` gui.
 1. Test how the image features' match between the map and the current view reflect the pan of the camera.
