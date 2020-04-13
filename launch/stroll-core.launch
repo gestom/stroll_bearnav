@@ -2,21 +2,23 @@
 
 <!-- Default folder with maps-->
 
-<arg name="folder" default="$(env HOME)"/>
+<arg name="folder" default="/home/kevin/datasets"/>
 
 <!-- Distance Measurement Node -->
-<node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor"/>
+<node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor">
+<!--<remap from="/odom" to="/zed/zed_node/odom"/>-->
+  </node>
 
 <!-- feature extraction -->
   <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
-  <remap from="image" to="/usb_cam/image_raw"/>
+  <remap from="image" to="/zed/zed_node/right/image_rect_color"/>
   </node>
 
 <!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
-  <remap from="image" to="/usb_cam/image_raw"/>
+  <remap from="image" to="/zed/zed_node/right/image_rect_color"/>
   <param name="folder" value="$(arg folder)" />
-  <param name="angularSpeed" value="1.1" />
+  <param name="angularSpeed" value="9" />
 </node>
 
 <!-- map loader node -->
