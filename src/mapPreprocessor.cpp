@@ -75,6 +75,21 @@ typedef enum
 }EMapLoaderState;
 EMapLoaderState state = IDLE;
 
+/* utility functions */
+int binarySearch(float array[], int i, int j, float val) {
+    if(i == j)    return i;
+
+    if(j-i == 1)    return fabs(val-array[i]) > fabs(val-array[j]) ? j:i;
+
+    if(i < j) {
+        int mid = i + (j-i)/2;
+        if(val == array[mid])   return mid;
+        else if(val > array[mid])   return binarySearch(array, mid, j, val);
+        else    return binarySearch(array, i, mid, val);
+    }
+    return -1;
+}
+
 /* Loads all maps from a folder
    returns number of loaded maps  */
 int loadMaps()
@@ -250,14 +265,15 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 		featureArray.feature.clear();
 
 		//find the closest map
-		int mindex = -1;
+		/*int mindex = -1;
 		float minDistance = FLT_MAX;
 		for (int i = 0;i<numMaps;i++){
 			if (fabs(distanceT-mapDistances[i]) < minDistance){
 				minDistance = fabs(distanceT-mapDistances[i]);
 				mindex = i;
 			}
-		}
+		}*/
+		int mindex = binarySearch(mapDistances, 0, numMaps-1, distanceT);
 
 		//and publish it
 		if (mindex > -1 && mindex != lastLoadedMap){
