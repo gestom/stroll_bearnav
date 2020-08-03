@@ -49,6 +49,8 @@
   <build_depend>nav_msgs</build_depend>
   <build_depend>actionlib_msgs</build_depend>
   <build_depend>rosbag</build_depend>
+  <build_depend>jaguar_localisation</build_depend>
+  <run_depend>jaguar_localisation</run_depend>
   <run_depend>rosbag</run_depend>
   <run_depend>actionlib_msgs</run_depend> 
   <run_depend>roscpp</run_depend>
