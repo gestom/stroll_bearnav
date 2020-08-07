@@ -1,8 +1,0 @@
-prefix=/home/kevin/jaguar_ws/src/stroll_bearnav/cmake-build-debug/devel
-
-Name: stroll_bearnav
-Description: Description of stroll_bearnav
-Version: 0.0.0
-Cflags: -I/home/kevin/jaguar_ws/src/stroll_bearnav/cmake-build-debug/devel/include
-Libs: -L/home/kevin/jaguar_ws/src/stroll_bearnav/cmake-build-debug/devel/lib 
-Requires: roscpp rospy std_msgs message_runtime actionlib_msgs

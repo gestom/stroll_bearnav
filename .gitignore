@@ -2,3 +2,8 @@
 *.swp
 *.swo
 *.bag
+
+cmake-build-debug/
+src/cmake-build-debug/
+.idea/
+src/.idea/
