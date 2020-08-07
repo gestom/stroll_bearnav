@@ -1,0 +1,6 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~distance_param" : \b [double] A distance parameter min: 0.0, default: 0.2, max: 5.0
+

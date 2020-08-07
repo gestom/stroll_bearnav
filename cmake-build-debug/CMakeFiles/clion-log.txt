@@ -1,0 +1,25 @@
+/snap/clion/123/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/kevin/jaguar_ws/src/stroll_bearnav
+-- Using CATKIN_DEVEL_PREFIX: /home/kevin/jaguar_ws/src/stroll_bearnav/cmake-build-debug/devel
+-- Using CMAKE_PREFIX_PATH: /home/kevin/jaguar_ws/devel;/opt/ros/kinetic
+-- This workspace overlays: /home/kevin/jaguar_ws/devel;/opt/ros/kinetic
+-- Found PythonInterp: /usr/bin/python2 (found suitable version "2.7.12", minimum required is "2") 
+-- Using PYTHON_EXECUTABLE: /usr/bin/python2
+-- Using Debian Python package layout
+-- Using empy: /usr/bin/empy
+-- Using CATKIN_ENABLE_TESTING: ON
+-- Call enable_testing()
+-- Using CATKIN_TEST_RESULTS_DIR: /home/kevin/jaguar_ws/src/stroll_bearnav/cmake-build-debug/test_results
+-- Found gmock sources under '/usr/src/gmock': gmock will be built
+-- Found PythonInterp: /usr/bin/python2 (found version "2.7.12") 
+-- Found gtest sources under '/usr/src/gmock': gtests will be built
+-- Using Python nosetests: /usr/bin/nosetests-2.7
+-- catkin 0.7.18
+-- BUILD_SHARED_LIBS is on
+-- Using these message generators: gencpp;geneus;genlisp;gennodejs;genpy
+-- Generating .msg files for action stroll_bearnav/mapper /home/kevin/jaguar_ws/src/stroll_bearnav/action/mapper.action
+-- Generating .msg files for action stroll_bearnav/navigator /home/kevin/jaguar_ws/src/stroll_bearnav/action/navigator.action
+-- Generating .msg files for action stroll_bearnav/loadMap /home/kevin/jaguar_ws/src/stroll_bearnav/action/loadMap.action
+-- stroll_bearnav: 25 messages, 1 services
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/kevin/jaguar_ws/src/stroll_bearnav/cmake-build-debug

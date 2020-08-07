@@ -1,0 +1,15 @@
+\subsubsection usage Usage
+\verbatim
+<node name="stroll_bearnav" pkg="stroll_bearnav" type="stroll_bearnav">
+  <param name="showAllMatches" type="bool" value="True" />
+  <param name="showGoodMatches" type="bool" value="True" />
+  <param name="velocityGain" type="double" value="1.0" />
+  <param name="matchingRatio" type="double" value="0.7" />
+  <param name="maxVerticalDifference" type="double" value="50.0" />
+  <param name="minGoodFeatures" type="int" value="3" />
+  <param name="pixelTurnGain" type="double" value="0.001" />
+  <param name="adaptiveSpeedMin" type="double" value="1.0" />
+  <param name="adaptiveSpeedMax" type="double" value="1.0" />
+</node>
+\endverbatim
+

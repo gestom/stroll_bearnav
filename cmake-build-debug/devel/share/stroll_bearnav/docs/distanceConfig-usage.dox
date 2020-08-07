@@ -1,0 +1,7 @@
+\subsubsection usage Usage
+\verbatim
+<node name="stroll_bearnav" pkg="stroll_bearnav" type="stroll_bearnav">
+  <param name="distance_param" type="double" value="0.2" />
+</node>
+\endverbatim
+
