@@ -78,7 +78,7 @@ float ratioMatchConstant = 0.7;
 int currentPathElement = 0;
 float currentDistance = 0;
 int minGoodFeatures = 2;
-float pixelTurnGain = 0.0001;
+float pixelTurnGain = 0.001;
 float pixelTurnGainInt = 0;
 float differenceRot=0;
 float differenceRotInt=0;
@@ -513,6 +513,10 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			twist.linear.x = path[currentPathElement].forward*velocityGain; 
 			twist.angular.z = path[currentPathElement].angular*velocityGain;
 			//differenceRotInt+=differenceRot;
+            ROS_INFO("angular vel %f", twist.angular.z);
+            ROS_INFO("differenceRot %f", differenceRot);
+            ROS_INFO("pixelTurnGain %f", pixelTurnGain);
+            
 			twist.angular.z+=differenceRot*pixelTurnGain;
 			//if (twist.angular.z > +twist.linear.x*maximalCurvature) twist.angular.z  = +twist.linear.x*maximalCurvature; 
 			//if (twist.angular.z < -twist.linear.x*maximalCurvature) twist.angular.z  = -twist.linear.x*maximalCurvature; 

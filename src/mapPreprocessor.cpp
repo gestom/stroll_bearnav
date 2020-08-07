@@ -57,6 +57,7 @@ int numFeatures;
 float distanceT;
 string prefix;
 bool stop = false;
+bool image_only = false;
 
 /*map to be preloaded*/
 vector<vector<KeyPoint> > keypointsMap;
@@ -140,12 +141,17 @@ int loadMaps()
 		{
 			img.release();
 			descriptors_1.release();
-			fs["Keypoints"]  >> keypoints_1;
-			fs["Descriptors"]>>descriptors_1;
-			fs["Image"]>>img;
-			ratings.clear();
-			fs["Ratings"]>>ratings;
-			for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
+            fs["Image"]>>img;
+
+            if(image_only == false) {
+                fs["Keypoints"] >> keypoints_1;
+                fs["Descriptors"] >> descriptors_1;
+
+                ratings.clear();
+                fs["Ratings"] >> ratings;
+                for (int j = ratings.size(); j < keypoints_1.size(); j++) ratings.push_back(0);
+            }
+
 			fs.release();
 			keypointsMap.push_back(keypoints_1);
 			descriptorMap.push_back(descriptors_1);
@@ -325,6 +331,7 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh_;
 	image_transport::ImageTransport it_(nh_);
 	ros::param::get("~folder", folder);
+    ros::param::get("~image_only", image_only);
 	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd",1);
 	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/pathProfile",1);
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);

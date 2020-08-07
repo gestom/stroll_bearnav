@@ -78,7 +78,8 @@ int pauseButton = 0;
 int linearAxis = 1;
 int angularAxis = 0;
 int flipperAxis = 4;
-
+int accelButton = 6; // in the acceleration mode,  the robot will apply the 2x max angular velocity
+int accelMaxButton = 7; // in the acceleration Max mode, the robot will ignore the linear velocity (for rotation within origin)
 /*these constants determine how quickly the robot moves based on the joystick input*/ 
 double maxForwardSpeed = 0.2;
 double maxAngularSpeed = 0.2;
@@ -243,8 +244,10 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	angularSpeed = maxAngularSpeed*forwardSpeed*0.5*joy->axes[angularAxis];
 	forwardAcceleration = maxForwardAcceleration*joy->axes[linearAxis];;
 	flipperSpeed = maxFlipperSpeed*joy->axes[flipperAxis];
-	if  (joy->buttons[stopButton] || joy->buttons[pauseButton]) angularSpeed = forwardSpeed = flipperSpeed = 0;
-	if  (joy->buttons[stopButton]) userStop = true;
+    if(joy->buttons[accelButton])   angularSpeed *= 2;
+	if(joy->buttons[accelMaxButton])   angularSpeed = maxAngularSpeed*joy->axes[angularAxis];
+	if(joy->buttons[stopButton] || joy->buttons[pauseButton]) angularSpeed = forwardSpeed = flipperSpeed = 0;
+	if(joy->buttons[stopButton]) userStop = true;
 	ROS_DEBUG("Joystick pressed");
 } 
 
