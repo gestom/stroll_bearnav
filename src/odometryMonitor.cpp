@@ -1,4 +1,6 @@
 #include <ros/ros.h>
+#include "tf/transform_broadcaster.h"
+#include <tf/transform_listener.h>
 #include <stdio.h>
 #include <iostream>
 #include <cmath>
@@ -29,6 +31,8 @@ double lastX=FLT_MAX;
 double lastY=FLT_MAX;
 float distanceEvent=0;
 float distanceThreshold=0.2;
+double angularVelThreshold=9;
+
 
 /* service for set/reset the distance */
 bool setDistance(stroll_bearnav::SetDistance::Request &req, stroll_bearnav::SetDistance::Response &res)
@@ -91,6 +95,21 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
 	currentX=msg->pose.pose.position.x;
 	currentY=msg->pose.pose.position.y;
 	totalDist += sqrt(pow(currentX-lastX,2)+pow(currentY-lastY,2));
+
+	// the incoming geometry_msgs::Quaternion is transformed to a tf::Quaterion
+    tf::Quaternion quat;
+    tf::quaternionMsgToTF(msg->pose.pose.orientation, quat);
+
+    // the tf::Quaternion has a method to acess roll pitch and yaw
+    double roll, pitch, yaw;
+    tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+
+    if(yaw > angularVelThreshold && sqrt(pow(currentX-lastX,2)+pow(currentY-lastY,2)) < distanceThreshold) {
+    	totalDist += distanceThreshold;
+    	ROS_INFO("Added distance compensation.");
+    }
+
+
 	lastX=currentX;
 	lastY=currentY;
 
@@ -109,7 +128,9 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
 int main(int argc, char** argv)
 { 
 	ros::init(argc, argv, "odometry_monitor");
-	ros::NodeHandle nh;
+	ros::NodeHandle nh("~");
+
+	nh.param("maxAngularSpeed", angularVelThreshold, 9.0); // override to record the rotation event
 
 	//initiate action server
 	dynamic_reconfigure::Server<stroll_bearnav::distanceConfig> server;
@@ -120,7 +141,7 @@ int main(int argc, char** argv)
 	/* initiate service */
 	ros::ServiceServer service = nh.advertiseService("/setDistance", setDistance);
 
-	odometrySub = nh.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
+	odometrySub = nh.subscribe<nav_msgs::Odometry>("/odom", 10 ,odomcallback);
 	jointSub = nh.subscribe<sensor_msgs::JointState>("/joint_states",10 ,jointcallback);
 	dist_pub_=nh.advertise<std_msgs::Float32>("/distance",1);
 	distEvent_pub_=nh.advertise<std_msgs::Float32>("/distance_events",1);

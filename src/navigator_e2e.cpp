@@ -513,6 +513,13 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			twist.linear.x = path[currentPathElement].forward*velocityGain; 
 			twist.angular.z = path[currentPathElement].angular*velocityGain;
 			//differenceRotInt+=differenceRot;
+            ROS_INFO("distance %f", path[currentPathElement].distance);
+            ROS_INFO("pvelocityGain %f", velocityGain);
+            if(path[currentPathElement].angular==0)
+                ROS_INFO("%ith  path angular event: %f redian/s", currentPathElement, path[currentPathElement].angular);
+            else
+                ROS_ERROR("%ith  path angular event: %f redian/s", currentPathElement, path[currentPathElement].angular);
+
             ROS_INFO("angular vel %f", twist.angular.z);
             ROS_INFO("differenceRot %f", differenceRot);
             ROS_INFO("pixelTurnGain %f", pixelTurnGain);

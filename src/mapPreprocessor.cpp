@@ -208,21 +208,32 @@ int loadPath()
 	sprintf(fileName,"%s/%s.yaml",folder.c_str(),prefix.c_str());
 	ROS_DEBUG("Loading %s/%s.yaml",folder.c_str(),prefix.c_str());
 	FileStorage fsp(fileName, FileStorage::READ);
-	vector<float> path;
-	path.clear();
+	vector<float> path_dist;
+	vector<float> path_forward_vel;
+	vector<float> path_angular_vel;
+	vector<float> path_flip_vel;
+	
+	path_dist.clear();
+	path_forward_vel.clear();
+	path_angular_vel.clear();
+	path_flip_vel.clear();
+
 	if(fsp.isOpened()){
-		fsp["Path"]>>path;
+		fsp["distance"]>>path_dist;
+		fsp["forward_vel"]>>path_forward_vel;
+		fsp["angular_vel"]>>path_angular_vel;
+		fsp["flip_vel"]>>path_flip_vel;
 		fsp.release();
 	}
 	stroll_bearnav::PathProfile pathProfile;
-	for(int i=0;i<path.size()/4;i++){
-		pathProfile.distance.push_back(path[4*i+0]);
-		pathProfile.forwardSpeed.push_back(path[4*i+1]);
-		pathProfile.angularSpeed.push_back(path[4*i+2]);
-		pathProfile.flipper.push_back(path[4*i+3]);
+	for(int i=0;i<path_dist.size();i++){
+		pathProfile.distance.push_back(path_dist[i]);
+		pathProfile.forwardSpeed.push_back(path_forward_vel[i]);
+		pathProfile.angularSpeed.push_back(path_angular_vel[i]);
+		pathProfile.flipper.push_back(path_flip_vel[i]);
 	}
 	pathPub.publish(pathProfile);
-	return path.size();
+	return path_dist.size();
 }
 
 /* Action server */
