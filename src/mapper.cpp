@@ -252,7 +252,7 @@ void executeCB(const stroll_bearnav::mapperGoalConstPtr &goal, Server *serv)
 /*receiving joystick data*/
 void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {    
-	angularSpeed = maxAngularSpeed*forwardSpeed*0.5*joy->axes[angularAxis];
+	angularSpeed = maxAngularSpeed*forwardSpeed*1.0*joy->axes[angularAxis];
 	forwardAcceleration = maxForwardAcceleration*joy->axes[linearAxis];;
 	flipperSpeed = maxFlipperSpeed*joy->axes[flipperAxis];
     if(joy->buttons[accelButton])   angularSpeed *= 2;

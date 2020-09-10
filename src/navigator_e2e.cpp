@@ -285,7 +285,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
         good_matches.clear();
 
-        int numBins = 41;
+        int numBins = srv.response.differences.size();
         int granularity = 20;
         int count = 0;
         int num = srv.response.differences.size();

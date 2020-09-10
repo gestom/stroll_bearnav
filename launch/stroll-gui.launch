@@ -7,7 +7,7 @@
 <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="Reconfigurator"/>
 
 <!-- image view to check video stream-->
-<!--  <node pkg="rviz" type="rviz" name="rviz" args=""/>-->
+<node pkg="rviz" type="rviz" name="rviz" args=""/>
 
 <!--<node pkg="image_view" type="image_view" name="Image_viewer">
   <param name="~image_transport" value="compressed" />

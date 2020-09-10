@@ -31,7 +31,7 @@ double lastX=FLT_MAX;
 double lastY=FLT_MAX;
 float distanceEvent=0;
 float distanceThreshold=0.2;
-double angularVelThreshold=9;
+double angularVelThreshold=4;
 
 
 /* service for set/reset the distance */
@@ -95,6 +95,7 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
 	currentX=msg->pose.pose.position.x;
 	currentY=msg->pose.pose.position.y;
 	totalDist += sqrt(pow(currentX-lastX,2)+pow(currentY-lastY,2));
+	// ROS_INFO("distance now: %f", totalDist);
 
 	// the incoming geometry_msgs::Quaternion is transformed to a tf::Quaterion
     tf::Quaternion quat;
@@ -104,7 +105,7 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
     double roll, pitch, yaw;
     tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
 
-    if(yaw > angularVelThreshold && sqrt(pow(currentX-lastX,2)+pow(currentY-lastY,2)) < distanceThreshold) {
+    if(yaw >= angularVelThreshold && sqrt(pow(currentX-lastX,2)+pow(currentY-lastY,2)) < distanceThreshold) {
     	totalDist += distanceThreshold;
     	ROS_INFO("Added distance compensation.");
     }
@@ -130,7 +131,7 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "odometry_monitor");
 	ros::NodeHandle nh("~");
 
-	nh.param("maxAngularSpeed", angularVelThreshold, 9.0); // override to record the rotation event
+	nh.param("maxAngularSpeed", angularVelThreshold, 2.0); // override to record the rotation event
 
 	//initiate action server
 	dynamic_reconfigure::Server<stroll_bearnav::distanceConfig> server;
@@ -141,7 +142,7 @@ int main(int argc, char** argv)
 	/* initiate service */
 	ros::ServiceServer service = nh.advertiseService("/setDistance", setDistance);
 
-	odometrySub = nh.subscribe<nav_msgs::Odometry>("/odom", 10 ,odomcallback);
+	odometrySub = nh.subscribe<nav_msgs::Odometry>("/encoder_odom", 10 ,odomcallback);
 	jointSub = nh.subscribe<sensor_msgs::JointState>("/joint_states",10 ,jointcallback);
 	dist_pub_=nh.advertise<std_msgs::Float32>("/distance",1);
 	distEvent_pub_=nh.advertise<std_msgs::Float32>("/distance_events",1);
