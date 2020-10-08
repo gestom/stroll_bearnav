@@ -92,6 +92,10 @@ int descriptorType = CV_32FC1;
 /* Feature message */
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
+
+/*PID Control*/
+float PID_Kp, PID_Ki, PID_Kd;
+std::vector<float> offset_queue;
  
 typedef struct
 {
@@ -244,6 +248,22 @@ bool compare_rating(stroll_bearnav::Feature first, stroll_bearnav::Feature secon
 	if (first.rating > second.rating) return true; else return false;
 }
 
+float PID(float error) {
+    if(isnan(error))    error=0;
+
+    int k = 20;
+    offset_queue.push_back(error);
+    while(offset_queue.size()>k)    offset_queue.erase(offset_queue.begin());
+    float sum = 0;
+    for(std::vector<float>::iterator it=offset_queue.begin(); it!=offset_queue.end(); ++it)    sum+=*it;
+    int len = offset_queue.size();
+
+    float delta = 0;
+    if(len > 1)     delta = offset_queue[len-1] - offset_queue[len-2];
+
+    return PID_Kp*error + PID_Ki*sum + PID_Kd*delta;
+}
+
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {;
@@ -358,6 +378,9 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
         cout << "correct: " << feedback.correct << " out: " << feedback.outliers << " map " << mapKeypoints.size() << " cur " << currentKeypoints.size() << " gm " << feedback.matches << " difference " << differenceRot  << " distance " << feedback.distance << endl;
         //cout << "Vektor: " << count << " " << differenceRot << endl;
         //cout << "bm " << bad_matches.size()  << endl;
+        float differenceRot_raw = differenceRot;
+        differenceRot = PID(differenceRot);
+        ROS_ERROR("PID control, before %f after %f", differenceRot_raw, differenceRot);
 
         velocityGain = fmin(fmax(count/20.0,minimalAdaptiveSpeed),maximalAdaptiveSpeed);
 
@@ -553,6 +576,10 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
+    ros::param::get("~PID_Kp", PID_Kp);
+    ros::param::get("~PID_Ki", PID_Ki);
+    ros::param::get("~PID_Kd", PID_Kd);
+
 	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
 	image_map_sub_ = it_.subscribe( "/map_image", 1,imageMapCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
