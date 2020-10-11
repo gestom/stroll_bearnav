@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <std_msgs/Float32.h>
 #include <image_transport/image_transport.h>
 #include <geometry_msgs/Twist.h>
 #include <cv_bridge/cv_bridge.h>
@@ -24,6 +25,7 @@
 #include <stroll_bearnav/navigatorConfig.h>
 #include <stroll_bearnav/NavigationInfo.h>
 #include <nn_matcher/NNImageMatching.h>
+#include <string>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -95,7 +97,17 @@ stroll_bearnav::Feature feature;
 
 /*PID Control*/
 float PID_Kp, PID_Ki, PID_Kd;
+float error_accumlation;
+float last_error;
 std::vector<float> offset_queue;
+ros::Publisher kp_pub, ki_pub, control_output;
+
+/*Testing Log*/
+bool write_log=false;
+string folder;
+std::vector<float> log_distances;
+std::vector<float> log_offsets;
+std::vector<int> log_num_inliners;
  
 typedef struct
 {
@@ -249,21 +261,54 @@ bool compare_rating(stroll_bearnav::Feature first, stroll_bearnav::Feature secon
 }
 
 float PID(float error) {
+    // if(abs(error)<2)    offset_queue.resize(0);
+    // if(isnan(error))    error=0;
+
+    // int k = 10000;
+    // offset_queue.push_back(error);
+    // while(offset_queue.size()>k)    offset_queue.erase(offset_queue.begin());
+    // float sum = 0;
+    // for(std::vector<float>::iterator it=offset_queue.begin(); it!=offset_queue.end(); ++it)    sum+=*it;
+    // int len = offset_queue.size();
+
+    // float delta = 0;
+    // if(len > 1)     delta = offset_queue[len-1] - offset_queue[len-2];
+
+    // return max(min(PID_Kp*error + PID_Ki*sum + PID_Kd*delta, float(500)), float(-500));
+
     if(isnan(error))    error=0;
+    if(abs(error)<2)    error_accumlation = 0;
 
-    int k = 20;
-    offset_queue.push_back(error);
-    while(offset_queue.size()>k)    offset_queue.erase(offset_queue.begin());
-    float sum = 0;
-    for(std::vector<float>::iterator it=offset_queue.begin(); it!=offset_queue.end(); ++it)    sum+=*it;
-    int len = offset_queue.size();
+    error_accumlation += error;
 
-    float delta = 0;
-    if(len > 1)     delta = offset_queue[len-1] - offset_queue[len-2];
+    float delta = error - last_error;
 
-    return PID_Kp*error + PID_Ki*sum + PID_Kd*delta;
+    std_msgs::Float32 msg;
+
+    msg.data = PID_Kp*error;
+    kp_pub.publish(msg);
+
+    msg.data = PID_Ki*error_accumlation;
+    ki_pub.publish(msg);
+
+    msg.data = max(min(PID_Kp*error + PID_Ki*error_accumlation + PID_Kd*delta, float(500)), float(-500));
+    control_output.publish(msg);
+
+    return max(min(PID_Kp*error + PID_Ki*error_accumlation + PID_Kd*delta, float(500)), float(-500));
 }
 
+void writeLog() {
+    /*save the path profile as well*/
+    char name[100];
+    sprintf(name,"%s/log_%f.yaml", folder.c_str(), ros::Time::now().toSec());
+    ROS_INFO("saving test log to %s",name);
+    FileStorage pfs(name,FileStorage::WRITE);
+    write(pfs, "distance", log_distances);
+    write(pfs, "offset", log_offsets);
+    write(pfs, "num_inliners", log_num_inliners);
+    pfs.release();
+    ROS_INFO("done!");
+}
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {;
@@ -398,6 +443,14 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
         std::fill(mapIndex.begin(),mapIndex.end(),-1);
         std::fill(mapEval.begin(),mapEval.end(),0);
 
+        //Output the log
+        if(write_log) {
+            log_distances.push_back(currentDistance);
+            log_offsets.push_back(differenceRot);
+            log_num_inliners.push_back(num_inliners);
+        }
+
+        // Rating
         isRating = false;
 
         if(isRating)
@@ -551,7 +604,9 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 			//if (twist.angular.z > +twist.linear.x*maximalCurvature) twist.angular.z  = +twist.linear.x*maximalCurvature; 
 			//if (twist.angular.z < -twist.linear.x*maximalCurvature) twist.angular.z  = -twist.linear.x*maximalCurvature; 
  
+            // Control the robot
 			cmd_pub_.publish(twist);
+            
 		}
 		/*used for testing and demos*/
 		if (path.size()==0)
@@ -567,6 +622,11 @@ void distanceCallback(const std_msgs::Float32::ConstPtr& msg)
 		twist.linear.x = twist.linear.y = twist.linear.z = 0.0;
 		twist.angular.z = twist.angular.y = twist.angular.x = 0.0;
 		cmd_pub_.publish(twist);
+
+        if(write_log) {
+            writeLog();
+            write_log = false;
+        }
 	}
 }
 
@@ -579,12 +639,18 @@ int main(int argc, char** argv)
     ros::param::get("~PID_Kp", PID_Kp);
     ros::param::get("~PID_Ki", PID_Ki);
     ros::param::get("~PID_Kd", PID_Kd);
+    ros::param::get("~write_log", write_log);
+    ros::param::get("~folder", folder);
 
 	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
 	image_map_sub_ = it_.subscribe( "/map_image", 1,imageMapCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
 	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("/navigationInfo",1);
 	image_pub_ = it_.advertise("/navigationMatches", 1);
+
+    kp_pub = nh.advertise<std_msgs::Float32>("p_val",1);
+    ki_pub = nh.advertise<std_msgs::Float32>("i_val",1);
+    control_output = nh.advertise<std_msgs::Float32>("pid_control_output",1);
 
 	//featureSub_ = nh.subscribe( "/features", 1,featureCallback);
 	//loadFeatureSub_ = nh.subscribe("/localMap", 1,loadFeatureCallback);

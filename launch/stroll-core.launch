@@ -2,27 +2,29 @@
 
 <!-- Default folder with maps-->
 
-<arg name="folder" default="/home/kevin/maps/roman_wharf"/>
+<arg name="folder" default="/home/kevin/maps/fisheye"/>
 
 <!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor">
 <param name="maxAngularSpeed" value="5" />
-<!--<remap from="/odom" to="/encoder_odom"/>-->
-<remap from="/odom" to="/odom"/>
+<remap from="/odom" to="/encoder_odom"/>
+<!--<remap from="/odom" to="/odom"/>-->
 </node>
 
 <!-- feature extraction -->
   <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
-  <remap from="/image" to="/zed2/zed_node/rgb/image_rect_color"/>
-  <!--<remap from="/image" to="/kodak/panorama"/>-->
+  <!--<remap from="/image" to="/zed2/zed_node/rgb/image_rect_color"/>-->
+  <remap from="/image" to="/kodak/panorama"/>
   </node>
 
 <!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper">
   <!--<remap from="/image" to="/kodak/panorama"/>-->
-  <remap from="/image" to="/zed2/zed_node/rgb/image_rect_color"/>
+  <remap from="/image" to="/kodak/panorama"/>
   <param name="folder" value="$(arg folder)" />
-  <param name="angularSpeed" value="2" />
+  <param name="maxForwardSpeed" type="double" value="5" />
+  <param name="maxAngularSpeed" type="double" value="2" />
+  <param name="maxForwardAcceleration" type="double" value="0.02" />
 </node>
 
 <!-- map loader node -->
@@ -34,9 +36,10 @@
 <!-- navigator node -->
 <node pkg="stroll_bearnav" type="end2end_navigator_node" name="navigator" output="screen">
   <param name="folder" value="$(arg folder)" />
-  <param name="PID_Kp" type="double" value="0.5"/>
-  <param name="PID_Ki" type="double" value="0.03"/>
-  <param name="PID_Kd" type="double" value="0.2"/>
+  <param name="write_log" type="bool" value="true"/>
+  <param name="PID_Kp" type="double" value="1.0"/>
+  <param name="PID_Ki" type="double" value="0.1"/>
+  <param name="PID_Kd" type="double" value="0.0"/>
 </node>
 
 </launch>

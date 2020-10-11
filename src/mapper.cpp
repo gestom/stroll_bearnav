@@ -89,6 +89,7 @@ double maxForwardSpeed = 0.2;
 double maxAngularSpeed = 0.2;
 double maxFlipperSpeed = 0.2;
 double maxForwardAcceleration = 0.01;
+double minForwardSpeed = 0.001;
 
 /*listening to joystick and flipperVelocity, publishing commands*/
 ros::Subscriber flipperSub;
@@ -387,10 +388,10 @@ int main(int argc, char** argv)
 	nh.param("pauseButton", pauseButton, 0);
 
 	/* robot speed limits */
-	nh.param("angularSpeed", maxAngularSpeed, 0.5);
-	nh.param("forwardSpeed", maxForwardSpeed, 1.5);
-	nh.param("flipperSpeed", maxFlipperSpeed, 0.5);
-	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
+	nh.param("maxAngularSpeed", maxAngularSpeed, 0.5);
+	nh.param("maxForwardSpeed", maxForwardSpeed, 1.5);
+	nh.param("maxFlipperSpeed", maxFlipperSpeed, 0.5);
+	nh.param("maxForwardAcceleration", maxForwardAcceleration, 0.02);
 
 	if (isPlastic == false) vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
 	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
@@ -436,14 +437,19 @@ int main(int argc, char** argv)
 				if(angularSpeed!=0 & ros::Time::now()>lastEventTime+ros::Duration(0.1))
 					ROS_WARN("Robot is turing.");
 
-				path_dist.push_back(distanceTravelled);
-				path_forward_vel.push_back(forwardSpeed);
-				path_angular_vel.push_back(angularSpeed);
-				path_flip_vel.push_back(flipperSpeed);
-				event_count++;
-				ROS_INFO("Event %i is record.", event_count);
-				lastEventTime = ros::Time::now();
-				//printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
+				if(fabs(forwardSpeed)>minForwardSpeed) {
+					path_dist.push_back(distanceTravelled);
+					path_forward_vel.push_back(forwardSpeed);
+					path_angular_vel.push_back(angularSpeed);
+					path_flip_vel.push_back(flipperSpeed);
+					event_count++;
+					ROS_INFO("Event %i is record.", event_count);
+					lastEventTime = ros::Time::now();
+					//printf("%.3f %.3f %.3f %.3f\n",distanceTravelled,forwardSpeed,angularSpeed,flipperSpeed);
+				}
+				else {
+					ROS_WARN("Robot is not moving.");
+				}
 			}
 			lastForwardSpeed = forwardSpeed;
 			lastAngularSpeed = angularSpeed;
