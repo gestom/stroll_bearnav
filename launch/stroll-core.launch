@@ -2,7 +2,7 @@
 
 <!-- Default folder with maps-->
 
-<arg name="folder" default="/home/kevin/maps/fisheye"/>
+<arg name="folder" default="/home/kevin/maps/icra2021"/>
 
 <!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor">
@@ -18,9 +18,9 @@
   </node>
 
 <!-- mapping node -->
-<node pkg="stroll_bearnav" type="mapper_node" name="mapper">
-  <!--<remap from="/image" to="/kodak/panorama"/>-->
+<node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
   <remap from="/image" to="/kodak/panorama"/>
+  <!--<remap from="/image" to="/zed2/zed_node/rgb/image_rect_color"/>-->
   <param name="folder" value="$(arg folder)" />
   <param name="maxForwardSpeed" type="double" value="5" />
   <param name="maxAngularSpeed" type="double" value="2" />

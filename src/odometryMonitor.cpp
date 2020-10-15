@@ -26,12 +26,14 @@ stroll_bearnav::distanceConfig config;
 /* distance parameters */
 int eventCounter=0;
 float totalDist=0;
-double currentX,currentY;
+double currentX, currentY, currentRot, currentTranslation;
 double lastX=FLT_MAX;
 double lastY=FLT_MAX;
 float distanceEvent=0;
 float distanceThreshold=0.2;
 double angularVelThreshold=4;
+double robotRadius=0.25; // half of the robot width
+double deltaTime=0.05; // encoder odometry 1/fps
 
 
 /* service for set/reset the distance */
@@ -94,8 +96,18 @@ void odomcallback(const nav_msgs::Odometry::ConstPtr& msg)
 	/*calculate eucledian distance from the last odometric position*/
 	currentX=msg->pose.pose.position.x;
 	currentY=msg->pose.pose.position.y;
-	totalDist += sqrt(pow(currentX-lastX,2)+pow(currentY-lastY,2));
-	// ROS_INFO("distance now: %f", totalDist);
+	currentRot=msg->twist.twist.angular.z;
+	currentTranslation=sqrt(pow(currentX-lastX,2)+pow(currentY-lastY,2));
+	totalDist += currentTranslation;
+
+	ROS_INFO("distance now: %f", totalDist);
+
+	/*if(currentTranslation<0.01&&fabs(currentRot)>0.008) {
+		totalDist += 0.1; //fabs(robotRadius)*fabs(currentRot)*deltaTime;
+		ROS_WARN("add angular distance compensation: %f", totalDist);
+	}
+	else
+		ROS_ERROR("translation: %f, rotation %f", currentTranslation, currentRot);*/
 
 	// the incoming geometry_msgs::Quaternion is transformed to a tf::Quaterion
     tf::Quaternion quat;
