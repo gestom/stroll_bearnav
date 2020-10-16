@@ -100,7 +100,7 @@ float PID_Kp, PID_Ki, PID_Kd;
 float error_accumlation;
 float last_error;
 std::vector<float> offset_queue;
-ros::Publisher kp_pub, ki_pub, control_output;
+ros::Publisher kp_pub, ki_pub, control_output, current_pub;
 
 /*Testing Log*/
 bool write_log=false;
@@ -261,23 +261,7 @@ bool compare_rating(stroll_bearnav::Feature first, stroll_bearnav::Feature secon
 }
 
 float PID(float error) {
-    // if(abs(error)<2)    offset_queue.resize(0);
-    // if(isnan(error))    error=0;
-
-    // int k = 10000;
-    // offset_queue.push_back(error);
-    // while(offset_queue.size()>k)    offset_queue.erase(offset_queue.begin());
-    // float sum = 0;
-    // for(std::vector<float>::iterator it=offset_queue.begin(); it!=offset_queue.end(); ++it)    sum+=*it;
-    // int len = offset_queue.size();
-
-    // float delta = 0;
-    // if(len > 1)     delta = offset_queue[len-1] - offset_queue[len-2];
-
-    // return max(min(PID_Kp*error + PID_Ki*sum + PID_Kd*delta, float(500)), float(-500));
-
     if(isnan(error))    error=0;
-    if(abs(error)<2)    error_accumlation = 0;
 
     error_accumlation += error;
 
@@ -322,7 +306,9 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
         currentDescriptors.release();
         currentDescriptors = Mat();
         good_matches.clear();
-
+        
+        error_accumlation = 0; // Reseting the integral at the start of navigation
+        
         nn_matcher::NNImageMatching srv;
 
         cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -424,6 +410,12 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
         //cout << "Vektor: " << count << " " << differenceRot << endl;
         //cout << "bm " << bad_matches.size()  << endl;
         float differenceRot_raw = differenceRot;
+
+        std_msgs::Float32 msg;
+
+        msg.data = differenceRot;
+        current_pub.publish(msg);
+
         differenceRot = PID(differenceRot);
         ROS_ERROR("PID control, before %f after %f", differenceRot_raw, differenceRot);
 
@@ -648,6 +640,7 @@ int main(int argc, char** argv)
 	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("/navigationInfo",1);
 	image_pub_ = it_.advertise("/navigationMatches", 1);
 
+    current_pub = nh.advertise<std_msgs::Float32>("current_val",1);
     kp_pub = nh.advertise<std_msgs::Float32>("p_val",1);
     ki_pub = nh.advertise<std_msgs::Float32>("i_val",1);
     control_output = nh.advertise<std_msgs::Float32>("pid_control_output",1);

@@ -2,7 +2,7 @@
 
 <!-- Default folder with maps-->
 
-<arg name="folder" default="/home/kevin/maps/icra2021"/>
+<arg name="folder" default="/home/jaguar/maps/icra2021"/>
 
 <!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor">
@@ -37,9 +37,9 @@
 <node pkg="stroll_bearnav" type="end2end_navigator_node" name="navigator" output="screen">
   <param name="folder" value="$(arg folder)" />
   <param name="write_log" type="bool" value="true"/>
-  <param name="PID_Kp" type="double" value="1.0"/>
+  <param name="PID_Kp" type="double" value="0.4"/>
   <param name="PID_Ki" type="double" value="0.1"/>
-  <param name="PID_Kd" type="double" value="0.0"/>
+  <param name="PID_Kd" type="double" value="0.3"/>
 </node>
 
 </launch>
