@@ -62,7 +62,7 @@ Test how the image features' matches from the map to the current view reflect th
 A detailed system description is provided in [[5](#references)].
 
 ### References
-1. 	Li Sun, Christopher Wild, Marwan Taher, Hao Tian, Zhu Dingyun, Cheng Zhao, Yu Zhang, Filip Majer, Zhi Yan, Tomáš Krajník, Tony J Prescott, Tom Duckett. <b>[Robust and Long-Term Monocular Teach-and-Repeat Navigation using a Single-Experience Topological Map]
+1. 	Li Sun, Christopher Wild, Marwan Taher, Hao Tian, Zhu Dingyun, Cheng Zhao, Yu Zhang, Filip Majer, Zhi Yan, Tomáš Krajník, Tony J Prescott, Tom Duckett. <b>[Robust and Long-Term Monocular Teach-and-Repeat Navigation using a Single-Experience Topological Map]</b> ICRA 2021 submission.
 1. T.Krajnik, J.Faigl et al.: <b>[Simple yet stable bearing-only navigation.](http://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/papers/surfnav.pdf)</b> Journal of Field Robotics, 2010. [[bibtex](http://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/files/surfnav.bib)]
 1. T.Krajnik, S.Pedre, L.Preucil: <b>[Monocular navigation for long-term autonomy.](http://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/papers/longterm.pdf)</b>In 16th International Conference on Advanced Robotics (ICAR), 2013. [[bibtex](http://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/files/longterm.bib)]
 
