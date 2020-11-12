@@ -4,7 +4,7 @@
 + Day2Night navigation
 + Fisheye-Panorama navigation
 
-### Authors: Filip Majer, Lucie Halodová, Tomáš Vintr and Tomáš Krajník
+### Authors: Li Sun, Marwan Taher, Filip Majer, Tomáš Krajník
 
 This paper proposes a robust approach to monocular visual teach-and-repeat navigation (V-T&R) for long-term operation in the wild. The approach leverages deep learned descriptors and a fisheye camera to handle changes in illumination and rapid manoeuvres. In particular, a novel illumination adaptation method is proposed to learn illumination-invariant descriptors in a self-supervised way. Moreover, the approach exploits panoramic images from a fisheye camera to address the out-of-plane rotation variance issue of pin-hole camera-based navigation systems, in which the rotational error can be estimated explicitly without requiring accurate calibration. Consequently, our approach achieves day-to-night navigation using a single map and is able to repeat complex and fast manoeuvres, and even recover from kidnapped situations. To verify our approach, we performed three navigation experiments in various outdoor environments, where both navigation accuracy and robustness are investigated. The experimental results show that our approach is superior to the baseline method with regards to accuracy and robustness.  
 
