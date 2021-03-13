@@ -2,7 +2,7 @@
 
 <!-- Default folder with maps-->
 
-<arg name="folder" default="/home/kevin/maps/icra2021"/>
+<arg name="folder" default="/home/jaguar/maps/icra2021"/>
 
 <!-- Distance Measurement Node -->
 <node pkg="stroll_bearnav" type="odometry_monitor_node" name="odometry_monitor">
@@ -13,13 +13,13 @@
 <!-- feature extraction -->
   <node pkg="stroll_bearnav" type="feature_extraction_node" name="feature_extraction">
   <remap from="/image" to="/zed2/zed_node/rgb/image_rect_color"/>
-  <!--<remap from="/image" to="/kodak/panorama"/>-->
+  <!-- <remap from="/image" to="/kodak/panorama"/> -->
   </node>
 
 <!-- mapping node -->
 <node pkg="stroll_bearnav" type="mapper_node" name="mapper" output="screen">
   <remap from="/image" to="/zed2/zed_node/rgb/image_rect_color"/>
-  <!--<remap from="/image" to="/kodak/panorama"/>-->
+  <!-- <remap from="/image" to="/kodak/panorama"/> -->
   <param name="folder" value="$(arg folder)" />
   <param name="maxForwardSpeed" type="double" value="5" />
   <param name="maxAngularSpeed" type="double" value="2" />
@@ -36,6 +36,22 @@
 <node pkg="stroll_bearnav" type="navigator_node" name="navigator" output="screen">
   <param name="folder" value="$(arg folder)" />
   <param name="write_log" type="bool" value="true"/>
+  <param name="PID_Kp" type="double" value="0.4"/>
+  <param name="PID_Ki" type="double" value="0.1"/>
+  <param name="PID_Kd" type="double" value="0.3"/>
 </node>
+
+
+<!-- Launch robot driver -->
+<include file="$(find jaguar4x4_2014)/launch/robot.launch" />
+
+<!-- Launch stroll GUI -->
+<include file="$(find stroll_bearnav)/launch/stroll-gui.launch" />
+
+<!-- launch lidar and IMU -->
+<include file="$(find lio_sam)/launch/include/start_sensors.launch" />
+
+<!-- rviz for sensors vizualization -->
+<node pkg="rviz" type="rviz" name="sensors_rviz" args="-d $(find stroll_bearnav)/rviz/sensors.rviz" />
 
 </launch>

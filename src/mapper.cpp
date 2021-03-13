@@ -89,7 +89,7 @@ double maxForwardSpeed = 0.2;
 double maxAngularSpeed = 0.2;
 double maxFlipperSpeed = 0.2;
 double maxForwardAcceleration = 0.01;
-double minForwardSpeed = 0.001;
+double minForwardSpeed = -1;
 
 /*listening to joystick and flipperVelocity, publishing commands*/
 ros::Subscriber flipperSub;
