@@ -39,14 +39,11 @@
   <param name="PID_Kd" type="double" value="0.3"/>
 </node>
 
-<!-- Launch robot driver -->
-<include file="$(find jaguar4x4_2014)/launch/robot.launch" />
+<!-- Run robot driver, teleop and sensors -->
+<include file="$(find jaguar4x4_2014)/launch/move_and_sense.launch" />
 
 <!-- Launch stroll GUI -->
 <include file="$(find stroll_bearnav)/launch/stroll-gui.launch" />
-
-<!-- launch lidar and IMU -->
-<include file="$(find lio_sam)/launch/include/start_sensors.launch" />
 
 <!-- rviz for sensors vizualization -->
 <node pkg="rviz" type="rviz" name="sensors_rviz" args="-d $(find stroll_bearnav)/rviz/sensors.rviz" />
