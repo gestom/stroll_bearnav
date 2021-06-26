@@ -58,6 +58,25 @@ Make the `stroll_bearnav` package work:
 1. Start the navigation by clicking `Send goal` in the `navigator` gui.
 
 
+## Run the docker container
+docker run -it --network=host --gpus all --rm -v /home/kevin/tmp_ws:/home/tmp_ws sha256:5fc203c5dfa7a6329c985d73ca19b485ef5446e4e19ac5a4fce8aa28c6a5f018
+
+### Instll Pytorch
+pip3 install torch==1.5.0+cu101 torchvision==0.6.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+
+### Build the workspace
+cd /home/tmp_ws && catkin_make && source devel/setup.bash
+
+### Run the feature matching node
+cd src/TRN_server/scripts
+python KeyPointMatching_server.py
+
+### Troubleshoot
+[ERROR] docker: Error response from daemon: could not select device driver "" with capabilities: [[gpu]].
+sudo apt-get install nvidia-container-toolkit
+
+
+
 ### References
 1. 	Li Sun, Marwan Taher, Christopher Wild, Zhu Dingyun, Cheng Zhao, Filip Majer, Zhi Yan, Tomáš Krajník, Tony J Prescott, Tom Duckett: <b>[Robust and Long-Term Monocular Teach-and-Repeat Navigation using a Single-Experience Map.] side product of IROS 2021 submission.
 1. T.Krajnik, J.Faigl et al.: <b>[Simple yet stable bearing-only navigation.](http://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/papers/surfnav.pdf)</b> Journal of Field Robotics, 2010. [[bibtex](http://raw.githubusercontent.com/wiki/gestom/stroll_bearnav/files/surfnav.bib)]
