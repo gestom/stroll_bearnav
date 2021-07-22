@@ -71,7 +71,7 @@ float maxLine = 0.5;
 int target_over;
 void adaptive_threshold(vector<KeyPoint>& keypoints);
 
-int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
+void detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 {
 	cv::Mat img;
 	if (maxLine < 1.0) img = image(cv::Rect(0,0,image.cols,(int)(image.rows*maxLine))); else img = image;
@@ -80,13 +80,13 @@ int detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
 	if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
 }
 
-int describeKeyPoints(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
+void describeKeyPoints(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 {
 	if (usedDescriptor==DES_BRIEF) briefDescriptor->compute(img,keypoints,descriptors);
 	if (usedDescriptor==DES_SURF) surf->compute(img,keypoints,descriptors);
 }
 
-int detectAndDescribe(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
+void detectAndDescribe(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 {
 	if (usedDescriptor==DES_SURF && usedDetector == DET_SURF) surf->detectAndCompute(img,Mat(),keypoints,descriptors);
 	else if (usedDescriptor==DES_SURF && usedDetector == DET_UPSURF) upSurf->detectAndCompute(img,Mat(),keypoints,descriptors);
@@ -96,7 +96,7 @@ int detectAndDescribe(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 	} 
 }
 
-int setThreshold(int thres)
+void setThreshold(int thres)
 {
 	if (usedDetector==DET_AGAST) agastDetector->setThreshold(thres);
 	if (usedDetector==DET_SURF) surf->setHessianThreshold(thres);
