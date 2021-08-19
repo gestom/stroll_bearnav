@@ -261,10 +261,10 @@ int main(int argc, char** argv)
 	dynamic_reconfigure::Server<stroll_bearnav::featureExtractionConfig>::CallbackType f = boost::bind(&callback, _1, _2);
 	server.setCallback(f);
 
-	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/features",1);
+	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("features",1);
 	image_sub_ = it_.subscribe( "/image", 1,imageCallback);
-	ros::Subscriber key_sub = nh_.subscribe("/targetKeypoints", 1, keypointCallback);
-	image_pub_ = it_.advertise("/image_with_features", 1);
+	ros::Subscriber key_sub = nh_.subscribe("targetKeypoints", 1, keypointCallback);
+	image_pub_ = it_.advertise("image_with_features", 1);
 
 
 	ros::spin();

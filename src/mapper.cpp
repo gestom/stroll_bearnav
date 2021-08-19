@@ -362,7 +362,7 @@ void infoMapMatch(const stroll_bearnav::NavigationInfo::ConstPtr& msg)
 int main(int argc, char** argv)
 { 
 	ros::init(argc, argv, "mapper");
-	ros::NodeHandle nh("~");
+	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
 	ros::param::get("~folder", folder);
 	/* joystick params */
@@ -379,23 +379,23 @@ int main(int argc, char** argv)
 	nh.param("forwardAcceleration", maxForwardAcceleration, 0.01);
 
 	if (isPlastic == false) vel_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd", 1);
-	flipperSub = nh.subscribe("/flipperPosition", 1, flipperCallback);
+	flipperSub = nh.subscribe("flipperPosition", 1, flipperCallback);
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10, joyCallback);
-	infoSub_ = nh.subscribe("/navigationInfo", 1000, infoMapMatch);
+	infoSub_ = nh.subscribe("navigationInfo", 1000, infoMapMatch);
 
 	image_sub_ = it_.subscribe( "/image", 1,imageCallback);					//THIS IS A PROBLEM WHEN GENERATING GROUND TRUTH
-	if(!isPlastic) featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
-	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance_events",1,distanceEventCallback);
-	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
+	if(!isPlastic) featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("features",1,featureCallback);
+	distEventSub_=nh.subscribe<std_msgs::Float32>("distance_events",1,distanceEventCallback);
+	distSub_=nh.subscribe<std_msgs::Float32>("distance",1,distanceCallback);
 	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",1);
 	ROS_INFO( "Map folder is: %s", folder.c_str());
 
 	/* Initiate action server */
-	server = new Server (nh, "/mapper", boost::bind(&executeCB, _1, server), false);
+	server = new Server (nh, "mapper", boost::bind(&executeCB, _1, server), false);
 	server->start();
 
 	/* Initiate service */
-	client = nh.serviceClient<stroll_bearnav::SetDistance>("/setDistance");
+	client = nh.serviceClient<stroll_bearnav::SetDistance>("setDistance");
 
 	path.clear();
 	while (ros::ok()){

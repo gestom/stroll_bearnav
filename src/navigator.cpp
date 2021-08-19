@@ -630,17 +630,17 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it_(nh);
-	image_sub_ = it_.subscribe( "/image_with_features", 1,imageCallback);
-	image_map_sub_ = it_.subscribe( "/map_image", 1,imageMapCallback);
-	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd",1);
-	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("/navigationInfo",1);
-	image_pub_ = it_.advertise("/navigationMatches", 1);
+	image_sub_ = it_.subscribe( "image_with_features", 1,imageCallback);
+	image_map_sub_ = it_.subscribe( "map_image", 1,imageMapCallback);
+	cmd_pub_ = nh.advertise<geometry_msgs::Twist>("/cmd",1);
+	info_pub_ = nh.advertise<stroll_bearnav::NavigationInfo>("navigationInfo",1);
+	image_pub_ = it_.advertise("navigationMatches", 1);
 
-	featureSub_ = nh.subscribe( "/features", 1,featureCallback);
-	loadFeatureSub_ = nh.subscribe("/localMap", 1,loadFeatureCallback);
-	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
-    distEventSub_=nh.subscribe<std_msgs::Float32>("/distance_events",1,distanceEventCallback);
-	speedSub_=nh.subscribe<stroll_bearnav::PathProfile>("/pathProfile",1,pathCallback);
+	featureSub_ = nh.subscribe( "features", 1,featureCallback);
+	loadFeatureSub_ = nh.subscribe("localMap", 1,loadFeatureCallback);
+	distSub_=nh.subscribe<std_msgs::Float32>("distance",1,distanceCallback);
+    distEventSub_=nh.subscribe<std_msgs::Float32>("distance_events",1,distanceEventCallback);
+	speedSub_=nh.subscribe<stroll_bearnav::PathProfile>("pathProfile",1,pathCallback);
   	/* Initiate action server */
 	server = new Server (nh, "navigator", boost::bind(&actionServerCB, _1, server), false);
 	server->start();

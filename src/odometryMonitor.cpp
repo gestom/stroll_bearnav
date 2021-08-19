@@ -118,12 +118,12 @@ int main(int argc, char** argv)
 	server.setCallback(f);
 
 	/* initiate service */
-	ros::ServiceServer service = nh.advertiseService("/setDistance", setDistance);
+	ros::ServiceServer service = nh.advertiseService("setDistance", setDistance);
 
 	odometrySub = nh.subscribe<nav_msgs::Odometry>("/odom",10 ,odomcallback);
 	jointSub = nh.subscribe<sensor_msgs::JointState>("/joint_states",10 ,jointcallback);
-	dist_pub_=nh.advertise<std_msgs::Float32>("/distance",1);
-	distEvent_pub_=nh.advertise<std_msgs::Float32>("/distance_events",1);
+	dist_pub_=nh.advertise<std_msgs::Float32>("distance",1);
+	distEvent_pub_=nh.advertise<std_msgs::Float32>("distance_events",1);
 	ros::spin();
 	return 0;
 }
