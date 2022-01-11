@@ -1,9 +1,8 @@
 <launch>
 
-    <group ns="bn">
 
         <!-- action and reconfigure clients to control the system -->
-        <node pkg="actionlib" type="axclient.py" args="mapper" name="Action_client_mapper"/>
+        <node pkg="actionlib_tools" type="axclient.py" args="/mapper" name="Action_client_mapper"/>
         <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="Reconfigurator"/>
 
         <!-- image view to check video stream-->
@@ -13,6 +12,5 @@
           <param name="autosize" value="false" />
         </node>
 
-    </group>
 
 </launch>

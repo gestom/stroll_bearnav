@@ -11,14 +11,14 @@
 #include <stroll_bearnav/Feature.h>
 #include <cmath>
 #include <opencv2/opencv.hpp>
-#include <opencv2/xfeatures2d.hpp>
+//#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
 #include <dynamic_reconfigure/server.h>
 #include <stroll_bearnav/featureExtractionConfig.h>
 #include <std_msgs/Int32.h>
 
 using namespace cv;
-using namespace cv::xfeatures2d;
+//using namespace cv::xfeatures2d;
 using namespace std;
 
 static const std::string OPENCV_WINDOW = "Image window";
@@ -53,9 +53,10 @@ Mat img;
 
 /*kokoti hlava, co delala OCV3, me donutila delat to uplne debilne*/
 Ptr<AgastFeatureDetector> agastDetector = AgastFeatureDetector::create(detectionThreshold);
-Ptr<BriefDescriptorExtractor> briefDescriptor = BriefDescriptorExtractor::create();
-Ptr<SURF> surf = SURF::create(detectionThreshold);
-Ptr<SURF> upSurf = SURF::create(detectionThreshold,4,3,false,true);
+//Ptr<BriefDescriptorExtractor> briefDescriptor = BriefDescriptorExtractor::create();
+Ptr<BRISK> briefDescriptor = BRISK::create();
+//Ptr<SURF> surf = SURF::create(detectionThreshold);
+//Ptr<SURF> upSurf = SURF::create(detectionThreshold,4,3,false,true);
 
 EDetectorType usedDetector = DET_NONE;
 EDescriptorType usedDescriptor = DES_NONE;
@@ -78,30 +79,33 @@ void detectKeyPoints(Mat &image,vector<KeyPoint> &keypoints)
     cv::Mat img;
     if (maxLine < 1.0) img = image(cv::Rect(0,0,image.cols,(int)(image.rows*maxLine))); else img = image;
     if (usedDetector==DET_AGAST) agastDetector->detect(img,keypoints, Mat () );
-    if (usedDetector==DET_SURF) surf->detect(img,keypoints, Mat () );
-    if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
+    //if (usedDetector==DET_SURF) surf->detect(img,keypoints, Mat () );
+    //if (usedDetector==DET_UPSURF) upSurf->detect(img,keypoints, Mat () );
 }
 
 void describeKeyPoints(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 {
-    if (usedDescriptor==DES_BRIEF) briefDescriptor->compute(img,keypoints,descriptors);
-    if (usedDescriptor==DES_SURF) surf->compute(img,keypoints,descriptors);
+    if (usedDescriptor==DES_BRIEF){
+	    briefDescriptor->compute(img,keypoints,descriptors);
+    }
+    //if (usedDescriptor==DES_SURF) surf->compute(img,keypoints,descriptors);
+    printf("Descriptors %i %i %ld %i %i\n",img.rows,img.cols,keypoints.size(),descriptors.cols,descriptors.rows);
 }
 
 void detectAndDescribe(Mat &image,vector<KeyPoint> &keypoints,Mat &descriptors)
 {
-    if (usedDescriptor==DES_SURF && usedDetector == DET_SURF) surf->detectAndCompute(img,Mat(),keypoints,descriptors);
-    else if (usedDescriptor==DES_SURF && usedDetector == DET_UPSURF) upSurf->detectAndCompute(img,Mat(),keypoints,descriptors);
-    else {
+    //if (usedDescriptor==DES_SURF && usedDetector == DET_SURF) surf->detectAndCompute(img,Mat(),keypoints,descriptors);
+    //else if (usedDescriptor==DES_SURF && usedDetector == DET_UPSURF) upSurf->detectAndCompute(img,Mat(),keypoints,descriptors);
+    //else {
         detectKeyPoints(image,keypoints);
         describeKeyPoints(image,keypoints,descriptors);
-    } 
+    //} 
 }
 
 void setThreshold(int thres)
 {
     if (usedDetector==DET_AGAST) agastDetector->setThreshold(thres);
-    if (usedDetector==DET_SURF) surf->setHessianThreshold(thres);
+    //if (usedDetector==DET_SURF) surf->setHessianThreshold(thres);
 }
 
 /* dynamic reconfigure of surf threshold and showing images */
@@ -188,7 +192,10 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
         feature.response=keypoints[i].response;
         feature.octave=keypoints[i].octave;
         feature.class_id=featureNorm;
-        descriptors.row(i).copyTo(feature.descriptor);
+        printf("Descriptors %i %i\n",descriptors.cols,descriptors.rows);
+        printf("Descriptors %ld %d\n",keypoints.size(),(int)feature.descriptor.size());
+
+	descriptors.row(i).copyTo(feature.descriptor);
         if(adaptThreshold)
         {
             if(i < (size_t)targetKeypoints)
