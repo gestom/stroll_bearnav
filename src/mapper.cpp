@@ -35,6 +35,7 @@ ros::Subscriber distEventSub_;
 ros::Subscriber distSub_;
 ros::Subscriber infoSub_; 
 image_transport::Subscriber image_sub_;
+image_transport::Subscriber image_sub1_;
 image_transport::Publisher image_pub_;
 
 /* Service for set/reset distance */
@@ -398,7 +399,8 @@ int main(int argc, char** argv)
 	joy_sub_ = nh.subscribe<sensor_msgs::Joy>("/joy", 10, joyCallback);
 	infoSub_ = nh.subscribe("/navigationInfo", 1000, infoMapMatch);
 
-	image_sub_ = it_.subscribe( "/image", 1,imageCallback);					//THIS IS A PROBLEM WHEN GENERATING GROUND TRUTH
+	image_sub1_ = it_.subscribe( "/image", 1,imageCallback);					//THIS IS A PROBLEM WHEN GENERATING GROUND TRUTH
+	image_sub_ = it_.subscribe( "/image_event", 1,imageCallback);	
 	if(!isPlastic) featureSub_ = nh.subscribe<stroll_bearnav::FeatureArray>("/features",1,featureCallback);
 	distEventSub_=nh.subscribe<std_msgs::Float32>("/distance_events",1,distanceEventCallback);
 	distSub_=nh.subscribe<std_msgs::Float32>("/distance",1,distanceCallback);
