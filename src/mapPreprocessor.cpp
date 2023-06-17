@@ -10,6 +10,7 @@
 #include <stroll_bearnav/Feature.h>
 #include <stroll_bearnav/PathProfile.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Int32.h>
 #include <geometry_msgs/Twist.h>
 #include <cmath>
 #include <dirent.h>
@@ -18,6 +19,8 @@
 #include <opencv2/features2d.hpp>
 #include <actionlib/server/simple_action_server.h>
 #include <stroll_bearnav/loadMapAction.h>
+#include <nn_matcher/NNImageMatchingStereo.h>
+#include <nn_matcher/nnfeature.h>
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -27,6 +30,7 @@ ros::Publisher cmd_pub_;
 ros::Publisher feat_pub_;
 ros::Subscriber dist_sub_;
 ros::Publisher pathPub;
+ros::Publisher image_index_pub;
 image_transport::Publisher image_pub_;
 
 /* Action server */
@@ -38,6 +42,7 @@ stroll_bearnav::loadMapFeedback feedback;
 /* Feature messages */
 stroll_bearnav::FeatureArray featureArray;
 stroll_bearnav::Feature feature;
+std_msgs::Int32 image_index;
 
 /* map variables */
 vector<float> ratings;
@@ -58,6 +63,7 @@ float distanceT;
 string prefix;
 bool stop = false;
 bool image_only = false;
+bool reload = false;
 
 /*map to be preloaded*/
 vector<vector<KeyPoint> > keypointsMap;
@@ -66,6 +72,8 @@ vector<float> distanceMap;
 vector<string> namesMap;
 vector<Mat> imagesMap;
 vector<vector<float> > ratingsMap;
+Mat image_map_stereo;
+ros::ServiceClient client;
 
 
 typedef enum
@@ -158,7 +166,7 @@ int loadMaps()
 			distanceMap.push_back(mapDistances[i]);
 			namesMap.push_back(fileName);
 			ratingsMap.push_back(ratings);
-			if (image_pub_.getNumSubscribers()>0) imagesMap.push_back(img);
+			if (image_index_pub.getNumSubscribers()>0) imagesMap.push_back(img);
 			numFeatures+=keypoints_1.size();
 			sprintf(fileName,"Loading map %i/%i",i+1,numMaps);
 			feedback.fileName = fileName;
@@ -242,10 +250,31 @@ void executeCB(const stroll_bearnav::loadMapGoalConstPtr &goal, Server *serv)
 	lastLoadedMap = -1;
 	numProcessedMaps = 0;
 	stroll_bearnav::loadMapFeedback feedback;
-
+	//reload = true;
 	prefix = goal->prefix;
-
+	/* add the function of extracting features for the map images for time saving when navigating*/
+	nn_matcher::NNImageMatchingStereo srv;
 	if (loadMaps() > 0 && loadPath() >= 0){
+		for(int i=0;i<imagesMap.size();i++ ){
+           
+		   std_msgs::Header header;
+		   cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::MONO8, imagesMap[i]);
+           	   srv.request.image_stereo = *(bridge.toImageMsg());
+		   srv.request.reloadmap = reload;
+		   cout << "state: " << reload << endl;
+		   if (client.call(srv))
+           	   {			
+			ROS_INFO("successfully save No %i image points and descriptor",(int)srv.response.mapnum);			
+		   }
+           	   else
+                   {
+           	    ROS_ERROR("Failed to call service to match two images.");
+                    return;
+          	   }				
+    
+		}
+		reload = true;
+		
 		state = ACTIVE;
 	}else{
 		result.distance=0;
@@ -327,10 +356,12 @@ void distCallback(const std_msgs::Float32::ConstPtr& msg)
 			feat_pub_.publish(featureArray);
 
 			/*if someone listens, then publish loaded image too*/
-			if (image_pub_.getNumSubscribers()>0){
+			if (image_index_pub.getNumSubscribers()>0){
 				std_msgs::Header header;
 				cv_bridge::CvImage bridge(header, sensor_msgs::image_encodings::MONO8, imagesMap[mindex]);
 				image_pub_.publish(bridge.toImageMsg());
+				image_index.data=mindex;
+				image_index_pub.publish(image_index);
 			}
 		}
 	}
@@ -342,13 +373,16 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh_;
 	image_transport::ImageTransport it_(nh_);
 	ros::param::get("~folder", folder);
-    ros::param::get("~image_only", image_only);
+        ros::param::get("~image_only", image_only);
 	cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd",1);
 	pathPub = nh_.advertise<stroll_bearnav::PathProfile>("/pathProfile",1);
 	dist_sub_ = nh_.subscribe<std_msgs::Float32>( "/distance", 1,distCallback);
 	image_pub_ = it_.advertise("/map_image", 1);
-	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);
+	image_index_pub = nh_.advertise<std_msgs::Int32>("/map_image_index",1);
+	feat_pub_ = nh_.advertise<stroll_bearnav::FeatureArray>("/localMap",1);	
 
+	client = nh_.serviceClient<nn_matcher::NNImageMatchingStereo>("NN_Image_Matching_Stereo");
+	
 	/* Initiate action server */
 	server = new Server (nh_, "map_preprocessor", boost::bind(&executeCB, _1, server), false);
 	server->start();
