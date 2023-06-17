@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(stroll_bearnav)
 set ( CMAKE_CXX_FLAGS "-ggdb")
+set(FMT_LIBRARIES fmt::fmt)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -19,6 +20,8 @@ find_package(catkin REQUIRED COMPONENTS
   rosbag
 )
 find_package(OpenCV REQUIRED)
+find_package(Sophus REQUIRED)
+find_package(fmt REQUIRED)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -127,6 +130,10 @@ catkin_package(
 include_directories(
   ${catkin_INCLUDE_DIRS}
 )
+include_directories(${OpenCV_INCLUDE_DIRS}
+                    ${Sophus_INCLUDE_DIRS}
+                    "/usr/local/include/eigen3/Eigen"
+)
 include_directories(${OpenCV_INCLUDE_DIRS})
 ## Declare a C++ library
 #add_library(cameleon_driver src/CRobot.cpp)
@@ -142,27 +149,36 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 ## Declare a C++ executable
 add_executable(mapper_node src/mapper.cpp)
 add_executable(feature_extraction_node src/featureExtraction.cpp)
+add_executable(feature_extraction_zed_node src/featureExtraction_zed.cpp)
 add_executable(odometry_monitor_node src/odometryMonitor.cpp)
 add_executable(map_preprocessor_node src/mapPreprocessor.cpp)
+add_executable(map_preprocessor_zed_node src/mapPreprocessor_zed.cpp)
 add_executable(navigator_node src/navigator.cpp)
 add_executable(end2end_navigator_node src/navigator_e2e.cpp)
+add_executable(end2end_navigator_zed_node src/navigator_e2e_zed.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(feature_extraction_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+add_dependencies(feature_extraction_zed_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(mapper_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(map_preprocessor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+add_dependencies(map_preprocessor_zed_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(odometry_monitor_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg  ${catkin_EXPORTED_TARGETS})
 add_dependencies(navigator_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 add_dependencies(end2end_navigator_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS}) 
+add_dependencies(end2end_navigator_zed_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(mapper_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(feature_extraction_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(feature_extraction_zed_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(odometry_monitor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(map_preprocessor_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(map_preprocessor_zed_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(navigator_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(end2end_navigator_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(end2end_navigator_zed_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Sophus_LIBRARIES} ${FMT_LIBRARIES})
 
 #############
 ## Install ##
